@@ -6,16 +6,15 @@ import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Mail, Lock, Eye, EyeOff, ShieldCheck, PiggyBank } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Logo } from '@/components/app/logo'
 import { useAuth, useUser, initiateEmailSignUp, initiateGoogleSignIn } from '@/firebase'
 import { Form, FormControl, FormField, FormMessage, FormItem } from '@/components/ui/form'
 import { useToast } from '@/hooks/use-toast'
-import loginBackground from '@/images/loginbackground.png'
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="24px" height="24px" {...props}>
@@ -108,23 +107,26 @@ export default function SignupPage() {
 
   if (isUserLoading || user) {
     return (
-        <div className="flex min-h-screen w-full items-center justify-center bg-background p-4">
-            <p>Loading...</p>
+        <div className="flex min-h-screen w-full items-center justify-center bg-slate-900 p-4">
+            <p className="text-white">Loading...</p>
         </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center lg:justify-end bg-cover bg-center p-4 lg:px-24" style={{ backgroundImage: `url(${loginBackground.src})` }}>
-      <Card className="w-full max-w-md bg-black/25 backdrop-blur-lg border border-white/20 rounded-2xl shadow-2xl">
-        <CardHeader className="space-y-2 text-center pt-8">
-          <div className="flex justify-center mb-2">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0f172a] via-[#1e3a8a] to-[#0f172a] p-4 relative overflow-hidden">
+      <div className="absolute w-[500px] h-[500px] bg-blue-500/20 rounded-full blur-3xl top-[-100px] right-[-100px]" />
+      <div className="absolute w-[400px] h-[400px] bg-indigo-500/20 rounded-full blur-3xl bottom-[-120px] left-[-120px]" />
+
+      <Card className="relative w-full max-w-md rounded-3xl bg-white/10 backdrop-blur-xl border border-white/20 shadow-[0_0_40px_rgba(59,130,246,0.4)]">
+        <CardContent className="p-8">
+          <div className="flex justify-center mb-6">
             <Logo />
           </div>
-          <CardTitle className="text-3xl font-bold text-white">Create Your Account</CardTitle>
-          <CardDescription className="text-slate-300">Start your journey to financial freedom.</CardDescription>
-        </CardHeader>
-        <CardContent className="p-8">
+
+          <h2 className="text-2xl font-bold text-white text-center">Create Your Account</h2>
+          <p className="text-gray-300 text-center mb-6">Start your journey to financial freedom.</p>
+          
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
@@ -134,8 +136,13 @@ export default function SignupPage() {
                   <FormItem>
                      <FormControl>
                       <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                        <Input type="email" placeholder="Email" {...field} className="pl-10 h-12 bg-black/20 border-slate-700 text-white placeholder:text-slate-400 focus:ring-blue-500 focus:border-blue-500" />
+                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-300" />
+                        <Input 
+                            type="email" 
+                            placeholder="Email" 
+                            {...field} 
+                            className="w-full pl-12 pr-4 py-3 rounded-xl bg-white/10 text-white placeholder-gray-300 border border-white/20 focus:outline-none focus:ring-2 focus:ring-blue-400 transition duration-300"
+                        />
                       </div>
                     </FormControl>
                     <FormMessage />
@@ -149,18 +156,18 @@ export default function SignupPage() {
                   <FormItem>
                      <FormControl>
                       <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-300" />
                         <Input 
                           type={showPassword ? "text" : "password"} 
                           placeholder="Password" 
                           {...field} 
-                          className="pl-10 h-12 pr-10 bg-black/20 border-slate-700 text-white placeholder:text-slate-400 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full pl-12 pr-12 py-3 rounded-xl bg-white/10 text-white placeholder-gray-300 border border-white/20 focus:outline-none focus:ring-2 focus:ring-blue-400 transition duration-300"
                         />
                         <Button 
                           type="button" 
                           variant="ghost" 
                           size="icon" 
-                          className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-slate-400 hover:bg-transparent hover:text-white"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 text-gray-300 hover:bg-transparent hover:text-white"
                           onClick={() => setShowPassword(!showPassword)}
                         >
                           {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
@@ -178,18 +185,18 @@ export default function SignupPage() {
                   <FormItem>
                     <FormControl>
                       <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-300" />
                         <Input 
                           type={showConfirmPassword ? "text" : "password"} 
                           placeholder="Confirm Password" 
                           {...field} 
-                          className="pl-10 h-12 pr-10 bg-black/20 border-slate-700 text-white placeholder:text-slate-400 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full pl-12 pr-12 py-3 rounded-xl bg-white/10 text-white placeholder-gray-300 border border-white/20 focus:outline-none focus:ring-2 focus:ring-blue-400 transition duration-300"
                         />
                          <Button 
                           type="button" 
                           variant="ghost" 
                           size="icon" 
-                          className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-slate-400 hover:bg-transparent hover:text-white"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 text-gray-300 hover:bg-transparent hover:text-white"
                           onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                         >
                           {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
@@ -200,27 +207,24 @@ export default function SignupPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full h-12 text-base font-semibold bg-blue-600 hover:bg-blue-700 text-white" disabled={isSubmitting}>
+              <Button type="submit" className="w-full py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:scale-[1.02] hover:shadow-[0_0_20px_rgba(59,130,246,0.7)] transition duration-300" disabled={isSubmitting}>
                 {isSubmitting ? 'Signing up...' : 'Sign Up'}
               </Button>
             </form>
           </Form>
 
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-slate-700" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-                <span className="px-2 text-slate-400" style={{background: 'rgb(0 0 0 / 0.25)'}}>OR CONTINUE WITH</span>
-            </div>
+          <div className="flex items-center my-6">
+            <div className="flex-grow h-px bg-white/20"></div>
+            <span className="px-3 text-gray-300 text-sm">OR CONTINUE WITH</span>
+            <div className="flex-grow h-px bg-white/20"></div>
           </div>
           
-          <Button variant="outline" className="w-full h-12 bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300" onClick={handleGoogleSignIn} disabled={isSubmitting}>
-            <GoogleIcon className="mr-2 h-6 w-6" />
+          <Button variant="outline" className="w-full py-3 rounded-xl bg-white/20 text-white font-medium border-0 hover:bg-white/30 transition duration-300" onClick={handleGoogleSignIn} disabled={isSubmitting}>
+            <GoogleIcon className="mr-2 h-5 w-5" />
             Continue with Google
           </Button>
 
-          <div className="mt-8 text-center text-sm text-slate-400">
+          <div className="mt-6 text-center text-sm text-gray-400">
             Already have an account?{' '}
             <Link href="/" className="font-semibold text-green-400 hover:text-green-300 hover:underline">
               Login

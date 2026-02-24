@@ -14,7 +14,6 @@ import { Logo } from '@/components/app/logo'
 import { useAuth, initiatePasswordReset } from '@/firebase'
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form'
 import { useToast } from '@/hooks/use-toast'
-import loginBackground from '@/images/loginbackground.png'
 
 const forgotPasswordSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address.' }),
@@ -60,26 +59,26 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center lg:justify-end bg-cover bg-center p-4 lg:px-24" style={{ backgroundImage: `url(${loginBackground.src})` }}>
-      <Card className="w-full max-w-md bg-black/25 backdrop-blur-lg border border-white/20 rounded-2xl shadow-2xl">
-        <CardHeader className="space-y-2 text-center pt-8">
-          <div className="flex justify-center mb-2">
-            <Logo />
-          </div>
-          <CardTitle className="text-3xl font-bold text-white">Reset Your Password</CardTitle>
-          <CardDescription className="text-slate-300">
-            {emailSent
-              ? 'An email has been sent with instructions.'
-              : 'Enter your email to receive a password reset link.'}
-          </CardDescription>
-        </CardHeader>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0f172a] via-[#1e3a8a] to-[#0f172a] p-4 relative overflow-hidden">
+      <div className="absolute w-[500px] h-[500px] bg-blue-500/20 rounded-full blur-3xl top-[-100px] right-[-100px]" />
+      <div className="absolute w-[400px] h-[400px] bg-indigo-500/20 rounded-full blur-3xl bottom-[-120px] left-[-120px]" />
+      
+      <Card className="relative w-full max-w-md rounded-3xl bg-white/10 backdrop-blur-xl border border-white/20 shadow-[0_0_40px_rgba(59,130,246,0.4)]">
         <CardContent className="p-8">
+            <div className="flex justify-center mb-6">
+                <Logo />
+            </div>
+
+            <h2 className="text-2xl font-bold text-white text-center">Reset Your Password</h2>
+            <p className="text-gray-300 text-center mb-6">
+              {emailSent
+                ? "If you don't see the email, please check your spam folder."
+                : 'Enter your email to receive a password reset link.'}
+            </p>
+
           {emailSent ? (
             <div className="text-center">
-              <p className="text-slate-300 mb-6">
-                If you don&apos;t see the email, please check your spam folder.
-              </p>
-              <Button asChild className="w-full h-12 text-base font-semibold bg-blue-600 hover:bg-blue-700 text-white">
+              <Button asChild className="w-full py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:scale-[1.02] hover:shadow-[0_0_20px_rgba(59,130,246,0.7)] transition duration-300">
                 <Link href="/">Back to Login</Link>
               </Button>
             </div>
@@ -94,20 +93,25 @@ export default function ForgotPasswordPage() {
                       <FormItem>
                         <FormControl>
                           <div className="relative">
-                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                            <Input type="email" placeholder="Email" {...field} className="pl-10 h-12 bg-black/20 border-slate-700 text-white placeholder:text-slate-400 focus:ring-blue-500 focus:border-blue-500" />
+                            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-300" />
+                            <Input 
+                              type="email" 
+                              placeholder="Email" 
+                              {...field} 
+                              className="w-full pl-12 pr-4 py-3 rounded-xl bg-white/10 text-white placeholder-gray-300 border border-white/20 focus:outline-none focus:ring-2 focus:ring-blue-400 transition duration-300"
+                            />
                           </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  <Button type="submit" className="w-full h-12 text-base font-semibold bg-blue-600 hover:bg-blue-700 text-white" disabled={isSubmitting}>
+                  <Button type="submit" className="w-full py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:scale-[1.02] hover:shadow-[0_0_20px_rgba(59,130,246,0.7)] transition duration-300" disabled={isSubmitting}>
                     {isSubmitting ? 'Sending...' : 'Send Reset Link'}
                   </Button>
                 </form>
               </Form>
-              <div className="mt-8 text-center text-sm text-slate-400">
+              <div className="mt-8 text-center text-sm text-gray-400">
                 <Link href="/" className="font-semibold text-green-400 hover:text-green-300 hover:underline">
                   Back to Login
                 </Link>
