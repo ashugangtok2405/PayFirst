@@ -4,6 +4,7 @@ import {
   File,
   ListFilter,
 } from "lucide-react"
+import { useMemo } from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -39,7 +40,7 @@ import {
 import { AddTransactionDialog } from "@/components/app/add-transaction-dialog"
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase'
 import { collection, query, where } from 'firebase/firestore'
-import type { Transaction } from '@/lib/types'
+import type { Transaction, Category } from '@/lib/types'
 import { Skeleton } from '@/components/ui/skeleton'
 
 function TransactionsTable({ type }: { type: 'all' | 'income' | 'expenses' }) {
@@ -55,7 +56,24 @@ function TransactionsTable({ type }: { type: 'all' | 'income' | 'expenses' }) {
         return query(baseQuery, where('type', '==', type === 'income' ? 'income' : 'expense'))
     }, [firestore, user, type])
     
-    const { data: transactions, isLoading } = useCollection<Transaction>(transactionsQuery)
+    const { data: transactions, isLoading: isLoadingTransactions } = useCollection<Transaction>(transactionsQuery)
+
+    const categoriesQuery = useMemoFirebase(
+      () => user ? collection(firestore, 'users', user.uid, 'categories') : null,
+      [firestore, user]
+    )
+    const { data: categories, isLoading: isLoadingCategories } = useCollection<Category>(categoriesQuery)
+
+    const categoryMap = useMemo(() => {
+        if (!categories) return new Map<string, string>()
+        return new Map(categories.map(cat => [cat.id, cat.name]))
+    }, [categories])
+
+    const isLoading = isLoadingTransactions || isLoadingCategories
+
+    const formatCurrency = (amount: number) => {
+        return amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
 
     return (
         <Card>
@@ -85,13 +103,13 @@ function TransactionsTable({ type }: { type: 'all' | 'income' | 'expenses' }) {
                 {!isLoading && transactions?.map((transaction) => (
                   <TableRow key={transaction.id}>
                     <TableCell className="font-medium">{transaction.description}</TableCell>
-                    <TableCell className="hidden md:table-cell">{transaction.categoryId}</TableCell> {/* This should be category name */}
+                    <TableCell className="hidden md:table-cell">{categoryMap.get(transaction.categoryId) ?? 'Uncategorized'}</TableCell>
                     <TableCell className="hidden md:table-cell">
                       <Badge variant={transaction.type === 'income' ? 'default' : 'secondary'}>{transaction.type}</Badge>
                     </TableCell>
                     <TableCell className="hidden md:table-cell">{new Date(transaction.transactionDate).toLocaleDateString()}</TableCell>
                     <TableCell className={`text-right ${transaction.type === 'income' ? 'text-green-500' : ''}`}>
-                      {transaction.type === 'income' ? '+' : '-'}${transaction.amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
+                      {transaction.type === 'income' ? '+$' : '-$'}{formatCurrency(transaction.amount)}
                     </TableCell>
                   </TableRow>
                 ))}

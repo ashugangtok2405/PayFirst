@@ -20,6 +20,10 @@ export function RecentTransactions() {
     )
     const { data: recentTransactions, isLoading } = useCollection<Transaction>(recentTransactionsQuery)
 
+    const formatCurrency = (amount: number) => {
+        return amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    };
+
     return (
         <Card>
             <CardHeader className="flex flex-row items-center">
@@ -55,7 +59,7 @@ export function RecentTransactions() {
                                     <div className="text-sm text-muted-foreground">{new Date(transaction.transactionDate).toLocaleDateString()}</div>
                                 </TableCell>
                                 <TableCell className={`text-right ${transaction.type === 'income' ? 'text-green-500' : ''}`}>
-                                    {transaction.type === 'income' ? '+' : '-'}${transaction.amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
+                                    {transaction.type === 'income' ? '+$' : '-$'}{formatCurrency(transaction.amount)}
                                 </TableCell>
                             </TableRow>
                         ))}
