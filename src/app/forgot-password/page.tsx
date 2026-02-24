@@ -75,17 +75,19 @@ export default function ForgotPasswordPage() {
         />
       
       <Card className="relative w-full max-w-lg rounded-3xl bg-white/10 backdrop-blur-xl border-2 border-white/20 shadow-[0_0_60px_rgba(59,130,246,0.6)]">
-        <CardContent className="p-12">
-            <div className="flex justify-center mb-6">
+        <CardContent className="p-12 space-y-8">
+            <div className="flex justify-center">
                 <Logo />
             </div>
 
-            <h2 className="text-2xl font-bold text-white text-center">Reset Your Password</h2>
-            <p className="text-gray-300 text-center mb-8">
-              {emailSent
-                ? "If you don't see the email, please check your spam folder."
-                : 'Enter your email to receive a password reset link.'}
-            </p>
+            <div className='space-y-2'>
+              <h2 className="text-2xl font-bold text-white text-center">Reset Your Password</h2>
+              <p className="text-gray-300 text-center">
+                {emailSent
+                  ? "If you don't see the email, please check your spam folder."
+                  : 'Enter your email to receive a password reset link.'}
+              </p>
+            </div>
 
           {emailSent ? (
             <div className="text-center">
@@ -109,7 +111,7 @@ export default function ForgotPasswordPage() {
                               type="email" 
                               placeholder="Email" 
                               {...field} 
-                              className="w-full pl-12 pr-4 py-3 rounded-xl bg-white/10 text-white placeholder-white border border-white/20 focus:outline-none focus:ring-2 focus:ring-blue-400 transition duration-300"
+                              className="w-full pl-12 pr-4 py-3 rounded-xl bg-white/10 text-white placeholder-gray-300 border border-white/20 focus:outline-none focus:ring-2 focus:ring-blue-400 transition duration-300"
                             />
                           </div>
                         </FormControl>

@@ -121,13 +121,15 @@ export default function LoginPage() {
       />
       
       <Card className="relative w-full max-w-lg rounded-3xl bg-white/10 backdrop-blur-xl border-2 border-white/20 shadow-[0_0_60px_rgba(59,130,246,0.6)]">
-        <CardContent className="p-12">
-          <div className="flex justify-center mb-6">
+        <CardContent className="p-12 space-y-8">
+          <div className="flex justify-center">
             <Logo />
           </div>
 
-          <h2 className="text-2xl font-bold text-white text-center">Login to Your Account</h2>
-          <p className="text-gray-300 text-center mb-8">Take control of every rupee.</p>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold text-white text-center">Login to Your Account</h2>
+            <p className="text-gray-300 text-center">Take control of every rupee.</p>
+          </div>
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -143,7 +145,7 @@ export default function LoginPage() {
                           type="email" 
                           placeholder="Email" 
                           {...field} 
-                          className="w-full pl-12 pr-4 py-3 rounded-xl bg-white/10 text-white placeholder-white border border-white/20 focus:outline-none focus:ring-2 focus:ring-blue-400 transition duration-300"
+                          className="w-full pl-12 pr-4 py-3 rounded-xl bg-white/10 text-white placeholder-gray-300 border border-white/20 focus:outline-none focus:ring-2 focus:ring-blue-400 transition duration-300"
                         />
                       </div>
                     </FormControl>
@@ -163,7 +165,7 @@ export default function LoginPage() {
                           type={showPassword ? "text" : "password"} 
                           placeholder="Password" 
                           {...field} 
-                          className="w-full pl-12 pr-12 py-3 rounded-xl bg-white/10 text-white placeholder-white border border-white/20 focus:outline-none focus:ring-2 focus:ring-blue-400 transition duration-300"
+                          className="w-full pl-12 pr-12 py-3 rounded-xl bg-white/10 text-white placeholder-gray-300 border border-white/20 focus:outline-none focus:ring-2 focus:ring-blue-400 transition duration-300"
                         />
                         <Button 
                           type="button" 
@@ -180,7 +182,7 @@ export default function LoginPage() {
                   </FormItem>
                 )}
               />
-              <div className="text-right mb-6">
+              <div className="text-right">
                 <Link href="/forgot-password" className="text-sm text-blue-300 hover:text-blue-400 hover:underline">
                   Forgot Password?
                 </Link>
@@ -192,18 +194,20 @@ export default function LoginPage() {
             </form>
           </Form>
 
-          <div className="flex items-center my-8">
-            <div className="flex-grow h-px bg-white/20"></div>
-            <span className="px-3 text-gray-300 text-sm">OR CONTINUE WITH</span>
-            <div className="flex-grow h-px bg-white/20"></div>
+          <div className="space-y-6">
+            <div className="flex items-center">
+              <div className="flex-grow h-px bg-white/20"></div>
+              <span className="px-3 text-gray-300 text-sm">OR CONTINUE WITH</span>
+              <div className="flex-grow h-px bg-white/20"></div>
+            </div>
+            
+            <Button variant="outline" className="w-full py-3 rounded-xl bg-white/20 text-white font-medium border-0 hover:bg-white/30 transition duration-300" onClick={handleGoogleSignIn} disabled={isSubmitting}>
+              <GoogleIcon className="mr-2 h-5 w-5" />
+              Continue with Google
+            </Button>
           </div>
           
-          <Button variant="outline" className="w-full py-3 rounded-xl bg-white/20 text-white font-medium border-0 hover:bg-white/30 transition duration-300" onClick={handleGoogleSignIn} disabled={isSubmitting}>
-            <GoogleIcon className="mr-2 h-5 w-5" />
-            Continue with Google
-          </Button>
-          
-          <div className="mt-8 space-y-2 text-sm text-gray-300 text-center">
+          <div className="space-y-4 text-sm text-gray-300 text-center">
             <div className="flex justify-center items-center gap-4">
                 <span className="flex items-center gap-1.5">💰 Automated Savings</span>
                 <span className="flex items-center gap-1.5">📊 Smart Tracking</span>
@@ -211,7 +215,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div className="mt-8 text-center text-sm text-gray-400">
+          <div className="text-center text-sm text-gray-400">
             Don&apos;t have an account?{' '}
             <Link href="/signup" className="font-semibold text-green-400 hover:text-green-300 hover:underline">
               Sign Up
