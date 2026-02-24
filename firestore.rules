@@ -1,8 +1,43 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow users to read and write ONLY their own data.
-    match /users/{userId}/{allPaths=**} {
+    // User profile data
+    match /users/{userId} {
+      // Users can read their own profile, update their displayName, etc.
+      // Creation is handled by the backend function/provider upon first sign-in.
+      allow read, update: if request.auth != null && request.auth.uid == userId;
+      // Allow creation of a user document only if the user is creating their own document.
+      allow create: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Transactions
+    match /users/{userId}/transactions/{transactionId} {
+      // Users can read and write (create, update, delete) their own transactions.
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Categories
+    match /users/{userId}/categories/{categoryId} {
+      // Users can read and write their own categories.
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Bank Accounts
+    match /users/{userId}/bankAccounts/{bankAccountId} {
+      // Users can read and write their own bank accounts.
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Credit Cards
+    match /users/{userId}/creditCards/{creditCardId} {
+      // Users can read and write their own credit cards.
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Savings Rules
+    match /users/{userId}/savingsRules/{savingsRuleId} {
+      // Users can read and write their own savings rules.
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
   }
