@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import './globals.css'
 import { Toaster } from '@/components/ui/toaster'
 import { cn } from '@/lib/utils'
+import { FirebaseClientProvider } from '@/firebase'
+import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
 
 export const metadata: Metadata = {
   title: 'PayFirst',
@@ -24,7 +26,10 @@ export default function RootLayout({
         />
       </head>
       <body className={cn('font-body antialiased', 'min-h-screen bg-background font-sans')}>
-        {children}
+        <FirebaseClientProvider>
+          <FirebaseErrorListener />
+          {children}
+        </FirebaseClientProvider>
         <Toaster />
       </body>
     </html>
