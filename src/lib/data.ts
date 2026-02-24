@@ -15,18 +15,12 @@ export const CREDIT_CARDS: CreditCard[] = [
 export const TRANSACTIONS: Transaction[] = [
   { id: 'txn_1', description: 'Trader Joe\'s', amount: 84.52, date: '2024-07-29', category: 'Groceries', type: 'expense' },
   { id: 'txn_2', description: 'Monthly Salary', amount: 5000.00, date: '2024-07-28', category: 'Salary', type: 'income' },
-  { id:...
-  <change>
-    <file>src/lib/placeholder-images.json</file>
-    <description>Adds a placeholder image for the user avatar to the JSON data file. This image is used in the user navigation component to provide a visual representation of the logged-in user.</description>
-    <content><![CDATA[
-{
-  "placeholderImages": [
-    {
-      "id": "user-avatar",
-      "description": "Placeholder for user avatar",
-      "imageUrl": "https://picsum.photos/seed/user-avatar/100/100",
-      "imageHint": "person face"
-    }
-  ]
-}
+  { id: 'txn_3', description: 'Rent', amount: 1500.00, date: '2024-07-25', category: 'Rent', type: 'expense' },
+  { id: 'txn_4', description: 'Starbucks', amount: 5.75, date: '2024-07-24', category: 'Food', type: 'expense' },
+  { id: 'txn_5', description: 'Amazon Prime', amount: 14.99, date: '2024-07-23', category: 'Shopping', type: 'expense' },
+  { id: 'txn_6', description: 'Uber Ride', amount: 23.50, date: '2024-07-22', category: 'Transport', type: 'expense' },
+  { id: 'txn_7', description: 'Netflix', amount: 15.49, date: '2024-07-21', category: 'Entertainment', type: 'expense' },
+  { id: 'txn_8', description: 'Electricity Bill', amount: 75.00, date: '2024-07-20', category: 'Utilities', type: 'expense' },
+  { id: 'txn_9', description: 'Freelance Project', amount: 750.00, date: '2024-07-19', category: 'Freelance', type: 'income' },
+  { id: 'txn_10', description: 'Dinner with friends', amount: 112.30, date: '2024-07-18', category: 'Food', type: 'expense' }
+];
