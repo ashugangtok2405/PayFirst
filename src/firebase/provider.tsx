@@ -2,9 +2,10 @@
 
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
 import { FirebaseApp } from 'firebase/app';
-import { Firestore } from 'firebase/firestore';
+import { Firestore, collection, doc, getDoc, writeBatch } from 'firebase/firestore';
 import { Auth, User, onAuthStateChanged } from 'firebase/auth';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
+import type { Category } from '@/lib/types';
 
 interface FirebaseProviderProps {
   children: ReactNode;
@@ -69,7 +70,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 
   // Effect to subscribe to Firebase auth state changes
   useEffect(() => {
-    if (!auth) { // If no Auth service instance, cannot determine user state
+    if (!auth || !firestore) { // If no Auth service instance, cannot determine user state
       setUserAuthState({ user: null, isUserLoading: false, userError: new Error("Auth service not provided.") });
       return;
     }
@@ -78,7 +79,50 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 
     const unsubscribe = onAuthStateChanged(
       auth,
-      (firebaseUser) => { // Auth state determined
+      async (firebaseUser) => { // Auth state determined
+        if (firebaseUser) {
+          // Check if user doc exists. If not, it's a new user.
+          const userDocRef = doc(firestore, 'users', firebaseUser.uid);
+          const userDoc = await getDoc(userDocRef);
+
+          if (!userDoc.exists()) {
+            // New user, create user profile and default categories
+            const batch = writeBatch(firestore);
+
+            // Create user profile
+            const userProfile = {
+              id: firebaseUser.uid,
+              email: firebaseUser.email,
+              displayName: firebaseUser.displayName,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            };
+            batch.set(userDocRef, userProfile);
+
+            // Create default categories
+            const defaultCategories: Omit<Category, 'id' | 'userId'>[] = [
+              { name: 'Groceries', type: 'expense', isDefault: true },
+              { name: 'Transport', type: 'expense', isDefault: true },
+              { name: 'Entertainment', type: 'expense', isDefault: true },
+              { name: 'Bills', type: 'expense', isDefault: true },
+              { name: 'Food', type: 'expense', isDefault: true },
+              { name: 'Shopping', type: 'expense', isDefault: true },
+              { name: 'Utilities', type: 'expense', isDefault: true },
+              { name: 'Rent', type: 'expense', isDefault: true },
+              { name: 'Salary', type: 'income', isDefault: true },
+              { name: 'Freelance', type: 'income', isDefault: true },
+              { name: 'Investment', type: 'income', isDefault: true },
+              { name: 'Other', type: 'income', isDefault: true },
+            ];
+
+            defaultCategories.forEach(category => {
+              const categoryRef = doc(collection(firestore, 'users', firebaseUser.uid, 'categories'));
+              batch.set(categoryRef, { ...category, userId: firebaseUser.uid });
+            });
+            
+            await batch.commit();
+          }
+        }
         setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
       },
       (error) => { // Auth listener error
@@ -87,7 +131,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       }
     );
     return () => unsubscribe(); // Cleanup
-  }, [auth]); // Depends on the auth instance
+  }, [auth, firestore]); // Depends on the auth instance
 
   // Memoize the context value
   const contextValue = useMemo((): FirebaseContextState => {

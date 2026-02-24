@@ -21,34 +21,56 @@ import { Calendar as CalendarIcon, PlusCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
 import { useToast } from '@/hooks/use-toast'
-import { ACCOUNTS, CREDIT_CARDS } from '@/lib/data'
+import { useFirestore, useUser, useCollection, useMemoFirebase, addDocumentNonBlocking } from '@/firebase'
+import { collection } from 'firebase/firestore'
+import type { BankAccount, CreditCard, Category } from '@/lib/types'
 
 export function AddTransactionDialog() {
   const [open, setOpen] = useState(false)
   const [date, setDate] = useState<Date>()
   const { toast } = useToast()
+  const firestore = useFirestore()
+  const { user } = useUser()
 
-  const handleAddIncome = () => {
-    // Logic to add income would go here
-    toast({
-      title: 'Income Added',
-      description: (
-        <div className="flex flex-col">
-          <span>$500.00 has been moved to your savings account.</span>
-          <span className="text-xs text-muted-foreground">Pay Yourself First! (10%)</span>
-        </div>
-      ),
-    })
-    setOpen(false)
-  }
+  const bankAccountsQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'bankAccounts') : null, [firestore, user])
+  const { data: bankAccounts } = useCollection<BankAccount>(bankAccountsQuery)
 
-  const handleAddExpense = () => {
-    // Logic to add expense would go here
-    toast({
-      title: 'Expense Added',
-      description: 'Your expense has been successfully recorded.',
-    })
-    setOpen(false)
+  const creditCardsQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'creditCards') : null, [firestore, user])
+  const { data: creditCards } = useCollection<CreditCard>(creditCardsQuery)
+
+  const expenseCategoriesQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'categories') : null, [firestore, user]); // Should filter by type
+  const { data: categories } = useCollection<Category>(expenseCategoriesQuery)
+
+  const handleAddTransaction = (type: 'income' | 'expense') => {
+      if (!user || !firestore) return;
+  
+      // This is a simplified version. A real app would use a form library.
+      const amount = parseFloat((document.getElementById(`${type}-amount`) as HTMLInputElement)?.value || '0');
+      const categoryId = (document.querySelector(`#${type}-category [data-radix-collection-item][aria-selected=true]`) as HTMLElement)?.dataset?.value;
+      const description = (document.getElementById(`${type}-description`) as HTMLInputElement)?.value || `New ${type}`;
+  
+      if (!amount || !categoryId || !date || !description) {
+          toast({ variant: 'destructive', title: 'Error', description: 'Please fill out all fields.' });
+          return;
+      }
+
+      const transactionData = {
+          userId: user.uid,
+          type,
+          amount,
+          description,
+          categoryId,
+          transactionDate: date.toISOString(),
+      };
+
+      addDocumentNonBlocking(collection(firestore, 'users', user.uid, 'transactions'), transactionData);
+      
+      toast({
+          title: `${type.charAt(0).toUpperCase() + type.slice(1)} Added`,
+          description: `Your ${type} has been successfully recorded.`,
+      })
+      setOpen(false)
+      setDate(undefined)
   }
 
   return (
@@ -60,132 +82,96 @@ export function AddTransactionDialog() {
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
-        <Tabs defaultValue="expense">
+        <Tabs defaultValue="expense" className="pt-4">
           <DialogHeader>
             <DialogTitle>Add Transaction</DialogTitle>
             <DialogDescription>Log a new income or expense to your records.</DialogDescription>
-            <TabsList className="grid w-full grid-cols-2 mt-4">
-              <TabsTrigger value="expense">Expense</TabsTrigger>
-              <TabsTrigger value="income">Income</TabsTrigger>
-            </TabsList>
           </DialogHeader>
-          <TabsContent value="expense">
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="expense-amount" className="text-right">
-                  Amount
-                </Label>
-                <Input id="expense-amount" type="number" placeholder="$0.00" className="col-span-3" />
+          <TabsList className="grid w-full grid-cols-2 mt-4">
+            <TabsTrigger value="expense">Expense</TabsTrigger>
+            <TabsTrigger value="income">Income</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="expense" className="space-y-4 py-4">
+               <div className="space-y-2">
+                  <Label htmlFor="expense-amount">Amount</Label>
+                  <Input id="expense-amount" type="number" placeholder="$0.00" />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="expense-category" className="text-right">
-                  Category
-                </Label>
-                <Select>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Select a category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="groceries">Groceries</SelectItem>
-                    <SelectItem value="transport">Transport</SelectItem>
-                    <SelectItem value="entertainment">Entertainment</SelectItem>
-                    <SelectItem value="bills">Bills</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="space-y-2">
+                  <Label htmlFor="expense-description">Description</Label>
+                  <Input id="expense-description" placeholder="e.g. Coffee" />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="expense-account" className="text-right">
-                  Account
-                </Label>
-                <Select>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Select an account" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[...ACCOUNTS, ...CREDIT_CARDS].map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+              <div className="space-y-2">
+                  <Label htmlFor="expense-category">Category</Label>
+                  <Select name="expense-category" >
+                      <SelectTrigger id="expense-category" className="w-full"><SelectValue placeholder="Select a category" /></SelectTrigger>
+                      <SelectContent>
+                          {categories?.filter(c => c.type === 'expense').map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>)}
+                      </SelectContent>
+                  </Select>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="expense-date" className="text-right">
-                  Date
-                </Label>
-                 <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-full justify-start text-left font-normal col-span-3",
-                        !date && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {date ? format(date, "PPP") : <span>Pick a date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={date}
-                      onSelect={setDate}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+              <div className="space-y-2">
+                  <Label htmlFor="expense-account">Account</Label>
+                  <Select name="expense-account">
+                      <SelectTrigger id="expense-account" className="w-full"><SelectValue placeholder="Select an account" /></SelectTrigger>
+                      <SelectContent>
+                          {bankAccounts?.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
+                          {creditCards?.map(card => <SelectItem key={card.id} value={card.id}>{card.name}</SelectItem>)}
+                      </SelectContent>
+                  </Select>
               </div>
-            </div>
+              <div className="space-y-2">
+                  <Label>Date</Label>
+                  <Popover>
+                      <PopoverTrigger asChild>
+                          <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}>
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {date ? format(date, "PPP") : <span>Pick a date</span>}
+                          </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={date} onSelect={setDate} initialFocus /></PopoverContent>
+                  </Popover>
+              </div>
             <DialogFooter>
-              <Button onClick={handleAddExpense}>Add Expense</Button>
+              <Button onClick={() => handleAddTransaction('expense')}>Add Expense</Button>
             </DialogFooter>
           </TabsContent>
 
-          <TabsContent value="income">
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="income-amount" className="text-right">
-                  Amount
-                </Label>
-                <Input id="income-amount" type="number" placeholder="$0.00" className="col-span-3" />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="income-category" className="text-right">
-                  Source
-                </Label>
-                <Select>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Select a source" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="salary">Salary</SelectItem>
-                    <SelectItem value="freelance">Freelance</SelectItem>
-                    <SelectItem value="investment">Investment</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
+          <TabsContent value="income" className="space-y-4 py-4">
+            <div className="space-y-2">
+                <Label htmlFor="income-amount">Amount</Label>
+                <Input id="income-amount" type="number" placeholder="$0.00" />
+            </div>
+             <div className="space-y-2">
+                <Label htmlFor="income-description">Description</Label>
+                <Input id="income-description" placeholder="e.g. Monthly Salary" />
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="income-category">Source</Label>
+                <Select name="income-category">
+                    <SelectTrigger id="income-category" className="w-full"><SelectValue placeholder="Select a source" /></SelectTrigger>
+                    <SelectContent>
+                        {categories?.filter(c => c.type === 'income').map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>)}
+                    </SelectContent>
                 </Select>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="income-account" className="text-right">
-                  Account
-                </Label>
-                <Select>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Select an account" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ACCOUNTS.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
-                  </SelectContent>
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="income-account">Account</Label>
+                <Select name="income-account">
+                    <SelectTrigger id="income-account" className="w-full"><SelectValue placeholder="Select an account" /></SelectTrigger>
+                    <SelectContent>
+                        {bankAccounts?.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
+                    </SelectContent>
                 </Select>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="income-date" className="text-right">
-                  Date
-                </Label>
+            </div>
+            <div className="space-y-2">
+                <Label>Date</Label>
                  <Popover>
                   <PopoverTrigger asChild>
                     <Button
                       variant={"outline"}
                       className={cn(
-                        "w-full justify-start text-left font-normal col-span-3",
+                        "w-full justify-start text-left font-normal",
                         !date && "text-muted-foreground"
                       )}
                     >
@@ -202,10 +188,9 @@ export function AddTransactionDialog() {
                     />
                   </PopoverContent>
                 </Popover>
-              </div>
             </div>
             <DialogFooter>
-              <Button onClick={handleAddIncome}>Add Income</Button>
+              <Button onClick={() => handleAddTransaction('income')}>Add Income</Button>
             </DialogFooter>
           </TabsContent>
         </Tabs>

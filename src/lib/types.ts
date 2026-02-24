@@ -1,24 +1,42 @@
-export interface Account {
+export interface BankAccount {
   id: string;
+  userId: string;
   name: string;
-  bank: string;
-  balance: number;
-  type: 'Checking' | 'Savings';
+  bankName: string;
+  currentBalance: number;
+  currency: string;
+  isSavingsAccount: boolean;
 }
 
 export interface CreditCard {
   id: string;
+  userId: string;
   name: string;
   issuer: string;
-  last4: string;
-  outstanding: number;
+  lastFourDigits: string;
+  currentBalance: number;
+  creditLimit: number;
+  apr: number;
+  statementDueDate: string;
 }
 
 export interface Transaction {
   id: string;
-  description: string;
-  amount: number;
-  date: string;
-  category: string;
+  userId: string;
   type: 'income' | 'expense';
+  amount: number;
+  description: string;
+  transactionDate: string;
+  categoryId: string;
+  fromBankAccountId?: string;
+  toBankAccountId?: string;
+  fromCreditCardId?: string;
+}
+
+export interface Category {
+    id: string;
+    userId: string;
+    name: string;
+    type: 'income' | 'expense';
+    isDefault: boolean;
 }

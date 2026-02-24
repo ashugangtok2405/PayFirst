@@ -1,3 +1,5 @@
+'use client'
+
 import {
   File,
   ListFilter,
@@ -35,7 +37,75 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs"
 import { AddTransactionDialog } from "@/components/app/add-transaction-dialog"
-import { TRANSACTIONS } from "@/lib/data"
+import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase'
+import { collection, query, where } from 'firebase/firestore'
+import type { Transaction } from '@/lib/types'
+import { Skeleton } from '@/components/ui/skeleton'
+
+function TransactionsTable({ type }: { type: 'all' | 'income' | 'expenses' }) {
+    const firestore = useFirestore()
+    const { user } = useUser()
+
+    const transactionsQuery = useMemoFirebase(() => {
+        if (!user) return null
+        const baseQuery = collection(firestore, 'users', user.uid, 'transactions')
+        if (type === 'all') {
+            return baseQuery
+        }
+        return query(baseQuery, where('type', '==', type === 'income' ? 'income' : 'expense'))
+    }, [firestore, user, type])
+    
+    const { data: transactions, isLoading } = useCollection<Transaction>(transactionsQuery)
+
+    return (
+        <Card>
+          <CardHeader>
+            <CardTitle>Transactions</CardTitle>
+            <CardDescription>
+              A list of all your recent financial activities.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Description</TableHead>
+                  <TableHead className="hidden md:table-cell">Category</TableHead>
+                  <TableHead className="hidden md:table-cell">Type</TableHead>
+                  <TableHead className="hidden md:table-cell">Date</TableHead>
+                  <TableHead className="text-right">Amount</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading && Array.from({ length: 5 }).map((_, i) => (
+                    <TableRow key={i}>
+                        <TableCell colSpan={5}><Skeleton className="h-8" /></TableCell>
+                    </TableRow>
+                ))}
+                {!isLoading && transactions?.map((transaction) => (
+                  <TableRow key={transaction.id}>
+                    <TableCell className="font-medium">{transaction.description}</TableCell>
+                    <TableCell className="hidden md:table-cell">{transaction.categoryId}</TableCell> {/* This should be category name */}
+                    <TableCell className="hidden md:table-cell">
+                      <Badge variant={transaction.type === 'income' ? 'default' : 'secondary'}>{transaction.type}</Badge>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">{new Date(transaction.transactionDate).toLocaleDateString()}</TableCell>
+                    <TableCell className={`text-right ${transaction.type === 'income' ? 'text-green-500' : ''}`}>
+                      {transaction.type === 'income' ? '+' : '-'}${transaction.amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {!isLoading && transactions?.length === 0 && (
+                    <TableRow>
+                        <TableCell colSpan={5} className="text-center">No transactions yet.</TableCell>
+                    </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+    )
+}
 
 export default function TransactionsPage() {
   return (
@@ -78,42 +148,13 @@ export default function TransactionsPage() {
         </div>
       </div>
       <TabsContent value="all">
-        <Card>
-          <CardHeader>
-            <CardTitle>Transactions</CardTitle>
-            <CardDescription>
-              A list of all your recent financial activities.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Description</TableHead>
-                  <TableHead className="hidden md:table-cell">Category</TableHead>
-                  <TableHead className="hidden md:table-cell">Type</TableHead>
-                  <TableHead className="hidden md:table-cell">Date</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {TRANSACTIONS.map((transaction) => (
-                  <TableRow key={transaction.id}>
-                    <TableCell className="font-medium">{transaction.description}</TableCell>
-                    <TableCell className="hidden md:table-cell">{transaction.category}</TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      <Badge variant={transaction.type === 'income' ? 'default' : 'secondary'}>{transaction.type}</Badge>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">{new Date(transaction.date).toLocaleDateString()}</TableCell>
-                    <TableCell className={`text-right ${transaction.type === 'income' ? 'text-green-500' : ''}`}>
-                      {transaction.type === 'income' ? '+' : '-'}${transaction.amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+        <TransactionsTable type="all" />
+      </TabsContent>
+      <TabsContent value="income">
+         <TransactionsTable type="income" />
+      </TabsContent>
+      <TabsContent value="expenses">
+         <TransactionsTable type="expenses" />
       </TabsContent>
     </Tabs>
   )

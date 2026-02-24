@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Sparkles, Bot, TrendingUp, Lightbulb } from 'lucide-react'
@@ -9,32 +9,77 @@ import type { AiSpendingInsightsOutput, AiSpendingInsightsInput } from '@/ai/flo
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-
-const mockInput: AiSpendingInsightsInput = {
-  monthlyIncome: 5000,
-  categorizedExpenses: [
-    { category: 'Food', amount: 800, count: 45 },
-    { category: 'Transport', amount: 300, count: 30 },
-    { category: 'Entertainment', amount: 400, count: 10 },
-    { category: 'Shopping', amount: 600, count: 8 },
-    { category: 'Rent', amount: 1500, count: 1 },
-    { category: 'Utilities', amount: 200, count: 4 },
-  ],
-  totalMonthlySpending: 3800,
-  currentSavingsBalance: 10000,
-  savingsGoalDescription: 'Save for a down payment on a house',
-}
+import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase'
+import { collection, query, where } from 'firebase/firestore'
+import type { Transaction, Category, BankAccount } from '@/lib/types'
 
 export function AiInsightsTool() {
   const [loading, setLoading] = useState(false)
   const [insights, setInsights] = useState<AiSpendingInsightsOutput | null>(null)
   const [error, setError] = useState<string | null>(null)
+  
+  const firestore = useFirestore()
+  const { user } = useUser()
+
+  const now = new Date()
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+
+  const transactionsQuery = useMemoFirebase(
+    () => user ? query(collection(firestore, 'users', user.uid, 'transactions'), where('transactionDate', '>=', startOfMonth)) : null,
+    [firestore, user]
+  )
+  const { data: transactions, isLoading: isLoadingTransactions } = useCollection<Transaction>(transactionsQuery)
+
+  const categoriesQuery = useMemoFirebase(
+      () => user ? collection(firestore, 'users', user.uid, 'categories') : null,
+      [firestore, user]
+  )
+  const { data: categories, isLoading: isLoadingCategories } = useCollection<Category>(categoriesQuery)
+
+  const bankAccountsQuery = useMemoFirebase(
+    () => user ? collection(firestore, 'users', user.uid, 'bankAccounts') : null,
+    [firestore, user]
+  )
+  const { data: bankAccounts, isLoading: isLoadingAccounts } = useCollection<BankAccount>(bankAccountsQuery)
+
+  const hasData = useMemo(() => transactions && transactions.length > 0 && categories && categories.length > 0, [transactions, categories]);
 
   const handleGenerate = async () => {
+    if (!transactions || !categories || !bankAccounts) {
+      setError("Not enough data to generate insights. Please add some transactions and accounts.")
+      return
+    }
+
     setLoading(true)
     setError(null)
     setInsights(null)
-    const result = await generateInsightsAction(mockInput)
+
+    const categoriesMap = categories.reduce((acc, category) => {
+        acc[category.id] = category.name
+        return acc
+    }, {} as { [key: string]: string })
+
+    const categorizedExpenses = transactions
+      .filter(t => t.type === 'expense')
+      .reduce((acc, t) => {
+          const categoryName = categoriesMap[t.categoryId] || 'Uncategorized';
+          if (!acc[categoryName]) {
+              acc[categoryName] = { category: categoryName, amount: 0, count: 0 };
+          }
+          acc[categoryName].amount += t.amount;
+          acc[categoryName].count++;
+          return acc;
+      }, {} as {[key: string]: {category: string, amount: number, count: number}});
+
+    const input: AiSpendingInsightsInput = {
+        monthlyIncome: transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0),
+        categorizedExpenses: Object.values(categorizedExpenses),
+        totalMonthlySpending: transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0),
+        currentSavingsBalance: bankAccounts.filter(a => a.isSavingsAccount).reduce((sum, a) => sum + a.currentBalance, 0),
+        savingsGoalDescription: 'Save for a down payment on a house', // still mock
+    }
+
+    const result = await generateInsightsAction(input)
     if (result.success && result.data) {
       setInsights(result.data)
     } else {
@@ -142,12 +187,23 @@ export function AiInsightsTool() {
               Let our AI analyze your spending and provide personalized tips to help you save more and spend smarter.
             </p>
           </div>
-          <Button onClick={handleGenerate} disabled={loading} size="lg">
+          <Button onClick={handleGenerate} disabled={loading || isLoadingAccounts || isLoadingCategories || isLoadingTransactions || !hasData} size="lg">
             <Sparkles className="mr-2 h-5 w-5" />
             {loading ? 'Analyzing...' : 'Analyze My Spending'}
           </Button>
         </CardContent>
       </Card>
+      
+      {(isLoadingAccounts || isLoadingCategories || isLoadingTransactions) && !loading && (
+        <p className="text-center text-muted-foreground">Loading financial data...</p>
+      )}
+
+      {!isLoadingAccounts && !isLoadingCategories && !isLoadingTransactions && !hasData && (
+        <Alert>
+          <AlertTitle>Not Enough Data</AlertTitle>
+          <AlertDescription>We need at least one transaction to generate insights. Please add some data first.</AlertDescription>
+        </Alert>
+      )}
 
       {loading && renderLoading()}
 
