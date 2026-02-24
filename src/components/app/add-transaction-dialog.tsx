@@ -304,7 +304,7 @@ export function AddTransactionDialog() {
                             {date ? format(date, "PPP") : <span>Pick a date</span>}
                         </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={date} onSelect={setDate} initialFocus /></PopoverContent>
+                    <PopoverContent onPointerDown={(e) => e.stopPropagation()} className="w-auto p-0"><Calendar mode="single" selected={date} onSelect={setDate} initialFocus /></PopoverContent>
                 </Popover>
             </div>
              <div className="space-y-2">
