@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Logo } from '@/components/app/logo'
-import { useAuth, useUser, initiateEmailSignIn } from '@/firebase'
+import { useAuth, useUser, initiateEmailSignIn, initiateGoogleSignIn } from '@/firebase'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { useToast } from '@/hooks/use-toast'
 
@@ -62,6 +62,23 @@ export default function LoginPage() {
         variant: 'destructive',
         title: 'Login Failed',
         description,
+      })
+    }
+  }
+
+  const handleGoogleSignIn = async () => {
+    try {
+      await initiateGoogleSignIn(auth)
+      // The onAuthStateChanged listener in FirebaseProvider will handle the redirect.
+      toast({
+        title: 'Login successful!',
+        description: 'You will be redirected to the dashboard.',
+      })
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Google Sign-In Failed',
+        description: error.message || 'An unexpected error occurred.',
       })
     }
   }
@@ -121,7 +138,7 @@ export default function LoginPage() {
               <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
                 Login
               </Button>
-              <Button variant="outline" className="w-full" type="button">
+              <Button variant="outline" className="w-full" type="button" onClick={handleGoogleSignIn}>
                 Login with Google
               </Button>
             </form>
@@ -137,3 +154,4 @@ export default function LoginPage() {
     </div>
   )
 }
+    

@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Logo } from '@/components/app/logo'
-import { useAuth, useUser, initiateEmailSignUp } from '@/firebase'
+import { useAuth, useUser, initiateEmailSignUp, initiateGoogleSignIn } from '@/firebase'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { useToast } from '@/hooks/use-toast'
 
@@ -69,6 +69,23 @@ export default function SignupPage() {
         variant: 'destructive',
         title: 'Sign Up Failed',
         description,
+      })
+    }
+  }
+
+  const handleGoogleSignUp = async () => {
+    try {
+      await initiateGoogleSignIn(auth)
+      // The onAuthStateChanged listener in FirebaseProvider will handle the redirect.
+      toast({
+        title: 'Sign Up successful!',
+        description: 'You will be redirected to the dashboard.',
+      })
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Google Sign-Up Failed',
+        description: error.message || 'An unexpected error occurred.',
       })
     }
   }
@@ -137,7 +154,7 @@ export default function SignupPage() {
               <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
                 Sign Up
               </Button>
-              <Button variant="outline" className="w-full" type="button">
+              <Button variant="outline" className="w-full" type="button" onClick={handleGoogleSignUp}>
                 Sign Up with Google
               </Button>
             </form>
@@ -153,3 +170,4 @@ export default function SignupPage() {
     </div>
   )
 }
+    
