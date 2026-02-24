@@ -2,21 +2,14 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
-import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase'
-import { collection } from 'firebase/firestore'
-import type { CreditCard } from '@/lib/types'
-import { Skeleton } from '@/components/ui/skeleton'
+
+const creditCards = [
+    { id: '1', name: 'Visa Rewards', issuer: 'Chase', currentBalance: 1250.50, creditLimit: 5000 },
+    { id: '2', name: 'Amex Gold', issuer: 'American Express', currentBalance: 800.10, creditLimit: 10000 },
+    { id: '3', name: 'Mastercard Platinum', issuer: 'Citi', currentBalance: 400.00, creditLimit: 2500 },
+];
 
 export function CreditCardOverview() {
-    const firestore = useFirestore()
-    const { user } = useUser()
-
-    const creditCardsQuery = useMemoFirebase(
-        () => user ? collection(firestore, 'users', user.uid, 'creditCards') : null,
-        [firestore, user]
-    )
-    const { data: creditCards, isLoading } = useCollection<CreditCard>(creditCardsQuery)
-
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-US', {
             style: 'currency',
@@ -37,17 +30,10 @@ export function CreditCardOverview() {
                 <CardDescription>Your outstanding balances and credit utilization.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-                {isLoading && Array.from({ length: 2 }).map((_, i) => (
-                    <div key={i} className="space-y-2">
-                        <Skeleton className="h-5 w-1/4" />
-                        <Skeleton className="h-4 w-1/2" />
-                        <Skeleton className="h-2 w-full" />
-                    </div>
-                ))}
-                {!isLoading && creditCards?.length === 0 && (
+                {creditCards.length === 0 && (
                     <p className="text-sm text-muted-foreground text-center">No credit cards added yet.</p>
                 )}
-                {!isLoading && creditCards?.map(card => {
+                {creditCards.map(card => {
                     const usage = card.creditLimit > 0 ? (card.currentBalance / card.creditLimit) * 100 : 0
                     return (
                         <div key={card.id}>
