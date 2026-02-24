@@ -2,19 +2,20 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { Mail, Lock, Eye, EyeOff } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Logo } from '@/components/app/logo'
-import { useAuth, useUser, initiateEmailSignIn, initiateGoogleSignIn } from '@/firebase'
+import { useAuth, useUser, initiateEmailSignIn } from '@/firebase'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { useToast } from '@/hooks/use-toast'
-
+import { Separator } from '@/components/ui/separator'
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address.' }),
@@ -28,6 +29,7 @@ export default function LoginPage() {
   const { user, isUserLoading } = useUser()
   const router = useRouter()
   const { toast } = useToast()
+  const [showPassword, setShowPassword] = useState(false)
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -46,11 +48,6 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginFormValues) => {
     try {
       await initiateEmailSignIn(auth, data.email, data.password)
-      // The onAuthStateChanged listener in FirebaseProvider will handle the redirect.
-      toast({
-        title: 'Login successful!',
-        description: 'You will be redirected to the dashboard.',
-      })
     } catch (error: any) {
       let description = 'An unexpected error occurred. Please try again.'
       if (error.code === 'auth/invalid-credential') {
@@ -66,23 +63,6 @@ export default function LoginPage() {
     }
   }
 
-  const handleGoogleSignIn = async () => {
-    try {
-      await initiateGoogleSignIn(auth)
-      // The onAuthStateChanged listener in FirebaseProvider will handle the redirect.
-      toast({
-        title: 'Login successful!',
-        description: 'You will be redirected to the dashboard.',
-      })
-    } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Google Sign-In Failed',
-        description: error.message || 'An unexpected error occurred.',
-      })
-    }
-  }
-
   if (isUserLoading || user) {
     return (
         <div className="flex min-h-screen w-full items-center justify-center bg-background p-4">
@@ -93,25 +73,27 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen w-full items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md mx-auto">
-        <CardHeader className="space-y-1 text-center">
+      <Card className="w-full max-w-md mx-auto shadow-xl rounded-2xl">
+        <CardHeader className="space-y-2 text-center pt-8">
           <div className="flex justify-center mb-4">
-            <Logo className="w-32 h-auto" />
+            <Logo />
           </div>
-          <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
-          <CardDescription>Enter your email below to login to your account</CardDescription>
+          <CardTitle className="text-3xl font-bold">Login to Your Account</CardTitle>
+          <CardDescription className="text-muted-foreground">Manage your finances with ease.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-8">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <FormField
                 control={form.control}
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="m@example.com" {...field} />
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                        <Input type="email" placeholder="Email" {...field} className="pl-10 h-12" />
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -122,31 +104,45 @@ export default function LoginPage() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <div className="flex items-center">
-                        <FormLabel>Password</FormLabel>
-                        <Link href="#" className="ml-auto inline-block text-sm underline">
-                        Forgot your password?
-                        </Link>
-                    </div>
                     <FormControl>
-                      <Input type="password" {...field} />
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                        <Input 
+                          type={showPassword ? "text" : "password"} 
+                          placeholder="Password" 
+                          {...field} 
+                          className="pl-10 h-12 pr-10"
+                        />
+                        <Button 
+                          type="button" 
+                          variant="ghost" 
+                          size="icon" 
+                          className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground hover:bg-transparent"
+                          onClick={() => setShowPassword(!showPassword)}
+                        >
+                          {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                        </Button>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+               <div className="text-right">
+                <Link href="#" className="text-sm font-medium text-primary hover:underline">
+                  Forgot Password?
+                </Link>
+              </div>
+              <Button type="submit" className="w-full h-12 text-base font-semibold" disabled={form.formState.isSubmitting}>
                 Login
-              </Button>
-              <Button variant="outline" className="w-full" type="button" onClick={handleGoogleSignIn}>
-                Login with Google
               </Button>
             </form>
           </Form>
-          <div className="mt-4 text-center text-sm">
+          <Separator className="my-6" />
+          <div className="text-center text-sm text-muted-foreground">
             Don&apos;t have an account?{' '}
-            <Link href="/signup" className="underline">
-              Sign up
+            <Link href="/signup" className="font-semibold text-green-600 hover:underline">
+              Sign Up
             </Link>
           </div>
         </CardContent>
