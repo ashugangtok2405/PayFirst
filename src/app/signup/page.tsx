@@ -49,14 +49,28 @@ export default function SignupPage() {
     }
   }, [user, isUserLoading, router])
 
-  const onSubmit = (data: SignupFormValues) => {
-    initiateEmailSignUp(auth, data.email, data.password)
-    // The onAuthStateChanged listener in FirebaseProvider will handle the redirect.
-    // We can show a toast message here to inform the user.
-    toast({
-      title: 'Account Creation Initiated',
-      description: 'You will be redirected shortly.',
-    })
+  const onSubmit = async (data: SignupFormValues) => {
+    try {
+      await initiateEmailSignUp(auth, data.email, data.password)
+      // The onAuthStateChanged listener in FirebaseProvider will handle the redirect.
+      toast({
+        title: 'Account Creation Successful',
+        description: 'You will be redirected shortly.',
+      })
+    } catch (error: any) {
+      let description = 'An unexpected error occurred. Please try again.'
+      if (error.code === 'auth/email-already-in-use') {
+        description = 'This email address is already in use.'
+        form.setError('email', { type: 'manual', message: description });
+      } else if (error.message) {
+        description = error.message;
+      }
+      toast({
+        variant: 'destructive',
+        title: 'Sign Up Failed',
+        description,
+      })
+    }
   }
 
   if (isUserLoading || user) {

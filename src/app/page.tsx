@@ -43,13 +43,27 @@ export default function LoginPage() {
     }
   }, [user, isUserLoading, router])
   
-  const onSubmit = (data: LoginFormValues) => {
-    initiateEmailSignIn(auth, data.email, data.password)
-    // The onAuthStateChanged listener in FirebaseProvider will handle the redirect.
-    toast({
-      title: 'Login attempt...',
-      description: 'You will be redirected upon successful login.',
-    })
+  const onSubmit = async (data: LoginFormValues) => {
+    try {
+      await initiateEmailSignIn(auth, data.email, data.password)
+      // The onAuthStateChanged listener in FirebaseProvider will handle the redirect.
+      toast({
+        title: 'Login successful!',
+        description: 'You will be redirected to the dashboard.',
+      })
+    } catch (error: any) {
+      let description = 'An unexpected error occurred. Please try again.'
+      if (error.code === 'auth/invalid-credential') {
+        description = 'Invalid email or password. Please try again.'
+      } else if (error.message) {
+        description = error.message;
+      }
+      toast({
+        variant: 'destructive',
+        title: 'Login Failed',
+        description,
+      })
+    }
   }
 
   if (isUserLoading || user) {
