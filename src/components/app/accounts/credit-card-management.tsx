@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
-import { MoreHorizontal, Bell, CreditCard as CreditCardIcon, FileText } from 'lucide-react'
+import { MoreHorizontal, Bell, CreditCard as CreditCardIcon, FileText, PlusCircle } from 'lucide-react'
 
 const creditCards = [
   {
