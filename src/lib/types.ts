@@ -22,12 +22,13 @@ export interface CreditCard {
 
 export interface Transaction {
   id: string;
-  userId: string;
+  userId?: string;
   type: 'income' | 'expense';
   amount: number;
   description: string;
-  transactionDate: string;
-  categoryId: string;
+  transactionDate?: string;
+  date?: string;
+  categoryId?: string;
   fromBankAccountId?: string;
   toBankAccountId?: string;
   fromCreditCardId?: string;
