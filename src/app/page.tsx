@@ -6,16 +6,15 @@ import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Mail, Lock, Eye, EyeOff } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff, ShieldCheck, PiggyBank } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Logo } from '@/components/app/logo'
 import { useAuth, useUser, initiateEmailSignIn, initiateGoogleSignIn } from '@/firebase'
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
+import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form'
 import { useToast } from '@/hooks/use-toast'
-import { Separator } from '@/components/ui/separator'
 import loginBackground from '@/images/loginbackground.png'
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -72,7 +71,8 @@ export default function LoginPage() {
         title: 'Login Failed',
         description,
       })
-      setIsSubmitting(false);
+    } finally {
+        setIsSubmitting(false);
     }
   }
 
@@ -92,7 +92,8 @@ export default function LoginPage() {
         title: 'Google Sign-In Failed',
         description,
       });
-      setIsSubmitting(false);
+    } finally {
+        setIsSubmitting(false);
     }
   };
 
@@ -105,18 +106,18 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-cover bg-center p-4" style={{ backgroundImage: `url(${loginBackground.src})` }}>
-      <Card className="w-full max-w-md mx-auto shadow-xl rounded-2xl bg-card/80 backdrop-blur-sm">
+    <div className="flex min-h-screen w-full items-center justify-center lg:justify-end bg-cover bg-center p-4 lg:px-24" style={{ backgroundImage: `url(${loginBackground.src})` }}>
+      <Card className="w-full max-w-md bg-black/25 backdrop-blur-lg border border-white/20 rounded-2xl shadow-2xl">
         <CardHeader className="space-y-2 text-center pt-8">
-          <div className="flex justify-center mb-4">
+          <div className="flex justify-center mb-2">
             <Logo />
           </div>
-          <CardTitle className="text-3xl font-bold">Login to Your Account</CardTitle>
-          <CardDescription className="text-muted-foreground">Manage your finances with ease.</CardDescription>
+          <CardTitle className="text-3xl font-bold text-white">Login to Your Account</CardTitle>
+          <CardDescription className="text-slate-300">Take control of every rupee.</CardDescription>
         </CardHeader>
         <CardContent className="p-8">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
                 name="email"
@@ -124,8 +125,8 @@ export default function LoginPage() {
                   <FormItem>
                     <FormControl>
                       <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                        <Input type="email" placeholder="Email" {...field} className="pl-10 h-12" />
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                        <Input type="email" placeholder="Email" {...field} className="pl-10 h-12 bg-black/20 border-slate-700 text-white placeholder:text-slate-400 focus:ring-blue-500 focus:border-blue-500" />
                       </div>
                     </FormControl>
                     <FormMessage />
@@ -139,34 +140,34 @@ export default function LoginPage() {
                   <FormItem>
                     <FormControl>
                       <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                         <Input 
                           type={showPassword ? "text" : "password"} 
                           placeholder="Password" 
                           {...field} 
-                          className="pl-10 h-12 pr-10"
+                          className="pl-10 h-12 pr-10 bg-black/20 border-slate-700 text-white placeholder:text-slate-400 focus:ring-blue-500 focus:border-blue-500"
                         />
                         <Button 
                           type="button" 
                           variant="ghost" 
                           size="icon" 
-                          className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground hover:bg-transparent"
+                          className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-slate-400 hover:bg-transparent hover:text-white"
                           onClick={() => setShowPassword(!showPassword)}
                         >
                           {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                         </Button>
                       </div>
                     </FormControl>
-                    <FormMessage />
+                    <div className="text-right pt-1">
+                        <Link href="/forgot-password" className="text-sm font-medium text-slate-300 hover:text-white hover:underline">
+                          Forgot Password?
+                        </Link>
+                    </div>
+                    <FormMessage className="pt-1" />
                   </FormItem>
                 )}
               />
-               <div className="text-right">
-                <Link href="/forgot-password" className="text-sm font-medium text-primary hover:underline">
-                  Forgot Password?
-                </Link>
-              </div>
-              <Button type="submit" className="w-full h-12 text-base font-semibold" disabled={isSubmitting}>
+              <Button type="submit" className="w-full h-12 text-base font-semibold bg-blue-600 hover:bg-blue-700 text-white" disabled={isSubmitting}>
                 {isSubmitting ? 'Logging in...' : 'Login'}
               </Button>
             </form>
@@ -174,22 +175,32 @@ export default function LoginPage() {
 
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
+                <span className="w-full border-t border-slate-700" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-card/80 px-2 text-muted-foreground">Or continue with</span>
+                <span className="bg-gray-900/50 px-2 text-slate-400" style={{background: 'rgb(0 0 0 / 0.25)'}}>OR CONTINUE WITH</span>
             </div>
           </div>
           
-          <Button variant="outline" className="w-full h-12" onClick={handleGoogleSignIn} disabled={isSubmitting}>
+          <Button variant="outline" className="w-full h-12 bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300" onClick={handleGoogleSignIn} disabled={isSubmitting}>
             <GoogleIcon className="mr-2 h-6 w-6" />
             Continue with Google
           </Button>
+          
+          <div className="mt-8 space-y-4 text-sm text-slate-200">
+            <div className="flex items-center gap-3">
+                <ShieldCheck className="w-5 h-5 text-green-400" />
+                <span>Secure | Smart Tracking</span>
+            </div>
+            <div className="flex items-center gap-3">
+                <PiggyBank className="w-5 h-5 text-green-400" />
+                <span>Automated Savings</span>
+            </div>
+          </div>
 
-          <Separator className="my-6" />
-          <div className="text-center text-sm text-muted-foreground">
+          <div className="mt-8 text-center text-sm text-slate-400">
             Don&apos;t have an account?{' '}
-            <Link href="/signup" className="font-semibold text-green-600 hover:underline">
+            <Link href="/signup" className="font-semibold text-green-400 hover:text-green-300 hover:underline">
               Sign Up
             </Link>
           </div>
@@ -198,4 +209,3 @@ export default function LoginPage() {
     </div>
   )
 }
-    
