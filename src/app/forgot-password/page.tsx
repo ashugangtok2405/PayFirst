@@ -75,13 +75,13 @@ export default function ForgotPasswordPage() {
         />
       
       <Card className="relative w-full max-w-lg rounded-3xl bg-white/10 backdrop-blur-xl border-2 border-white/20 shadow-[0_0_60px_rgba(59,130,246,0.6)]">
-        <CardContent className="p-8">
+        <CardContent className="p-12">
             <div className="flex justify-center mb-6">
                 <Logo />
             </div>
 
             <h2 className="text-2xl font-bold text-white text-center">Reset Your Password</h2>
-            <p className="text-gray-300 text-center mb-6">
+            <p className="text-gray-300 text-center mb-8">
               {emailSent
                 ? "If you don't see the email, please check your spam folder."
                 : 'Enter your email to receive a password reset link.'}

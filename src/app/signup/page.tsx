@@ -130,16 +130,16 @@ export default function SignupPage() {
       />
 
       <Card className="relative w-full max-w-lg rounded-3xl bg-white/10 backdrop-blur-xl border-2 border-white/20 shadow-[0_0_60px_rgba(59,130,246,0.6)]">
-        <CardContent className="p-8">
+        <CardContent className="p-12">
           <div className="flex justify-center mb-6">
             <Logo />
           </div>
 
           <h2 className="text-2xl font-bold text-white text-center">Create Your Account</h2>
-          <p className="text-gray-300 text-center mb-6">Start your journey to financial freedom.</p>
+          <p className="text-gray-300 text-center mb-8">Start your journey to financial freedom.</p>
           
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <FormField
                 control={form.control}
                 name="email"
@@ -224,7 +224,7 @@ export default function SignupPage() {
             </form>
           </Form>
 
-          <div className="flex items-center my-6">
+          <div className="flex items-center my-8">
             <div className="flex-grow h-px bg-white/20"></div>
             <span className="px-3 text-gray-300 text-sm">OR CONTINUE WITH</span>
             <div className="flex-grow h-px bg-white/20"></div>
@@ -235,7 +235,7 @@ export default function SignupPage() {
             Continue with Google
           </Button>
 
-          <div className="mt-6 text-center text-sm text-gray-400">
+          <div className="mt-8 text-center text-sm text-gray-400">
             Already have an account?{' '}
             <Link href="/" className="font-semibold text-green-400 hover:text-green-300 hover:underline">
               Login

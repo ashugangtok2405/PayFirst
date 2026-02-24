@@ -121,16 +121,16 @@ export default function LoginPage() {
       />
       
       <Card className="relative w-full max-w-lg rounded-3xl bg-white/10 backdrop-blur-xl border-2 border-white/20 shadow-[0_0_60px_rgba(59,130,246,0.6)]">
-        <CardContent className="p-8">
+        <CardContent className="p-12">
           <div className="flex justify-center mb-6">
             <Logo />
           </div>
 
           <h2 className="text-2xl font-bold text-white text-center">Login to Your Account</h2>
-          <p className="text-gray-300 text-center mb-6">Take control of every rupee.</p>
+          <p className="text-gray-300 text-center mb-8">Take control of every rupee.</p>
 
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <FormField
                 control={form.control}
                 name="email"
@@ -180,7 +180,7 @@ export default function LoginPage() {
                   </FormItem>
                 )}
               />
-              <div className="text-right -mt-2 mb-4">
+              <div className="text-right mb-6">
                 <Link href="/forgot-password" className="text-sm text-blue-300 hover:text-blue-400 hover:underline">
                   Forgot Password?
                 </Link>
@@ -192,7 +192,7 @@ export default function LoginPage() {
             </form>
           </Form>
 
-          <div className="flex items-center my-6">
+          <div className="flex items-center my-8">
             <div className="flex-grow h-px bg-white/20"></div>
             <span className="px-3 text-gray-300 text-sm">OR CONTINUE WITH</span>
             <div className="flex-grow h-px bg-white/20"></div>
@@ -203,7 +203,7 @@ export default function LoginPage() {
             Continue with Google
           </Button>
           
-          <div className="mt-6 space-y-2 text-sm text-gray-300 text-center">
+          <div className="mt-8 space-y-2 text-sm text-gray-300 text-center">
             <div className="flex justify-center items-center gap-4">
                 <span className="flex items-center gap-1.5">💰 Automated Savings</span>
                 <span className="flex items-center gap-1.5">📊 Smart Tracking</span>
@@ -211,7 +211,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div className="mt-6 text-center text-sm text-gray-400">
+          <div className="mt-8 text-center text-sm text-gray-400">
             Don&apos;t have an account?{' '}
             <Link href="/signup" className="font-semibold text-green-400 hover:text-green-300 hover:underline">
               Sign Up
