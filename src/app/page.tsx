@@ -143,7 +143,7 @@ export default function LoginPage() {
                           type="email" 
                           placeholder="Email" 
                           {...field} 
-                          className="w-full pl-12 pr-4 py-3 rounded-xl bg-white/10 text-white placeholder-gray-300 border border-white/20 focus:outline-none focus:ring-2 focus:ring-blue-400 transition duration-300"
+                          className="w-full pl-12 pr-4 py-3 rounded-xl bg-white/10 text-white placeholder-white border border-white/20 focus:outline-none focus:ring-2 focus:ring-blue-400 transition duration-300"
                         />
                       </div>
                     </FormControl>
@@ -163,7 +163,7 @@ export default function LoginPage() {
                           type={showPassword ? "text" : "password"} 
                           placeholder="Password" 
                           {...field} 
-                          className="w-full pl-12 pr-12 py-3 rounded-xl bg-white/10 text-white placeholder-gray-300 border border-white/20 focus:outline-none focus:ring-2 focus:ring-blue-400 transition duration-300"
+                          className="w-full pl-12 pr-12 py-3 rounded-xl bg-white/10 text-white placeholder-white border border-white/20 focus:outline-none focus:ring-2 focus:ring-blue-400 transition duration-300"
                         />
                         <Button 
                           type="button" 
