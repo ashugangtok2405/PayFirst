@@ -1,0 +1,450 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the PayFirst application. All financial data is associated with a user.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the User entity."
+        },
+        "email": {
+          "type": "string",
+          "description": "The email address of the user, used for display purposes. (Note: Authentication handled by external system.)",
+          "format": "email"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "A user-friendly name for display in the application."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the user account was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the user account was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Category": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Category",
+      "type": "object",
+      "description": "Defines a classification for financial transactions (e.g., 'Groceries', 'Salary', 'Utilities'). Categories can be user-defined or default.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Category entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User who owns this category. (Relationship: User 1:N Category)"
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the category (e.g., 'Food', 'Rent', 'Income')."
+        },
+        "type": {
+          "type": "string",
+          "description": "The type of financial flow this category applies to (e.g., 'income', 'expense').",
+          "items": {
+            "type": "string"
+          }
+        },
+        "isDefault": {
+          "type": "boolean",
+          "description": "Indicates if this is a system-provided default category or a user-created one."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "name",
+        "type",
+        "isDefault"
+      ]
+    },
+    "BankAccount": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "BankAccount",
+      "type": "object",
+      "description": "Represents a user's bank account, tracking its current balance and details.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the BankAccount entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User who owns this bank account. (Relationship: User 1:N BankAccount)"
+        },
+        "name": {
+          "type": "string",
+          "description": "A user-friendly name for the bank account (e.g., 'My Checking', 'Savings Fund')."
+        },
+        "bankName": {
+          "type": "string",
+          "description": "The name of the bank or financial institution."
+        },
+        "currentBalance": {
+          "type": "number",
+          "description": "The current balance of the bank account."
+        },
+        "currency": {
+          "type": "string",
+          "description": "The currency in which the account balance is denominated (e.g., 'USD', 'EUR')."
+        },
+        "isSavingsAccount": {
+          "type": "boolean",
+          "description": "Indicates if this account is designated as a savings account for 'Pay Yourself First' rules."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the bank account record was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the bank account record was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "name",
+        "bankName",
+        "currentBalance",
+        "currency",
+        "isSavingsAccount",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "CreditCard": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "CreditCard",
+      "type": "object",
+      "description": "Represents a user's credit card, tracking its outstanding balance, limit, and other relevant details.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the CreditCard entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User who owns this credit card. (Relationship: User 1:N CreditCard)"
+        },
+        "name": {
+          "type": "string",
+          "description": "A user-friendly name for the credit card (e.g., 'Visa Rewards', 'Amex Platinum')."
+        },
+        "issuer": {
+          "type": "string",
+          "description": "The issuing bank or financial institution of the credit card."
+        },
+        "lastFourDigits": {
+          "type": "string",
+          "description": "The last four digits of the credit card number for identification."
+        },
+        "currentBalance": {
+          "type": "number",
+          "description": "The current outstanding balance on the credit card."
+        },
+        "creditLimit": {
+          "type": "number",
+          "description": "The maximum credit limit allowed on the card."
+        },
+        "apr": {
+          "type": "number",
+          "description": "The Annual Percentage Rate (APR) for purchases on the card."
+        },
+        "statementDueDate": {
+          "type": "string",
+          "description": "The next due date for the credit card statement payment.",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the credit card record was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the credit card record was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "name",
+        "issuer",
+        "lastFourDigits",
+        "currentBalance",
+        "creditLimit",
+        "apr",
+        "statementDueDate",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Transaction": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Transaction",
+      "type": "object",
+      "description": "Represents a single financial transaction, such as income, expense, transfer, or savings allocation.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Transaction entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User who performed this transaction. (Relationship: User 1:N Transaction)"
+        },
+        "type": {
+          "type": "string",
+          "description": "The type of transaction (e.g., 'income', 'expense', 'transfer', 'savings_deposit', 'credit_card_payment')."
+        },
+        "amount": {
+          "type": "number",
+          "description": "The amount of money involved in the transaction. Always positive, direction determined by 'type'."
+        },
+        "description": {
+          "type": "string",
+          "description": "A brief description or memo for the transaction."
+        },
+        "transactionDate": {
+          "type": "string",
+          "description": "The date and time when the transaction occurred.",
+          "format": "date-time"
+        },
+        "categoryId": {
+          "type": "string",
+          "description": "Reference to the Category for this transaction (e.g., 'Groceries'). Optional for 'transfer' or 'payment' types. (Relationship: Category 1:N Transaction)"
+        },
+        "fromBankAccountId": {
+          "type": "string",
+          "description": "Reference to the BankAccount from which funds were debited (for expenses, transfers out, savings deposits, credit card payments). (Relationship: BankAccount 1:N Transaction)"
+        },
+        "fromCreditCardId": {
+          "type": "string",
+          "description": "Reference to the CreditCard from which funds were debited (for expenses). (Relationship: CreditCard 1:N Transaction)"
+        },
+        "toBankAccountId": {
+          "type": "string",
+          "description": "Reference to the BankAccount into which funds were credited (for income, transfers in, savings deposits, credit card payments). (Relationship: BankAccount 1:N Transaction)"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "type",
+        "amount",
+        "description",
+        "transactionDate"
+      ]
+    },
+    "SavingsRule": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "SavingsRule",
+      "type": "object",
+      "description": "Defines a 'Pay Yourself First' rule for automatically allocating funds to a savings account upon income.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the SavingsRule entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User who owns this savings rule. (Relationship: User 1:N SavingsRule)"
+        },
+        "ruleName": {
+          "type": "string",
+          "description": "A descriptive name for the savings rule (e.g., 'Emergency Fund Deposit')."
+        },
+        "allocationType": {
+          "type": "string",
+          "description": "The method of allocation: 'fixed_amount' or 'percentage' of income."
+        },
+        "allocationValue": {
+          "type": "number",
+          "description": "The fixed amount or percentage value to be allocated. Interpreted based on 'allocationType'."
+        },
+        "sourceBankAccountId": {
+          "type": "string",
+          "description": "Reference to the BankAccount from which income is typically received and from which savings are debited. (Relationship: BankAccount 1:N SavingsRule)"
+        },
+        "targetBankAccountId": {
+          "type": "string",
+          "description": "Reference to the BankAccount designated as the savings account where funds are deposited. (Relationship: BankAccount 1:N SavingsRule)"
+        },
+        "active": {
+          "type": "boolean",
+          "description": "Indicates if the savings rule is currently active and should be applied."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the savings rule was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the savings rule was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "ruleName",
+        "allocationType",
+        "allocationValue",
+        "sourceBankAccountId",
+        "targetBankAccountId",
+        "active",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profile information. Each document represents a single user, identified by their authentication UID. This path forms the root of all user-specific private financial data. Authorization is strictly tied to `request.auth.uid` matching the `{userId}` wildcard.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the authenticated user, corresponding to `request.auth.uid`."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/categories/{categoryId}",
+        "definition": {
+          "entityName": "Category",
+          "schema": {
+            "$ref": "#/backend/entities/Category"
+          },
+          "description": "Stores financial transaction categories, which can be user-defined or default. Nested under a specific user, ensuring privacy and ownership. Authorization relies on `request.auth.uid` matching the `{userId}` wildcard in the path, ensuring Authorization Independence.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The ID of the user who owns this category."
+            },
+            {
+              "name": "categoryId",
+              "description": "The unique ID of the category."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/bankAccounts/{bankAccountId}",
+        "definition": {
+          "entityName": "BankAccount",
+          "schema": {
+            "$ref": "#/backend/entities/BankAccount"
+          },
+          "description": "Stores details for a user's bank accounts, including balances. Nested under a specific user, ensuring privacy and ownership. Authorization relies on `request.auth.uid` matching the `{userId}` wildcard in the path, ensuring Authorization Independence.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The ID of the user who owns this bank account."
+            },
+            {
+              "name": "bankAccountId",
+              "description": "The unique ID of the bank account."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/creditCards/{creditCardId}",
+        "definition": {
+          "entityName": "CreditCard",
+          "schema": {
+            "$ref": "#/backend/entities/CreditCard"
+          },
+          "description": "Stores details for a user's credit cards, including balances and limits. Nested under a specific user, ensuring privacy and ownership. Authorization relies on `request.auth.uid` matching the `{userId}` wildcard in the path, ensuring Authorization Independence.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The ID of the user who owns this credit card."
+            },
+            {
+              "name": "creditCardId",
+              "description": "The unique ID of the credit card."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/transactions/{transactionId}",
+        "definition": {
+          "entityName": "Transaction",
+          "schema": {
+            "$ref": "#/backend/entities/Transaction"
+          },
+          "description": "Stores individual financial transactions (income, expense, transfer, etc.). Nested under a specific user, ensuring privacy and ownership. Authorization relies on `request.auth.uid` matching the `{userId}` wildcard in the path, ensuring Authorization Independence.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The ID of the user who owns this transaction."
+            },
+            {
+              "name": "transactionId",
+              "description": "The unique ID of the transaction."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/savingsRules/{savingsRuleId}",
+        "definition": {
+          "entityName": "SavingsRule",
+          "schema": {
+            "$ref": "#/backend/entities/SavingsRule"
+          },
+          "description": "Stores 'Pay Yourself First' savings rules. Nested under a specific user, ensuring privacy and ownership. Authorization relies on `request.auth.uid` matching the `{userId}` wildcard in the path, ensuring Authorization Independence.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The ID of the user who owns this savings rule."
+            },
+            {
+              "name": "savingsRuleId",
+              "description": "The unique ID of the savings rule."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The recommended Firestore structure for PayFirst emphasizes strict user data isolation and simplified security rules by leveraging path-based ownership. All user-specific financial data (Categories, Bank Accounts, Credit Cards, Transactions, and Savings Rules) is nested directly under a user's unique profile document in the `/users/{userId}/` path.\n\nThis design achieves **Authorization Independence (CRITICAL)** by ensuring that the authorization context (the user's ID) is explicitly present in the path for every document. For example, a `Category` document will be stored at `/users/{userId}/categories/{categoryId}`. A security rule to access this document can simply check `request.auth.uid == userId`, directly comparing the authenticated user's ID with the `userId` wildcard in the path. This eliminates the need for expensive and complex `get()` calls to parent documents in security rules, which can break atomic operations and make debugging challenging. All authorization decisions are self-contained within the document's path and the `request.auth.uid`.\n\nFurthermore, this structure strongly supports **QAPs (Rules are not Filters)**. By structurally segregating each user's data into their own dedicated subcollections (e.g., `/users/{userId}/transactions`, `/users/{userId}/bankAccounts`), every document within these collections shares the same security posture: it is privately owned by the `userId` specified in the path. This means that `list` operations are inherently secure. When a user queries `/users/{userId}/transactions`, the security rules simply verify that `request.auth.uid` matches the `userId` in the path. Firestore's query-ability and security rules work in concert to ensure that a user can only list documents from their own designated data space, preventing data leakage and removing the need for rules to act as data filters after retrieval. This leads to clear, concise, and highly performant security rules that are easy to understand and debug, making the application's data highly secure by design."
+  }
+}
