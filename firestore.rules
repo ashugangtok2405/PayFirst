@@ -2,46 +2,35 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Helper function to check if the requesting user is the owner of the data.
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
     match /users/{userId} {
-      allow get: if request.auth != null && request.auth.uid == userId;
+      // Allow users to read and manage their own user profile document.
+      allow get, update, delete: if isOwner(userId);
+      
+      // Allow users to create their own profile document.
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      
+      // Do not allow anyone to list all user documents.
       allow list: if false;
-      allow create: if request.auth != null && request.auth.uid == userId && request.resource.data.id == userId;
-      allow update: if request.auth != null && request.auth.uid == userId && request.resource.data.id == resource.data.id;
-      allow delete: if request.auth != null && request.auth.uid == userId;
 
-      match /categories/{categoryId} {
-        allow get, list: if request.auth != null && request.auth.uid == userId;
-        allow create: if request.auth != null && request.auth.uid == userId && request.resource.data.userId == userId;
-        allow update: if request.auth != null && request.auth.uid == userId && request.resource.data.userId == resource.data.userId;
-        allow delete: if request.auth != null && request.auth.uid == userId;
-      }
+      // Apply rules to all subcollections of a user document (transactions, accounts, etc.)
+      match /{subcollection}/{docId} {
 
-      match /bankAccounts/{bankAccountId} {
-        allow get, list: if request.auth != null && request.auth.uid == userId;
-        allow create: if request.auth != null && request.auth.uid == userId && request.resource.data.userId == userId;
-        allow update: if request.auth != null && request.auth.uid == userId && request.resource.data.userId == resource.data.userId;
-        allow delete: if request.auth != null && request.auth.uid == userId;
-      }
+        // Allow owner to read their own documents (single or list).
+        allow read: if isOwner(userId);
 
-      match /creditCards/{creditCardId} {
-        allow get, list: if request.auth != null && request.auth.uid == userId;
-        allow create: if request.auth != null && request.auth.uid == userId && request.resource.data.userId == userId;
-        allow update: if request.auth != null && request.auth.uid == userId && request.resource.data.userId == resource.data.userId;
-        allow delete: if request.auth != null && request.auth.uid == userId;
-      }
+        // Allow owner to create documents, ensuring the data is correctly tagged with their userId.
+        allow create: if isOwner(userId) && request.resource.data.userId == userId;
 
-      match /transactions/{transactionId} {
-        allow get, list: if request.auth != null && request.auth.uid == userId;
-        allow create: if request.auth != null && request.auth.uid == userId && request.resource.data.userId == userId;
-        allow update: if request.auth != null && request.auth.uid == userId && request.resource.data.userId == resource.data.userId;
-        allow delete: if request.auth != null && request.auth.uid == userId;
-      }
+        // Allow owner to update documents, but prevent changing the owner.
+        allow update: if isOwner(userId) && request.resource.data.userId == resource.data.userId;
 
-      match /savingsRules/{savingsRuleId} {
-        allow get, list: if request.auth != null && request.auth.uid == userId;
-        allow create: if request.auth != null && request.auth.uid == userId && request.resource.data.userId == userId;
-        allow update: if request.auth != null && request.auth.uid == userId && request.resource.data.userId == resource.data.userId;
-        allow delete: if request.auth != null && request.auth.uid == userId;
+        // Allow owner to delete their documents.
+        allow delete: if isOwner(userId);
       }
     }
   }
