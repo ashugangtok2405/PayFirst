@@ -15,24 +15,71 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
-import { Textarea } from '@/components/ui/textarea'
-import { Slider } from '@/components/ui/slider'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Landmark, CreditCard, ChevronDown, PlusCircle } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { useToast } from '@/hooks/use-toast'
+import { useFirestore, useUser, addDocumentNonBlocking } from '@/firebase'
+import { collection } from 'firebase/firestore'
+import type { BankAccount, CreditCard as CreditCardType } from '@/lib/types'
 
 export function AddAccountDialog() {
   const [open, setOpen] = useState(false)
   const [accountType, setAccountType] = useState('bank')
   const { toast } = useToast()
+  const firestore = useFirestore()
+  const { user } = useUser()
+
+  // Bank Account State
+  const [bankAccountName, setBankAccountName] = useState('')
+  const [bankName, setBankName] = useState('')
+  const [openingBalance, setOpeningBalance] = useState('')
+  const [isSavingsAccount, setIsSavingsAccount] = useState(false)
+  
+  // Credit Card State
+  const [cardName, setCardName] = useState('')
+  const [cardIssuer, setCardIssuer] = useState('')
+  const [creditLimit, setCreditLimit] = useState('')
+  const [cardCurrentBalance, setCardCurrentBalance] = useState('')
+  const [apr, setApr] = useState('')
+  const [statementDay, setStatementDay] = useState('')
 
   const handleAddAccount = () => {
-    toast({
-      title: 'Account Added',
-      description: `Your new ${accountType === 'bank' ? 'bank account' : 'credit card'} has been added.`,
-    })
+    if (!user) {
+        toast({ variant: "destructive", title: "Error", description: "You must be logged in to add an account." });
+        return;
+    }
+
+    if (accountType === 'bank') {
+        const bankAccount: Omit<BankAccount, 'id' | 'userId' | 'currency'> = {
+            name: bankAccountName,
+            bankName: bankName,
+            currentBalance: parseFloat(openingBalance) || 0,
+            isSavingsAccount: isSavingsAccount,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+        }
+        addDocumentNonBlocking(collection(firestore, 'users', user.uid, 'bankAccounts'), { ...bankAccount, userId: user.uid, currency: 'INR' });
+        toast({ title: 'Account Added', description: `Your new bank account has been added.` })
+    } else {
+        const creditCard: Omit<CreditCardType, 'id' | 'userId' | 'lastFourDigits' | 'statementDueDate'> = {
+            name: cardName,
+            issuer: cardIssuer,
+            creditLimit: parseFloat(creditLimit) || 0,
+            currentBalance: parseFloat(cardCurrentBalance) || 0,
+            apr: parseFloat(apr) || 0,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+        }
+        
+        const dueDate = new Date();
+        if (statementDay) {
+          dueDate.setDate(parseInt(statementDay, 10));
+        }
+
+        addDocumentNonBlocking(collection(firestore, 'users', user.uid, 'creditCards'), { ...creditCard, userId: user.uid, lastFourDigits: '0000', statementDueDate: dueDate.toISOString() });
+        toast({ title: 'Account Added', description: `Your new credit card has been added.` })
+    }
     setOpen(false)
   }
 
@@ -68,17 +115,17 @@ export function AddAccountDialog() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="bank-acc-name">Account Name</Label>
-                            <Input id="bank-acc-name" placeholder="e.g. My Primary Savings" />
+                            <Input id="bank-acc-name" placeholder="e.g. My Primary Savings" value={bankAccountName} onChange={e => setBankAccountName(e.target.value)} />
                         </div>
                          <div className="space-y-2">
                             <Label htmlFor="bank-name">Bank Name</Label>
-                            <Input id="bank-name" placeholder="e.g. HDFC Bank" />
+                            <Input id="bank-name" placeholder="e.g. HDFC Bank" value={bankName} onChange={e => setBankName(e.target.value)} />
                         </div>
                     </div>
                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="bank-acc-type">Account Type</Label>
-                            <Select>
+                            <Select onValueChange={(v) => setIsSavingsAccount(v === 'savings')}>
                                 <SelectTrigger id="bank-acc-type"><SelectValue placeholder="Select type" /></SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="savings">Savings</SelectItem>
@@ -90,7 +137,7 @@ export function AddAccountDialog() {
                             <Label htmlFor="opening-balance">Opening Balance</Label>
                             <div className="relative">
                                 <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">₹</span>
-                                <Input id="opening-balance" type="number" placeholder="0.00" className="pl-7" />
+                                <Input id="opening-balance" type="number" placeholder="0.00" className="pl-7" value={openingBalance} onChange={e => setOpeningBalance(e.target.value)} />
                             </div>
                         </div>
                          <div className="space-y-2">
@@ -111,38 +158,19 @@ export function AddAccountDialog() {
                                     </Label>
                                     <Switch id="bank-net-worth" defaultChecked />
                                 </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="low-balance-alert">Low Balance Alert Threshold</Label>
-                                    <div className="relative">
-                                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">₹</span>
-                                        <Input id="low-balance-alert" type="number" placeholder="10,000" className="pl-7" />
-                                    </div>
-                                </div>
-                                 <div className="space-y-2">
-                                    <Label>Account Color</Label>
-                                    <div className="flex gap-2">
-                                        {['#3b82f6', '#22c55e', '#f97316', '#ef4444', '#8b5cf6'].map(color => (
-                                            <Button key={color} variant="outline" size="icon" className="h-8 w-8 rounded-full" style={{ backgroundColor: color }} />
-                                        ))}
-                                    </div>
-                                </div>
                             </div>
                         </CollapsibleContent>
                     </Collapsible>
-                     <div className="space-y-2">
-                        <Label htmlFor="bank-notes">Notes</Label>
-                        <Textarea id="bank-notes" placeholder="Optional notes about this account" />
-                    </div>
                 </TabsContent>
                 <TabsContent value="credit" className="py-4 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="cc-name">Card Name</Label>
-                            <Input id="cc-name" placeholder="e.g. Amazon Pay ICICI" />
+                            <Input id="cc-name" placeholder="e.g. Amazon Pay ICICI" value={cardName} onChange={e => setCardName(e.target.value)} />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="cc-bank-name">Bank Name</Label>
-                            <Input id="cc-bank-name" placeholder="e.g. ICICI Bank" />
+                            <Input id="cc-bank-name" placeholder="e.g. ICICI Bank" value={cardIssuer} onChange={e => setCardIssuer(e.target.value)} />
                         </div>
                     </div>
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -150,21 +178,21 @@ export function AddAccountDialog() {
                             <Label htmlFor="cc-limit">Credit Limit</Label>
                              <div className="relative">
                                 <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">₹</span>
-                                <Input id="cc-limit" type="number" placeholder="1,00,000" className="pl-7" />
+                                <Input id="cc-limit" type="number" placeholder="1,00,000" className="pl-7" value={creditLimit} onChange={e => setCreditLimit(e.target.value)} />
                             </div>
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="cc-outstanding">Current Outstanding</Label>
                             <div className="relative">
                                 <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">₹</span>
-                                <Input id="cc-outstanding" type="number" placeholder="0.00" className="pl-7" />
+                                <Input id="cc-outstanding" type="number" placeholder="0.00" className="pl-7" value={cardCurrentBalance} onChange={e => setCardCurrentBalance(e.target.value)} />
                             </div>
                         </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                          <div className="space-y-2">
-                            <Label htmlFor="cc-billing-date">Billing Date</Label>
-                            <Select>
+                            <Label htmlFor="cc-billing-date">Statement Date</Label>
+                            <Select onValueChange={setStatementDay}>
                                 <SelectTrigger id="cc-billing-date"><SelectValue placeholder="Select day of month" /></SelectTrigger>
                                 <SelectContent>
                                     {days.map(day => <SelectItem key={day} value={day.toString()}>{day}</SelectItem>)}
@@ -172,13 +200,8 @@ export function AddAccountDialog() {
                             </Select>
                         </div>
                          <div className="space-y-2">
-                            <Label htmlFor="cc-due-date">Due Date</Label>
-                            <Select>
-                                <SelectTrigger id="cc-due-date"><SelectValue placeholder="Select day of month" /></SelectTrigger>
-                                <SelectContent>
-                                    {days.map(day => <SelectItem key={day} value={day.toString()}>{day}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
+                            <Label htmlFor="cc-apr">Interest Rate (APR %)</Label>
+                            <Input id="cc-apr" type="number" placeholder="e.g. 14.99" value={apr} onChange={e => setApr(e.target.value)} />
                         </div>
                     </div>
                      <Collapsible>
@@ -187,23 +210,6 @@ export function AddAccountDialog() {
                         </CollapsibleTrigger>
                         <CollapsibleContent className="mt-4 space-y-4 animate-in fade-in-0 slide-in-from-top-2">
                             <div className="p-4 border rounded-lg space-y-4">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                     <div className="space-y-2">
-                                        <Label htmlFor="cc-min-due">Minimum Due (Optional)</Label>
-                                        <div className="relative">
-                                            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">₹</span>
-                                            <Input id="cc-min-due" type="number" placeholder="0.00" className="pl-7" />
-                                        </div>
-                                    </div>
-                                     <div className="space-y-2">
-                                        <Label htmlFor="cc-apr">Interest Rate (APR %)</Label>
-                                        <Input id="cc-apr" type="number" placeholder="e.g. 14.99" />
-                                    </div>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="cc-util-alert">Alert when utilization exceeds (50%)</Label>
-                                    <Slider id="cc-util-alert" defaultValue={[50]} max={100} step={5} />
-                                </div>
                                 <div className="flex items-center justify-between">
                                     <Label htmlFor="cc-net-worth" className="flex flex-col gap-0.5">
                                         <span>Include in Net Worth</span>
