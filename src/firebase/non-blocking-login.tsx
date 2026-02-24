@@ -7,6 +7,7 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
   UserCredential,
+  sendPasswordResetEmail,
   // Assume getAuth and app are initialized elsewhere
 } from 'firebase/auth';
 
@@ -35,4 +36,9 @@ export function initiateGoogleSignIn(authInstance: Auth): Promise<UserCredential
   return signInWithPopup(authInstance, provider);
 }
 
+/** Initiate password reset email (non-blocking). */
+export function initiatePasswordReset(authInstance: Auth, email: string): Promise<void> {
+    // CRITICAL: Call sendPasswordResetEmail directly. Do NOT use 'await sendPasswordResetEmail(...)'.
+    return sendPasswordResetEmail(authInstance, email);
+}
     
