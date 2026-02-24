@@ -1,63 +1,43 @@
 'use client'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Landmark, CreditCard, Wallet, Scale } from 'lucide-react'
+import { Landmark, CreditCard, ShoppingCart, Scale } from 'lucide-react'
+
+const overviewData = [
+    { title: 'Total Available Balance', value: 142500, icon: Landmark, color: 'text-blue-500', bgColor: 'bg-blue-100' },
+    { title: 'Total Credit Card', value: 68200, icon: CreditCard, color: 'text-red-500', bgColor: 'bg-red-100' },
+    { title: 'This Month Expenses', value: 54300, icon: ShoppingCart, color: 'text-green-500', bgColor: 'bg-green-100' },
+    { title: 'Net Position', value: 74300, icon: Scale, color: 'text-emerald-500', bgColor: 'bg-emerald-100' },
+]
 
 export function OverviewCards() {
-    const totalBalance = 15234.89;
-    const totalDebt = 2450.60;
-    const monthlyExpenses = 3120.45;
-    const netPosition = totalBalance - totalDebt;
-
     const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('en-US', {
+        return new Intl.NumberFormat('en-IN', {
             style: 'currency',
-            currency: 'USD',
+            currency: 'INR',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
         }).format(amount)
     }
 
     return (
-        <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Available Balance</CardTitle>
-                    <Landmark className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">{formatCurrency(totalBalance)}</div>
-                    <p className="text-xs text-muted-foreground">Across all bank accounts</p>
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Credit Outstanding</CardTitle>
-                    <CreditCard className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">{formatCurrency(totalDebt)}</div>
-                    <p className="text-xs text-muted-foreground">Total outstanding balance</p>
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">This Month's Expenses</CardTitle>
-                    <Wallet className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">{formatCurrency(monthlyExpenses)}</div>
-                    <p className="text-xs text-muted-foreground">in the last 30 days</p>
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Net Position</CardTitle>
-                    <Scale className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">{formatCurrency(netPosition)}</div>
-                    <p className="text-xs text-muted-foreground">Bank Balance - Credit</p>
-                </CardContent>
-            </Card>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {overviewData.map((item, index) => {
+                const Icon = item.icon
+                return (
+                    <Card key={index}>
+                        <CardContent className="p-4 flex items-center gap-4">
+                            <div className={`flex items-center justify-center size-12 rounded-lg ${item.bgColor}`}>
+                                <Icon className={`size-6 ${item.color}`} />
+                            </div>
+                            <div>
+                                <p className="text-sm text-muted-foreground">{item.title}</p>
+                                <p className="text-2xl font-bold">{formatCurrency(item.value)}</p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )
+            })}
         </div>
     )
 }

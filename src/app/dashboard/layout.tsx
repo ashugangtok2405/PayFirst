@@ -14,9 +14,11 @@ import {
   SidebarFooter,
   SidebarTrigger,
   SidebarInset,
+  SidebarSeparator,
 } from '@/components/ui/sidebar'
-import { Search } from 'lucide-react'
+import { Bell, Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
 export default function DashboardLayout({
   children,
@@ -40,39 +42,40 @@ export default function DashboardLayout({
     )
   }
 
+  const getInitials = (email?: string | null) => {
+    if (!email) return 'U'
+    return email.substring(0, 2).toUpperCase()
+  }
+
   return (
     <SidebarProvider>
       <Sidebar>
-        <SidebarHeader>
-          <Logo className="w-24 h-auto" />
+        <SidebarHeader className="p-4">
+          <Logo />
         </SidebarHeader>
         <SidebarContent>
           <MainNav />
         </SidebarContent>
-        <SidebarFooter>
+        <SidebarFooter className="p-4">
           <UserNav />
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-        <header className="flex h-14 items-center gap-4 border-b bg-card px-4 lg:h-[60px] lg:px-6">
+        <header className="flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6">
           <SidebarTrigger className="md:hidden" />
-          <div className="w-full flex-1">
-            <form>
-              <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Search transactions..."
-                  className="w-full appearance-none bg-background pl-8 shadow-none md:w-2/3 lg:w-1/3"
-                />
-              </div>
-            </form>
-          </div>
-          <div className="md:hidden">
-            <UserNav />
+          <h1 className="text-xl font-semibold">Dashboard</h1>
+          <div className="ml-auto flex items-center gap-4">
+            <button className="relative rounded-full p-2 hover:bg-muted">
+              <Bell className="h-5 w-5" />
+              <span className="sr-only">Notifications</span>
+            </button>
+            <Avatar className="h-9 w-9">
+              <AvatarImage src={user?.photoURL ?? undefined} alt={user?.displayName ?? "User"} />
+              <AvatarFallback>{getInitials(user?.email)}</AvatarFallback>
+            </Avatar>
           </div>
         </header>
-        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
+        <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
           {children}
         </main>
       </SidebarInset>

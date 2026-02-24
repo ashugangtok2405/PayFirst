@@ -26,14 +26,14 @@ export function MainNav() {
   const pathname = usePathname()
 
   return (
-    <div className="flex flex-col h-full">
-      <SidebarMenu className="flex-1">
+      <SidebarMenu className="flex-1 p-2">
         {menuItems.map((item) => (
           <SidebarMenuItem key={item.href}>
             <SidebarMenuButton
               asChild
               isActive={pathname === item.href}
               tooltip={item.label}
+              className="h-10"
             >
               <Link href={item.href}>
                 <item.icon />
@@ -43,16 +43,5 @@ export function MainNav() {
           </SidebarMenuItem>
         ))}
       </SidebarMenu>
-      <SidebarMenu>
-        <SidebarMenuItem>
-          <SidebarMenuButton asChild tooltip="Settings">
-            <Link href="#">
-              <Settings />
-              <span>Settings</span>
-            </Link>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-      </SidebarMenu>
-    </div>
   )
 }

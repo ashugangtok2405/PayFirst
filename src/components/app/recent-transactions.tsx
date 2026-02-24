@@ -7,16 +7,21 @@ import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 
 const recentTransactions = [
-  { id: '1', description: 'Monthly Salary', transactionDate: new Date().toISOString(), type: 'income', amount: 4500 },
-  { id: '2', description: 'Groceries at Walmart', transactionDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), type: 'expense', amount: 154.23 },
-  { id: '3', description: 'Gasoline', transactionDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), type: 'expense', amount: 55.76 },
-  { id: '4', description: 'Dinner with friends', transactionDate: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(), type: 'expense', amount: 89.50 },
-  { id: '5', description: 'Netflix Subscription', transactionDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), type: 'expense', amount: 15.99 },
+  { id: '1', description: 'Monthly Salary', transactionDate: new Date().toISOString(), type: 'income', amount: 80000 },
+  { id: '2', description: 'HDFC Credit Card Bill', transactionDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), type: 'expense', amount: 24800 },
+  { id: '3', description: 'Fuel', transactionDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), type: 'expense', amount: 12400 },
+  { id: '4', description: 'Zomato Order', transactionDate: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(), type: 'expense', amount: 850 },
+  { id: '5', description: 'Shopping', transactionDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), type: 'expense', amount: 6800 },
 ];
 
 export function RecentTransactions() {
     const formatCurrency = (amount: number) => {
-        return amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        return new Intl.NumberFormat('en-IN', {
+            style: 'currency',
+            currency: 'INR',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+        }).format(amount)
     };
 
     return (
@@ -53,8 +58,8 @@ export function RecentTransactions() {
                                     <div className="font-medium">{transaction.description}</div>
                                     <div className="text-sm text-muted-foreground">{new Date(transaction.transactionDate).toLocaleDateString()}</div>
                                 </TableCell>
-                                <TableCell className={`text-right ${transaction.type === 'income' ? 'text-green-500' : ''}`}>
-                                    {transaction.type === 'income' ? '+$' : '-$'}{formatCurrency(transaction.amount)}
+                                <TableCell className={`text-right font-medium ${transaction.type === 'income' ? 'text-green-500' : ''}`}>
+                                    {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
                                 </TableCell>
                             </TableRow>
                         ))}
