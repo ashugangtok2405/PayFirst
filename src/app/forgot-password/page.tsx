@@ -15,6 +15,7 @@ import { useAuth, initiatePasswordReset } from '@/firebase'
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form'
 import { useToast } from '@/hooks/use-toast'
 import { Separator } from '@/components/ui/separator'
+import loginBackground from '@/images/loginbackground.png'
 
 const forgotPasswordSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address.' }),
@@ -60,7 +61,7 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-cover bg-center p-4" style={{ backgroundImage: "url('/images/loginbackground.png')" }}>
+    <div className="flex min-h-screen w-full items-center justify-center bg-cover bg-center p-4" style={{ backgroundImage: `url(${loginBackground.src})` }}>
       <Card className="w-full max-w-md mx-auto shadow-xl rounded-2xl bg-card/80 backdrop-blur-sm">
         <CardHeader className="space-y-2 text-center pt-8">
           <div className="flex justify-center mb-4">

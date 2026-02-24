@@ -16,6 +16,7 @@ import { useAuth, useUser, initiateEmailSignIn, initiateGoogleSignIn } from '@/f
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { useToast } from '@/hooks/use-toast'
 import { Separator } from '@/components/ui/separator'
+import loginBackground from '@/images/loginbackground.png'
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="24px" height="24px" {...props}>
@@ -104,7 +105,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-cover bg-center p-4" style={{ backgroundImage: "url('/images/loginbackground.png')" }}>
+    <div className="flex min-h-screen w-full items-center justify-center bg-cover bg-center p-4" style={{ backgroundImage: `url(${loginBackground.src})` }}>
       <Card className="w-full max-w-md mx-auto shadow-xl rounded-2xl bg-card/80 backdrop-blur-sm">
         <CardHeader className="space-y-2 text-center pt-8">
           <div className="flex justify-center mb-4">
