@@ -12,6 +12,7 @@ import loginBackground from '@/images/loginbackground.png'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { Logo } from '@/components/app/logo'
 import { useAuth, useUser, initiateEmailSignIn, initiateGoogleSignIn } from '@/firebase'
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form'
