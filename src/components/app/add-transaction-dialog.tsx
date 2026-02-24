@@ -21,17 +21,13 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Calendar } from '@/components/ui/calendar'
 import {
-  Calendar as CalendarIcon,
   PlusCircle,
   ArrowDown,
   ArrowUp,
   ArrowRightLeft,
   CreditCard as CreditCardIcon,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
 import { useToast } from '@/hooks/use-toast'
 import {
@@ -77,7 +73,7 @@ export function AddTransactionDialog() {
   
   // Common state
   const [amount, setAmount] = useState('')
-  const [date, setDate] = useState<Date | undefined>(new Date())
+  const [date, setDate] = useState(format(new Date(), 'dd/MM/yy'))
   const [notes, setNotes] = useState('')
 
   // Tab-specific state
@@ -109,7 +105,7 @@ export function AddTransactionDialog() {
     setFromAccountId('')
     setToAccountId('')
     setToCreditCardId('')
-    // Keep date as is for convenience
+    setDate(format(new Date(), 'dd/MM/yy'))
   }, [])
   
   useEffect(() => {
@@ -122,11 +118,25 @@ export function AddTransactionDialog() {
       return
     }
 
+    let parsedDate: Date;
+    try {
+        const dateParts = date.split('/');
+        if (dateParts.length !== 3 || dateParts[2].length !== 2) throw new Error();
+        const day = parseInt(dateParts[0], 10);
+        const month = parseInt(dateParts[1], 10) - 1;
+        const year = parseInt(dateParts[2], 10) + 2000;
+        parsedDate = new Date(year, month, day);
+        if (isNaN(parsedDate.getTime())) throw new Error();
+    } catch {
+        toast({ variant: 'destructive', title: 'Invalid Date', description: 'Please use DD/MM/YY format.' });
+        return;
+    }
+
     let transactionData: Partial<Transaction> = {
       userId: user.uid,
       type: activeTab,
       amount: parseFloat(amount),
-      transactionDate: date.toISOString(),
+      transactionDate: parsedDate.toISOString(),
       description: notes || `New ${activeTab.replace('_', ' ')}`,
     }
 
@@ -190,11 +200,6 @@ export function AddTransactionDialog() {
       </DialogTrigger>
       <DialogContent
         className="sm:max-w-md"
-        onPointerDownOutside={(e) => {
-          if ((e.target as HTMLElement).closest('[data-radix-popper-content-wrapper]')) {
-            e.preventDefault()
-          }
-        }}
       >
         <DialogHeader>
           <DialogTitle>Add Transaction</DialogTitle>
@@ -303,18 +308,13 @@ export function AddTransactionDialog() {
             </TabsContent>
 
             <div className="space-y-2">
-                <Label>Date</Label>
-                <Popover>
-                    <PopoverTrigger asChild>
-                        <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}>
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {date ? format(date, "PPP") : <span>Pick a date</span>}
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                        <Calendar mode="single" selected={date} onSelect={setDate} initialFocus />
-                    </PopoverContent>
-                </Popover>
+                <Label htmlFor="date-input">Date</Label>
+                <Input
+                    id="date-input"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    placeholder="DD/MM/YY"
+                />
             </div>
              <div className="space-y-2">
                   <Label htmlFor="notes">Notes (Optional)</Label>

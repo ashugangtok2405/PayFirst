@@ -14,16 +14,13 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Calendar } from '@/components/ui/calendar'
-import { Calendar as CalendarIcon, ArrowRightLeft } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { ArrowRightLeft } from 'lucide-react'
 import { format } from 'date-fns'
 import { useToast } from '@/hooks/use-toast'
 
 export function TransferMoneyDialog() {
   const [open, setOpen] = useState(false)
-  const [date, setDate] = useState<Date>()
+  const [date, setDate] = useState(format(new Date(), 'dd/MM/yy'))
   const { toast } = useToast()
 
   const handleTransfer = () => {
@@ -43,11 +40,6 @@ export function TransferMoneyDialog() {
       </DialogTrigger>
       <DialogContent
         className="sm:max-w-[480px]"
-        onPointerDownOutside={(e) => {
-          if ((e.target as HTMLElement).closest('[data-radix-popper-content-wrapper]')) {
-            e.preventDefault()
-          }
-        }}
       >
         <DialogHeader>
           <DialogTitle>Transfer Money</DialogTitle>
@@ -86,21 +78,12 @@ export function TransferMoneyDialog() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="date">Date</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  id="date"
-                  variant={'outline'}
-                  className={cn('w-full justify-start text-left font-normal', !date && 'text-muted-foreground')}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {date ? format(date, 'PPP') : <span>Pick a date</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar mode="single" selected={date} onSelect={setDate} initialFocus />
-              </PopoverContent>
-            </Popover>
+            <Input 
+              id="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              placeholder="DD/MM/YY"
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="notes">Notes (Optional)</Label>
