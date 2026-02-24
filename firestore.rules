@@ -106,15 +106,6 @@ service cloud.firestore {
     // Collection Rules
     // ----------------------------------------------------------------------
 
-    /**
-     * @description Controls access to a user's primary profile document.
-     * @path /users/{userId}
-     * @allow (get, update, delete) A user (auth.uid='user123') can read, update, or delete their own profile at `/users/user123`.
-     * @allow (create) A new user (auth.uid='user123') can create their own profile document at `/users/user123`, but only if the document's `id` field is also 'user123'.
-     * @deny (list) No user, authenticated or not, can list all documents in the `/users` collection. This prevents user enumeration.
-     * @deny (get) A user (auth.uid='user456') cannot read another user's profile at `/users/user123`.
-     * @principle Restricts access to a user's own data tree and enforces relational integrity at creation.
-     */
     match /users/{userId} {
       allow get: if isOwner(userId);
       allow list: if false;
@@ -122,79 +113,39 @@ service cloud.firestore {
       allow update: if isUpdatingOwnProfile(userId);
       allow delete: if isExistingOwner(userId);
 
-      /**
-       * @description Controls access to a user's spending categories.
-       * @path /users/{userId}/categories/{categoryId}
-       * @allow (all) A user (auth.uid='user123') can perform any read or write operation on their own categories within `/users/user123/categories`.
-       * @deny (all) A user (auth.uid='user456') cannot perform any operation on another user's categories at `/users/user123/categories/{categoryId}`.
-       * @principle Enforces strict data isolation within a user's private subcollections.
-       */
       match /categories/{categoryId} {
-        allow get: if isOwner(userId);
-        allow list: if isOwner(userId);
+        allow read: if isOwner(userId);
         allow create: if isCreatingOwnData(userId);
         allow update: if isUpdatingOwnData(userId);
-        allow delete: if isExistingOwner(userId);
+        allow delete: if isOwner(userId);
       }
 
-      /**
-       * @description Controls access to a user's linked bank accounts.
-       * @path /users/{userId}/bankAccounts/{bankAccountId}
-       * @allow (all) A user (auth.uid='user123') can perform any read or write operation on their own bank accounts within `/users/user123/bankAccounts`.
-       * @deny (all) A user (auth.uid='user456') cannot perform any operation on another user's bank accounts at `/users/user123/bankAccounts/{bankAccountId}`.
-       * @principle Enforces strict data isolation within a user's private subcollections.
-       */
       match /bankAccounts/{bankAccountId} {
-        allow get: if isOwner(userId);
-        allow list: if isOwner(userId);
+        allow read: if isOwner(userId);
         allow create: if isCreatingOwnData(userId);
         allow update: if isUpdatingOwnData(userId);
-        allow delete: if isExistingOwner(userId);
+        allow delete: if isOwner(userId);
       }
 
-      /**
-       * @description Controls access to a user's linked credit cards.
-       * @path /users/{userId}/creditCards/{creditCardId}
-       * @allow (all) A user (auth.uid='user123') can perform any read or write operation on their own credit cards within `/users/user123/creditCards`.
-       * @deny (all) A user (auth.uid='user456') cannot perform any operation on another user's credit cards at `/users/user123/creditCards/{creditCardId}`.
-       * @principle Enforces strict data isolation within a user's private subcollections.
-       */
       match /creditCards/{creditCardId} {
-        allow get: if isOwner(userId);
-        allow list: if isOwner(userId);
+        allow read: if isOwner(userId);
         allow create: if isCreatingOwnData(userId);
         allow update: if isUpdatingOwnData(userId);
-        allow delete: if isExistingOwner(userId);
+        allow delete: if isOwner(userId);
       }
 
-      /**
-       * @description Controls access to a user's financial transactions.
-       * @path /users/{userId}/transactions/{transactionId}
-       * @allow (all) A user (auth.uid='user123') can perform any read or write operation on their own transactions within `/users/user123/transactions`.
-       * @deny (all) A user (auth.uid='user456') cannot perform any operation on another user's transactions at `/users/user123/transactions/{transactionId}`.
-       * @principle Enforces strict data isolation within a user's private subcollections.
-       */
       match /transactions/{transactionId} {
-        allow get: if isOwner(userId);
-        allow list: if isOwner(userId);
+        allow read: if isOwner(userId);
         allow create: if isCreatingOwnData(userId);
         allow update: if isUpdatingOwnData(userId);
-        allow delete: if isExistingOwner(userId);
+        allow delete: if isOwner(userId);
       }
 
-      /**
-       * @description Controls access to a user's 'Pay Yourself First' savings rules.
-       * @path /users/{userId}/savingsRules/{savingsRuleId}
-       * @allow (all) A user (auth.uid='user123') can perform any read or write operation on their own savings rules within `/users/user123/savingsRules`.
-       * @deny (all) A user (auth.uid='user456') cannot perform any operation on another user's savings rules at `/users/user123/savingsRules/{savingsRuleId}`.
-       * @principle Enforces strict data isolation within a user's private subcollections.
-       */
       match /savingsRules/{savingsRuleId} {
-        allow get: if isOwner(userId);
-        allow list: if isOwner(userId);
+        allow read: if isOwner(userId);
         allow create: if isCreatingOwnData(userId);
         allow update: if isUpdatingOwnData(userId);
-        allow delete: if isExistingOwner(userId);
+        allow delete: if isOwner(userId);
       }
     }
   }
