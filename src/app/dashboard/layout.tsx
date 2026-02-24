@@ -1,3 +1,8 @@
+'use client'
+
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useUser } from '@/firebase'
 import { MainNav } from '@/components/app/main-nav'
 import { UserNav } from '@/components/app/user-nav'
 import { Logo } from '@/components/app/logo'
@@ -18,6 +23,23 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
+  const { user, isUserLoading } = useUser()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (!isUserLoading && !user) {
+      router.push('/')
+    }
+  }, [user, isUserLoading, router])
+
+  if (isUserLoading || !user) {
+    return (
+      <div className="flex min-h-screen w-full items-center justify-center">
+        <p>Loading...</p>
+      </div>
+    )
+  }
+
   return (
     <SidebarProvider>
       <Sidebar>
