@@ -5,8 +5,7 @@ import { BankAccounts } from '@/components/app/accounts/bank-accounts'
 import { CreditCardManagement } from '@/components/app/accounts/credit-card-management'
 import { SmartAlerts } from '@/components/app/accounts/smart-alerts'
 import { TransferMoneyDialog } from '@/components/app/accounts/transfer-money-dialog'
-import { Button } from '@/components/ui/button'
-import { PlusCircle } from 'lucide-react'
+import { AddAccountDialog } from '@/components/app/accounts/add-account-dialog'
 
 export default function AccountsPage() {
   return (
@@ -14,7 +13,7 @@ export default function AccountsPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Accounts</h1>
         <div className="flex items-center gap-4">
-            <Button variant="outline">Add Account</Button>
+            <AddAccountDialog />
             <TransferMoneyDialog />
         </div>
       </div>
