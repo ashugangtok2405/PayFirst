@@ -8,12 +8,7 @@ import {
 } from '@/components/ui/accordion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import {
-  PlusCircle,
-  ArrowRightLeft,
-  History,
-  Trash2,
-} from 'lucide-react'
+import { PlusCircle, ArrowRightLeft, History, Trash2 } from 'lucide-react'
 import {
   Table,
   TableBody,
@@ -32,38 +27,10 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { useToast } from '@/hooks/use-toast'
-
-const bankAccounts = [
-  {
-    id: 'acc1',
-    bankName: 'HDFC Bank',
-    accountType: 'Savings Account',
-    balance: 525000,
-    monthlyInflow: 80000,
-    monthlyOutflow: 35000,
-    lastUpdated: '2 days ago',
-    transactions: [
-      { id: 't1', date: '2024-07-22', description: 'Salary Credit', type: 'income', amount: 80000 },
-      { id: 't2', date: '2024-07-21', description: 'Rent Payment', type: 'expense', amount: 25000 },
-      { id: 't3', date: '2024-07-20', description: 'Zomato', type: 'expense', amount: 850 },
-      { id: 't4', date: '2024-07-19', description: 'Online Shopping', type: 'expense', amount: 4200 },
-      { id: 't5', date: '2024-07-18', description: 'Freelance Payment', type: 'income', amount: 15000 },
-    ],
-  },
-  {
-    id: 'acc2',
-    bankName: 'ICICI Bank',
-    accountType: 'Current Account',
-    balance: 315500,
-    monthlyInflow: 120000,
-    monthlyOutflow: 95000,
-    lastUpdated: '1 day ago',
-    transactions: [
-      { id: 't6', date: '2024-07-22', description: 'Client Payment', type: 'income', amount: 50000 },
-      { id: 't7', date: '2024-07-21', description: 'Software Subscription', type: 'expense', amount: 10000 },
-    ]
-  },
-]
+import { useFirestore, useUser, useCollection, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase'
+import { collection, doc } from 'firebase/firestore'
+import type { BankAccount, Transaction } from '@/lib/types'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -76,13 +43,32 @@ const formatCurrency = (amount: number) => {
 
 export function BankAccounts() {
   const { toast } = useToast()
+  const firestore = useFirestore()
+  const { user } = useUser()
 
-  const handleDelete = (accountName: string) => {
+  const bankAccountsQuery = useMemoFirebase(
+    () => user ? collection(firestore, 'users', user.uid, 'bankAccounts') : null,
+    [firestore, user]
+  )
+  const { data: bankAccounts, isLoading: loadingBankAccounts } = useCollection<BankAccount>(bankAccountsQuery)
+
+  const transactionsQuery = useMemoFirebase(
+    () => user ? collection(firestore, 'users', user.uid, 'transactions') : null,
+    [firestore, user]
+  );
+  const { data: transactions, isLoading: loadingTransactions } = useCollection<Transaction>(transactionsQuery);
+
+  const handleDelete = (accountId: string, accountName: string) => {
+    if (!user) return;
+    const docRef = doc(firestore, 'users', user.uid, 'bankAccounts', accountId)
+    deleteDocumentNonBlocking(docRef);
     toast({
       title: 'Bank Account Deleted',
       description: `${accountName} has been removed from your accounts.`,
     })
   }
+  
+  const isLoading = loadingBankAccounts || loadingTransactions;
 
   return (
     <Card>
@@ -90,85 +76,106 @@ export function BankAccounts() {
         <CardTitle>Bank Accounts</CardTitle>
       </CardHeader>
       <CardContent>
-        <Accordion type="single" collapsible className="w-full space-y-4">
-          {bankAccounts.map((account) => (
-            <AccordionItem value={account.id} key={account.id} className="border-b-0">
-                <Card className="rounded-xl">
-                    <div className="p-6">
-                        <AccordionTrigger className="w-full p-0 hover:no-underline">
-                                <div className="flex-1 text-left">
-                                    <div className="flex items-center justify-between">
-                                        <div className="space-y-1">
-                                            <h4 className="font-semibold">{account.bankName}</h4>
-                                            <p className="text-sm text-muted-foreground">{account.accountType}</p>
+        {isLoading ? (
+            <div className="space-y-4">
+                {[...Array(2)].map((_, i) => <Skeleton key={i} className="h-48 w-full rounded-xl" />)}
+            </div>
+        ) : bankAccounts && bankAccounts.length > 0 ? (
+            <Accordion type="single" collapsible className="w-full space-y-4">
+            {bankAccounts.map((account) => {
+                const accountTransactions = transactions?.filter(t => t.fromBankAccountId === account.id || t.toBankAccountId === account.id).sort((a,b) => new Date(b.transactionDate).getTime() - new Date(a.transactionDate).getTime()).slice(0, 5) ?? [];
+                
+                const monthlyInflow = transactions?.filter(t => t.toBankAccountId === account.id && t.type === 'income').reduce((sum, t) => sum + t.amount, 0) ?? 0;
+                const monthlyOutflow = transactions?.filter(t => t.fromBankAccountId === account.id && t.type === 'expense').reduce((sum, t) => sum + t.amount, 0) ?? 0;
+
+                return (
+                <AccordionItem value={account.id} key={account.id} className="border-b-0">
+                    <Card className="rounded-xl">
+                        <div className="p-6">
+                            <AccordionTrigger className="w-full p-0 hover:no-underline">
+                                    <div className="flex-1 text-left">
+                                        <div className="flex items-center justify-between">
+                                            <div className="space-y-1">
+                                                <h4 className="font-semibold">{account.name}</h4>
+                                                <p className="text-sm text-muted-foreground">{account.bankName}</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-2xl font-bold">{formatCurrency(account.currentBalance)}</p>
+                                                <p className="text-xs text-muted-foreground">Updated just now</p>
+                                            </div>
                                         </div>
-                                        <div className="text-right">
-                                            <p className="text-2xl font-bold">{formatCurrency(account.balance)}</p>
-                                            <p className="text-xs text-muted-foreground">Last updated {account.lastUpdated}</p>
+                                        <div className="mt-4 flex justify-between text-sm">
+                                            <div>
+                                                <span className="text-muted-foreground">Inflow: </span>
+                                                <span className="font-medium text-green-600">{formatCurrency(monthlyInflow)}</span>
+                                            </div>
+                                            <div>
+                                                <span className="text-muted-foreground">Outflow: </span>
+                                                <span className="font-medium text-red-600">{formatCurrency(monthlyOutflow)}</span>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="mt-4 flex justify-between text-sm">
-                                        <div>
-                                            <span className="text-muted-foreground">Inflow: </span>
-                                            <span className="font-medium text-green-600">{formatCurrency(account.monthlyInflow)}</span>
-                                        </div>
-                                        <div>
-                                            <span className="text-muted-foreground">Outflow: </span>
-                                            <span className="font-medium text-red-600">{formatCurrency(account.monthlyOutflow)}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                        </AccordionTrigger>
-                        <div className="mt-4 flex items-center gap-2">
-                            <Button size="sm" variant="outline"><PlusCircle className="mr-2 h-4 w-4" /> Add Transaction</Button>
-                            <Button size="sm" variant="outline"><ArrowRightLeft className="mr-2 h-4 w-4" /> Transfer</Button>
-                            <Button size="sm" variant="ghost"><History className="mr-2 h-4 w-4" /> View History</Button>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button size="sm" variant="ghost" className="text-red-500 hover:text-red-500 hover:bg-red-50">
-                                  <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    This action cannot be undone. This will permanently delete your
-                                    bank account and all of its associated data.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => handleDelete(account.bankName)}>
-                                    Delete
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
+                            </AccordionTrigger>
+                            <div className="mt-4 flex items-center gap-2">
+                                <Button size="sm" variant="outline"><PlusCircle className="mr-2 h-4 w-4" /> Add Transaction</Button>
+                                <Button size="sm" variant="outline"><ArrowRightLeft className="mr-2 h-4 w-4" /> Transfer</Button>
+                                <Button size="sm" variant="ghost"><History className="mr-2 h-4 w-4" /> View History</Button>
+                                <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button size="sm" variant="ghost" className="text-red-500 hover:text-red-500 hover:bg-red-50">
+                                    <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        This action cannot be undone. This will permanently delete your
+                                        bank account and all of its associated data.
+                                    </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDelete(account.id, account.name)}>
+                                        Delete
+                                    </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                                </AlertDialog>
+                            </div>
                         </div>
-                    </div>
-                    <AccordionContent className="px-6 pb-6">
-                        <h5 className="font-semibold mb-2">Recent Transactions</h5>
-                        <Table>
-                            <TableBody>
-                                {account.transactions.map((tx) => (
-                                <TableRow key={tx.id}>
-                                    <TableCell>
-                                        <p className="font-medium">{tx.description}</p>
-                                        <p className="text-xs text-muted-foreground">{tx.date}</p>
-                                    </TableCell>
-                                    <TableCell className={`text-right font-medium ${tx.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
-                                        {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount)}
-                                    </TableCell>
-                                </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </AccordionContent>
-                </Card>
-            </AccordionItem>
-          ))}
-        </Accordion>
+                        <AccordionContent className="px-6 pb-6">
+                            <h5 className="font-semibold mb-2">Recent Transactions</h5>
+                            {accountTransactions.length > 0 ? (
+                                <Table>
+                                    <TableBody>
+                                        {accountTransactions.map((tx) => (
+                                        <TableRow key={tx.id}>
+                                            <TableCell>
+                                                <p className="font-medium">{tx.description}</p>
+                                                <p className="text-xs text-muted-foreground">{new Date(tx.transactionDate).toLocaleDateString()}</p>
+                                            </TableCell>
+                                            <TableCell className={`text-right font-medium ${tx.type === 'income' || (tx.type === 'transfer' && tx.toBankAccountId === account.id) ? 'text-green-600' : 'text-red-600'}`}>
+                                                {(tx.type === 'income' || (tx.type === 'transfer' && tx.toBankAccountId === account.id)) ? '+' : '-'}{formatCurrency(tx.amount)}
+                                            </TableCell>
+                                        </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            ) : (
+                                <p className="text-sm text-muted-foreground">No recent transactions for this account.</p>
+                            )}
+                        </AccordionContent>
+                    </Card>
+                </AccordionItem>
+                )})}
+            </Accordion>
+        ) : (
+          <div className="text-center py-10">
+            <p className="text-muted-foreground">No bank accounts found.</p>
+            <p className="text-sm text-muted-foreground">Add a new account to get started.</p>
+          </div>
+        )}
       </CardContent>
     </Card>
   )

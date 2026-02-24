@@ -6,6 +6,8 @@ export interface BankAccount {
   currentBalance: number;
   currency: string;
   isSavingsAccount: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface CreditCard {
@@ -18,6 +20,8 @@ export interface CreditCard {
   creditLimit: number;
   apr: number;
   statementDueDate: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Transaction {

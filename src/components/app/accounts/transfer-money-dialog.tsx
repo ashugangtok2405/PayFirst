@@ -17,13 +17,61 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ArrowRightLeft } from 'lucide-react'
 import { format } from 'date-fns'
 import { useToast } from '@/hooks/use-toast'
+import { useFirestore, useUser, useCollection, useMemoFirebase, addDocumentNonBlocking } from '@/firebase'
+import { collection } from 'firebase/firestore'
+import type { BankAccount, Transaction } from '@/lib/types'
 
 export function TransferMoneyDialog() {
   const [open, setOpen] = useState(false)
+  const [fromAccountId, setFromAccountId] = useState('')
+  const [toAccountId, setToAccountId] = useState('')
+  const [amount, setAmount] = useState('')
   const [date, setDate] = useState(format(new Date(), 'dd/MM/yy'))
+  const [notes, setNotes] = useState('')
+  
   const { toast } = useToast()
+  const firestore = useFirestore()
+  const { user } = useUser()
+
+  const bankAccountsQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'bankAccounts') : null, [firestore, user])
+  const { data: bankAccounts, isLoading } = useCollection<BankAccount>(bankAccountsQuery)
 
   const handleTransfer = () => {
+    if (!user || !fromAccountId || !toAccountId || !amount) {
+        toast({ variant: 'destructive', title: 'Missing Fields', description: 'Please fill out all fields.' })
+        return
+    }
+    if (fromAccountId === toAccountId) {
+        toast({ variant: 'destructive', title: 'Invalid Selection', description: 'From and To accounts cannot be the same.' })
+        return
+    }
+
+    let parsedDate: Date;
+    try {
+        const dateParts = date.split('/');
+        if (dateParts.length !== 3 || dateParts[2].length !== 2) throw new Error();
+        const day = parseInt(dateParts[0], 10);
+        const month = parseInt(dateParts[1], 10) - 1;
+        const year = parseInt(dateParts[2], 10) + 2000;
+        parsedDate = new Date(year, month, day);
+        if (isNaN(parsedDate.getTime())) throw new Error();
+    } catch {
+        toast({ variant: 'destructive', title: 'Invalid Date', description: 'Please use DD/MM/YY format.' });
+        return;
+    }
+
+    const transactionData: Partial<Transaction> = {
+        userId: user.uid,
+        type: 'transfer',
+        amount: parseFloat(amount),
+        fromBankAccountId,
+        toBankAccountId,
+        transactionDate: parsedDate.toISOString(),
+        description: notes || 'Fund Transfer',
+    }
+
+    addDocumentNonBlocking(collection(firestore, 'users', user.uid, 'transactions'), transactionData)
+
     toast({
       title: 'Transfer Successful',
       description: 'The money has been transferred between your accounts.',
@@ -40,6 +88,11 @@ export function TransferMoneyDialog() {
       </DialogTrigger>
       <DialogContent
         className="sm:max-w-[480px]"
+        onInteractOutside={(e) => {
+          if (e.target instanceof HTMLElement && e.target.closest('[data-radix-popper-content-wrapper]')) {
+            e.preventDefault();
+          }
+        }}
       >
         <DialogHeader>
           <DialogTitle>Transfer Money</DialogTitle>
@@ -49,32 +102,30 @@ export function TransferMoneyDialog() {
           <div className="grid grid-cols-2 items-center gap-4">
             <div className="space-y-2">
               <Label htmlFor="from-account">From Account</Label>
-              <Select>
+              <Select value={fromAccountId} onValueChange={setFromAccountId} disabled={isLoading}>
                 <SelectTrigger id="from-account">
                   <SelectValue placeholder="Select account" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="hdfc-savings">HDFC Savings (₹5,25,000)</SelectItem>
-                  <SelectItem value="icici-current">ICICI Current (₹3,15,500)</SelectItem>
+                  {bankAccounts?.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="to-account">To Account</Label>
-              <Select>
+              <Select value={toAccountId} onValueChange={setToAccountId} disabled={isLoading}>
                 <SelectTrigger id="to-account">
                   <SelectValue placeholder="Select account" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="hdfc-savings">HDFC Savings (₹5,25,000)</SelectItem>
-                  <SelectItem value="icici-current">ICICI Current (₹3,15,500)</SelectItem>
+                  {bankAccounts?.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="amount">Amount</Label>
-            <Input id="amount" type="number" placeholder="₹0.00" />
+            <Input id="amount" type="number" placeholder="₹0.00" value={amount} onChange={e => setAmount(e.target.value)} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="date">Date</Label>
@@ -87,15 +138,15 @@ export function TransferMoneyDialog() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="notes">Notes (Optional)</Label>
-            <Input id="notes" placeholder="e.g., For monthly investment" />
+            <Input id="notes" placeholder="e.g., For monthly investment" value={notes} onChange={e => setNotes(e.target.value)} />
           </div>
         </div>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => setOpen(false)}>
             Cancel
           </Button>
-          <Button type="submit" onClick={handleTransfer}>
-            Confirm Transfer
+          <Button type="submit" onClick={handleTransfer} disabled={isLoading}>
+            {isLoading ? "Loading..." : "Confirm Transfer"}
           </Button>
         </DialogFooter>
       </DialogContent>
