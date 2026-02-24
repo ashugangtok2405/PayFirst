@@ -129,7 +129,7 @@ export default function SignupPage() {
         }}
       />
 
-      <Card className="relative w-full max-w-md rounded-3xl bg-white/10 backdrop-blur-xl border border-white/20 shadow-[0_0_40px_rgba(59,130,246,0.4)]">
+      <Card className="relative w-full max-w-lg rounded-3xl bg-white/10 backdrop-blur-xl border-2 border-white/20 shadow-[0_0_60px_rgba(59,130,246,0.6)]">
         <CardContent className="p-8">
           <div className="flex justify-center mb-6">
             <Logo />
