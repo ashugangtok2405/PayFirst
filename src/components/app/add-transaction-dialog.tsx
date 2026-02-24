@@ -37,14 +37,39 @@ import { useToast } from '@/hooks/use-toast'
 import {
   useFirestore,
   useUser,
-  useCollection,
-  useMemoFirebase,
   addDocumentNonBlocking,
 } from '@/firebase'
-import { collection, query, where } from 'firebase/firestore'
+import { collection } from 'firebase/firestore'
 import type { BankAccount, CreditCard, Category, Transaction } from '@/lib/types'
 
 type TransactionType = 'expense' | 'income' | 'transfer' | 'credit_card_payment'
+
+// Dummy data to populate the dropdowns for UI demonstration
+const dummyCategories: Category[] = [
+    { id: 'cat-exp-1', userId: 'dummy', name: 'Groceries', type: 'expense', isDefault: true },
+    { id: 'cat-exp-2', userId: 'dummy', name: 'Transport', type: 'expense', isDefault: true },
+    { id: 'cat-exp-3', userId: 'dummy', name: 'Entertainment', type: 'expense', isDefault: true },
+    { id: 'cat-exp-4', userId: 'dummy', name: 'Bills', type: 'expense', isDefault: true },
+    { id: 'cat-exp-5', userId: 'dummy', name: 'Food', type: 'expense', isDefault: true },
+    { id: 'cat-exp-6', userId: 'dummy', name: 'Shopping', type: 'expense', isDefault: true },
+    { id: 'cat-exp-7', userId: 'dummy', name: 'Utilities', type: 'expense', isDefault: true },
+    { id: 'cat-exp-8', userId: 'dummy', name: 'Rent', type: 'expense', isDefault: true },
+    { id: 'cat-inc-1', userId: 'dummy', name: 'Salary', type: 'income', isDefault: true },
+    { id: 'cat-inc-2', userId: 'dummy', name: 'Freelance', type: 'income', isDefault: true },
+    { id: 'cat-inc-3', userId: 'dummy', name: 'Investment', type: 'income', isDefault: true },
+    { id: 'cat-inc-4', userId: 'dummy', name: 'Other', type: 'income', isDefault: true },
+  ];
+
+const dummyBankAccounts: BankAccount[] = [
+    { id: 'acc1', userId: 'dummy', name: 'HDFC Savings', bankName: 'HDFC Bank', currentBalance: 525000, currency: 'INR', isSavingsAccount: true },
+    { id: 'acc2', userId: 'dummy', name: 'ICICI Current', bankName: 'ICICI Bank', currentBalance: 315500, currency: 'INR', isSavingsAccount: false },
+  ];
+
+const dummyCreditCards: CreditCard[] = [
+    { id: 'cc1', userId: 'dummy', name: 'HDFC Millennia', issuer: 'HDFC Bank', lastFourDigits: '1111', currentBalance: 45200, creditLimit: 150000, apr: 15, statementDueDate: new Date().toISOString() },
+    { id: 'cc2', userId: 'dummy', name: 'ICICI Amazon Pay', issuer: 'ICICI Bank', lastFourDigits: '2222', currentBalance: 15000, creditLimit: 200000, apr: 16, statementDueDate: new Date().toISOString() },
+  ];
+
 
 export function AddTransactionDialog() {
   const [open, setOpen] = useState(false)
@@ -68,15 +93,10 @@ export function AddTransactionDialog() {
   const firestore = useFirestore()
   const { user } = useUser()
 
-  // Data fetching
-  const bankAccountsQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'bankAccounts') : null, [firestore, user])
-  const { data: bankAccounts } = useCollection<BankAccount>(bankAccountsQuery)
-
-  const creditCardsQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'creditCards') : null, [firestore, user])
-  const { data: creditCards } = useCollection<CreditCard>(creditCardsQuery)
-  
-  const categoriesQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'categories') : null, [firestore, user])
-  const { data: categories } = useCollection<Category>(categoriesQuery)
+  // Using dummy data for UI demonstration
+  const bankAccounts = dummyBankAccounts;
+  const creditCards = dummyCreditCards;
+  const categories = dummyCategories;
 
   const expenseCategories = useMemo(() => categories?.filter(c => c.type === 'expense') ?? [], [categories])
   const incomeCategories = useMemo(() => categories?.filter(c => c.type === 'income') ?? [], [categories])
