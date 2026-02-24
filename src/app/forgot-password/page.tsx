@@ -61,7 +61,7 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative">
+    <div className="min-h-screen flex items-center justify-center lg:justify-end p-4 lg:pr-32 xl:pr-48 relative">
         <Image
             alt="Background"
             src={loginBackground}

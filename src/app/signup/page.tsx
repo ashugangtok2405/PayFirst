@@ -12,7 +12,6 @@ import loginBackground from '@/images/loginbackground.png'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import { Logo } from '@/components/app/logo'
 import { useAuth, useUser, initiateEmailSignUp, initiateGoogleSignIn } from '@/firebase'
 import { Form, FormControl, FormField, FormMessage, FormItem } from '@/components/ui/form'
@@ -116,7 +115,7 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative">
+    <div className="min-h-screen flex items-center justify-center lg:justify-end p-4 lg:pr-32 xl:pr-48 relative">
       <Image
         alt="Background"
         src={loginBackground}
