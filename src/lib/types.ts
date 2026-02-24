@@ -23,15 +23,15 @@ export interface CreditCard {
 export interface Transaction {
   id: string;
   userId?: string;
-  type: 'income' | 'expense';
+  type: 'income' | 'expense' | 'transfer' | 'credit_card_payment';
   amount: number;
   description: string;
-  transactionDate?: string;
-  date?: string;
+  transactionDate: string;
   categoryId?: string;
   fromBankAccountId?: string;
   toBankAccountId?: string;
   fromCreditCardId?: string;
+  toCreditCardId?: string;
 }
 
 export interface Category {

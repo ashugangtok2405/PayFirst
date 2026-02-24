@@ -245,7 +245,11 @@
         },
         "toBankAccountId": {
           "type": "string",
-          "description": "Reference to the BankAccount into which funds were credited (for income, transfers in, savings deposits, credit card payments). (Relationship: BankAccount 1:N Transaction)"
+          "description": "Reference to the BankAccount into which funds were credited (for income, transfers in, savings deposits). (Relationship: BankAccount 1:N Transaction)"
+        },
+        "toCreditCardId": {
+          "type": "string",
+          "description": "Reference to the CreditCard to which a payment was made. (Relationship: CreditCard 1:N Transaction)"
         }
       },
       "required": [
