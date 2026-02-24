@@ -41,7 +41,14 @@ export function TransferMoneyDialog() {
           <ArrowRightLeft className="mr-2 h-4 w-4" /> Transfer Money
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[480px]">
+      <DialogContent
+        className="sm:max-w-[480px]"
+        onPointerDownOutside={(e) => {
+          if ((e.target as HTMLElement).closest('[data-radix-popper-content-wrapper]')) {
+            e.preventDefault()
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Transfer Money</DialogTitle>
           <DialogDescription>Move funds between your accounts.</DialogDescription>
@@ -90,7 +97,7 @@ export function TransferMoneyDialog() {
                   {date ? format(date, 'PPP') : <span>Pick a date</span>}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent onPointerDownOutside={(e) => e.preventDefault()} className="w-auto p-0">
+              <PopoverContent className="w-auto p-0">
                 <Calendar mode="single" selected={date} onSelect={setDate} initialFocus />
               </PopoverContent>
             </Popover>

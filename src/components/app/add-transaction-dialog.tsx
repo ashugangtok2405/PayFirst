@@ -188,7 +188,14 @@ export function AddTransactionDialog() {
           <PlusCircle className="mr-2 h-4 w-4" /> Add Transaction
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent
+        className="sm:max-w-md"
+        onPointerDownOutside={(e) => {
+          if ((e.target as HTMLElement).closest('[data-radix-popper-content-wrapper]')) {
+            e.preventDefault()
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Add Transaction</DialogTitle>
           <DialogDescription>Log a new income, expense, or transfer.</DialogDescription>
@@ -304,7 +311,7 @@ export function AddTransactionDialog() {
                             {date ? format(date, "PPP") : <span>Pick a date</span>}
                         </Button>
                     </PopoverTrigger>
-                    <PopoverContent onPointerDownOutside={(e) => e.preventDefault()} className="w-auto p-0">
+                    <PopoverContent className="w-auto p-0">
                         <Calendar mode="single" selected={date} onSelect={setDate} initialFocus />
                     </PopoverContent>
                 </Popover>
