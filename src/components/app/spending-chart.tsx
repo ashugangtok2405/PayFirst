@@ -12,15 +12,28 @@ const monthlySpending = [
 ];
 
 export function SpendingChart() {
+    const CustomTooltip = ({ active, payload, label }: any) => {
+        if (active && payload && payload.length) {
+          return (
+            <div className="rounded-lg border bg-background p-2 shadow-sm">
+                <p className="font-medium">{label}</p>
+                <p className="text-sm text-muted-foreground">total: {payload[0].value}</p>
+            </div>
+          );
+        }
+      
+        return null;
+    };
+
     return (
         <Card>
             <CardHeader className="flex flex-row justify-between items-center">
                 <div>
                     <CardTitle>Spending Overview</CardTitle>
                 </div>
-                <Select defaultValue="6">
+                <Select defaultValue="all">
                     <SelectTrigger className="w-[150px]">
-                        <SelectValue placeholder="Last 6 Months" />
+                        <SelectValue placeholder="All Time" />
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem value="6">Last 6 Months</SelectItem>
@@ -43,9 +56,18 @@ export function SpendingChart() {
                         <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `₹${Number(value) / 1000}k`} />
                         <Tooltip
                             cursor={{ stroke: 'hsl(var(--primary))', strokeWidth: 1, strokeDasharray: '3 3' }}
-                            contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: 'var(--radius)' }}
+                            content={<CustomTooltip />}
                         />
-                        <Area type="monotone" dataKey="total" stroke="hsl(var(--primary))" strokeWidth={2} fillOpacity={1} fill="url(#colorTotal)" />
+                        <Area 
+                            type="monotone" 
+                            dataKey="total" 
+                            stroke="hsl(var(--primary))" 
+                            strokeWidth={2} 
+                            fillOpacity={1} 
+                            fill="url(#colorTotal)"
+                            dot={{ r: 4, fill: 'hsl(var(--primary))', stroke: 'hsl(var(--card))', strokeWidth: 2 }}
+                            activeDot={{ r: 6, stroke: 'hsl(var(--card))', strokeWidth: 2 }}
+                        />
                     </AreaChart>
                 </ResponsiveContainer>
             </CardContent>
