@@ -116,8 +116,9 @@ export default function TransactionsPage() {
     return { currentSummary: current, previousSummary: previous, daysInPeriod: numDays, previousDaysInPeriod: prevNumDays }
   }, [filteredTransactions, previousPeriodTransactions, dateRange])
   
-  const averageDailySpend = currentSummary.expense / daysInPeriod;
-  const previousAverageDailySpend = previousSummary.expense / previousDaysInPeriod;
+  const averageDailySpend = isFinite(currentSummary.expense / daysInPeriod) ? currentSummary.expense / daysInPeriod : 0;
+  const previousAverageDailySpend = isFinite(previousSummary.expense / previousDaysInPeriod) ? previousSummary.expense / previousDaysInPeriod : 0;
+  const projectedMonthlySpend = averageDailySpend * 30;
 
   return (
     <div className="space-y-6">
@@ -148,6 +149,7 @@ export default function TransactionsPage() {
             previousSummary={previousSummary}
             averageDailySpend={averageDailySpend}
             previousAverageDailySpend={previousAverageDailySpend}
+            projectedMonthlySpend={projectedMonthlySpend}
           />
           <SmartInsights
             transactions={filteredTransactions}

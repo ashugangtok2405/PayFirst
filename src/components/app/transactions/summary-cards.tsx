@@ -34,12 +34,10 @@ const ChangeIndicator = ({ value, invertColors = false, prefix = "vs last period
     )
 }
 
-export function SummaryCards({ currentSummary, previousSummary, averageDailySpend, previousAverageDailySpend, daysInPeriod }: any) {
+export function SummaryCards({ currentSummary, previousSummary, averageDailySpend, previousAverageDailySpend, projectedMonthlySpend }: any) {
     const incomeChange = calculatePercentageChange(currentSummary.income, previousSummary.income)
     const expenseChange = calculatePercentageChange(currentSummary.expense, previousSummary.expense)
     
-    const projectedMonthlySpend = averageDailySpend * 30;
-
     return (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card>
