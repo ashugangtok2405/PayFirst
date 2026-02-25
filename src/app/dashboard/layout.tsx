@@ -21,6 +21,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { AddTransactionDialog } from '@/components/app/add-transaction-dialog'
 import { Button } from '@/components/ui/button'
 import { AddAccountDialog } from '@/components/app/accounts/add-account-dialog'
+import { RecurringProcessor } from '@/components/app/recurring-processor'
 
 export default function DashboardLayout({
   children,
@@ -51,6 +52,7 @@ export default function DashboardLayout({
 
   return (
     <SidebarProvider>
+      <RecurringProcessor />
       <Sidebar>
         <div className="flex h-full flex-col justify-between">
           <div>

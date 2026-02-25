@@ -48,7 +48,7 @@ export interface Category {
 }
 
 export interface RecurringTransaction {
-  id: string;
+  id:string;
   userId: string;
   description: string;
   amount: number;
@@ -64,4 +64,6 @@ export interface RecurringTransaction {
   fromCreditCardId?: string;
   toCreditCardId?: string;
   autoCreate: boolean;
+  active: boolean;
+  createdAt: string;
 }

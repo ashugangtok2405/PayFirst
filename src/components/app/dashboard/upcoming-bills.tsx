@@ -6,8 +6,8 @@ import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase'
-import { collection } from 'firebase/firestore'
-import type { CreditCard } from '@/lib/types'
+import { collection, query, where } from 'firebase/firestore'
+import type { CreditCard, RecurringTransaction } from '@/lib/types'
 import { differenceInDays, isFuture, isPast, parseISO, startOfToday, format as formatDate } from 'date-fns'
 
 const formatCurrency = (amount: number) => {
@@ -27,42 +27,74 @@ export function UpcomingBills() {
         () => user ? collection(firestore, 'users', user.uid, 'creditCards') : null,
         [firestore, user]
     )
-    const { data: creditCards, isLoading } = useCollection<CreditCard>(creditCardsQuery)
+    const { data: creditCards, isLoading: loadingCreditCards } = useCollection<CreditCard>(creditCardsQuery)
     
+    const recurringQuery = useMemoFirebase(
+        () => user ? query(
+            collection(firestore, 'users', user.uid, 'recurringTransactions'),
+            where('active', '==', true),
+            where('autoCreate', '==', false) // Only get reminders
+        ) : null,
+        [firestore, user]
+    )
+    const { data: recurringTransactions, isLoading: loadingRecurring } = useCollection<RecurringTransaction>(recurringQuery)
+    
+    const isLoading = loadingCreditCards || loadingRecurring
+
     const upcomingBills = useMemo(() => {
-        if (!creditCards) return [];
+        if (!creditCards && !recurringTransactions) return [];
         
         const today = startOfToday();
+        const bills = [];
 
-        const billsFromCards = creditCards.map(card => {
-            try {
-                const dueDate = parseISO(card.statementDueDate);
-                const daysUntilDue = differenceInDays(dueDate, today);
-                const isOverdue = isPast(dueDate) && card.currentBalance > 0 && daysUntilDue < 0;
-                
-                // We only care about bills due in the next 30 days or overdue
-                if (card.currentBalance > 0 && (isOverdue || (isFuture(dueDate) && daysUntilDue <= 30))) {
-                    return {
-                        id: card.id,
-                        name: card.name,
-                        dueDate: dueDate,
-                        amount: card.currentBalance,
-                        isOverdue: isOverdue,
-                        daysUntilDue: daysUntilDue
-                    };
-                }
-            } catch (e) {
-                // Ignore invalid dates
+        // Credit Card Bills
+        if (creditCards) {
+            for (const card of creditCards) {
+                try {
+                    const dueDate = parseISO(card.statementDueDate);
+                    const daysUntilDue = differenceInDays(dueDate, today);
+                    const isOverdue = isPast(dueDate) && card.currentBalance > 0 && daysUntilDue < 0;
+                    
+                    if (card.currentBalance > 0 && (isOverdue || (isFuture(dueDate) && daysUntilDue <= 30))) {
+                        bills.push({
+                            id: `cc-${card.id}`,
+                            name: card.name,
+                            dueDate: dueDate,
+                            amount: card.currentBalance,
+                            isOverdue: isOverdue,
+                            daysUntilDue: daysUntilDue
+                        });
+                    }
+                } catch (e) { /* Ignore invalid dates */ }
             }
-            return null;
-        }).filter(Boolean);
+        }
+        
+        // Recurring Transactions (as reminders)
+        if (recurringTransactions) {
+            for (const item of recurringTransactions) {
+                 try {
+                    const dueDate = parseISO(item.nextGenerationDate);
+                    const daysUntilDue = differenceInDays(dueDate, today);
+                     const isOverdue = isPast(dueDate) && daysUntilDue < 0;
 
-        // For now, we are just using credit card bills.
+                    if (isOverdue || (isFuture(dueDate) && daysUntilDue <= 30)) {
+                         bills.push({
+                            id: `rec-${item.id}`,
+                            name: item.description,
+                            dueDate: dueDate,
+                            amount: item.amount,
+                            isOverdue: isOverdue,
+                            daysUntilDue: daysUntilDue
+                        });
+                    }
+                 } catch (e) { /* Ignore invalid dates */ }
+            }
+        }
         
         // Sort by due date
-        return billsFromCards.sort((a, b) => a!.dueDate.getTime() - b!.dueDate.getTime());
+        return bills.sort((a, b) => a!.dueDate.getTime() - b!.dueDate.getTime());
 
-    }, [creditCards]);
+    }, [creditCards, recurringTransactions]);
 
 
     const renderLoading = () => (
