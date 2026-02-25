@@ -54,9 +54,9 @@ export function FinancialHealthAnalysis() {
   
   const isLoading = loadingTransactions || loadingBankAccounts || loadingCreditCards || loadingLoans;
 
-  // --- Core Metric Calculations ---
-  const calculatedMetrics = useMemo(() => {
-    if (!recentTransactions || !bankAccounts || !creditCards || !loans) return null;
+  // --- Core Metric Calculations for AI input ---
+  const calculatedMetricsForAI = useMemo(() => {
+    if (isLoading || !recentTransactions || !bankAccounts || !creditCards || !loans) return null;
 
     const now = new Date();
     const currentMonthStart = startOfMonth(now);
@@ -81,7 +81,6 @@ export function FinancialHealthAnalysis() {
         return getMonthlyTotals(startOfMonth(date), endOfMonth(date)).expense;
     });
 
-    const monthlyBurnRate = last3MonthsExpenses.reduce((s, e) => s + e, 0) / (last3MonthsExpenses.filter(e => e > 0).length || 1);
     const liquidAssets = bankAccounts.reduce((s, a) => s + a.currentBalance, 0);
     const totalMonthlyEmi = loans.reduce((s, l) => s + l.emiAmount, 0);
     const totalCreditOutstanding = creditCards.reduce((s, c) => s + c.currentBalance, 0);
@@ -96,10 +95,10 @@ export function FinancialHealthAnalysis() {
         totalCreditOutstanding: totalCreditOutstanding,
         totalCreditLimit: totalCreditLimit,
     };
-  }, [recentTransactions, bankAccounts, creditCards, loans]);
+  }, [isLoading, recentTransactions, bankAccounts, creditCards, loans]);
 
   const handleGenerate = async () => {
-    if (!calculatedMetrics) {
+    if (!calculatedMetricsForAI) {
       setError("Not enough data to generate insights. Please add transactions and accounts.")
       return
     }
@@ -108,7 +107,7 @@ export function FinancialHealthAnalysis() {
     setError(null)
     setAnalysis(null)
     
-    const result = await getFinancialHealthAnalysisAction(calculatedMetrics as FinancialHealthInput)
+    const result = await getFinancialHealthAnalysisAction(calculatedMetricsForAI as FinancialHealthInput)
     if (result.success && result.data) {
       setAnalysis(result.data)
     } else {
@@ -152,17 +151,12 @@ export function FinancialHealthAnalysis() {
   )
 
   const renderAnalysis = () => {
-    if (!analysis || !calculatedMetrics) return null;
-    const { savingsRate, debtToIncome, cashRunwayMonths, creditUtilization } = {
-        savingsRate: calculatedMetrics.monthlyIncome > 0 ? ((calculatedMetrics.monthlyIncome - calculatedMetrics.monthlyExpense) / calculatedMetrics.monthlyIncome) * 100 : (calculatedMetrics.monthlyExpense > 0 ? -100 : 0),
-        debtToIncome: calculatedMetrics.monthlyIncome > 0 ? (calculatedMetrics.totalMonthlyEmi / calculatedMetrics.monthlyIncome) * 100 : 100,
-        cashRunwayMonths: calculatedMetrics.monthlyBurnRate > 0 ? calculatedMetrics.liquidAssets / calculatedMetrics.monthlyBurnRate : Infinity,
-        creditUtilization: calculatedMetrics.totalCreditLimit > 0 ? (calculatedMetrics.totalCreditOutstanding / calculatedMetrics.totalCreditLimit) * 100 : 0
-    };
+    if (!analysis) return null;
+    const { savingsRate, debtToIncomeRatio, cashRunwayMonths, creditUtilization } = analysis;
 
     const metricCards = [
         { title: "Savings Rate", value: formatPercent(savingsRate), icon: TrendingUp, good: savingsRate > 15 },
-        { title: "Debt-to-Income", value: formatPercent(debtToIncome), icon: DollarSign, good: debtToIncome < 30 },
+        { title: "Debt-to-Income", value: formatPercent(debtToIncomeRatio), icon: DollarSign, good: debtToIncomeRatio < 30 },
         { title: "Cash Runway", value: formatMonths(cashRunwayMonths), icon: Wallet, good: cashRunwayMonths > 4 },
         { title: "Credit Utilization", value: formatPercent(creditUtilization), icon: ShieldAlert, good: creditUtilization < 30 },
     ];
