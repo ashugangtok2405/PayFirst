@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, doc, query, where, runTransaction } from 'firebase/firestore';
 import { addDays, addMonths, addWeeks, addYears, isAfter, parseISO } from 'date-fns';
@@ -17,13 +17,17 @@ export function useRecurringProcessor() {
     if (!user || !firestore) return null;
     return query(
       collection(firestore, 'users', user.uid, 'recurringTransactions'),
-      where('active', '==', true),
-      where('autoCreate', '==', true),
       where('nextGenerationDate', '<=', new Date().toISOString())
     );
   }, [user, firestore]);
 
-  const { data: dueTransactions, isLoading } = useCollection<RecurringTransaction>(recurringQuery);
+  const { data: allDueRecurring } = useCollection<RecurringTransaction>(recurringQuery);
+
+  const dueTransactions = useMemo(() => {
+    if (!allDueRecurring) return [];
+    return allDueRecurring.filter(t => t.active && t.autoCreate);
+  }, [allDueRecurring]);
+
 
   useEffect(() => {
     if (!dueTransactions || dueTransactions.length === 0 || isProcessing || !firestore || !user) {
@@ -78,25 +82,49 @@ export function useRecurringProcessor() {
 
               if (type === 'income' && freshRecurring.toBankAccountId) {
                   const accRef = doc(firestore, 'users', user.uid, 'bankAccounts', freshRecurring.toBankAccountId);
-                  tx.update(accRef, { $currentBalance: { increment: amount } });
+                  const accDoc = await tx.get(accRef);
+                  if (accDoc.exists()) {
+                      const newBalance = accDoc.data().currentBalance + amount;
+                      tx.update(accRef, { currentBalance: newBalance });
+                  }
               } else if (type === 'expense') {
                   if (freshRecurring.fromBankAccountId) {
                       const accRef = doc(firestore, 'users', user.uid, 'bankAccounts', freshRecurring.fromBankAccountId);
-                      tx.update(accRef, { $currentBalance: { increment: -amount } });
+                      const accDoc = await tx.get(accRef);
+                      if (accDoc.exists()) {
+                          const newBalance = accDoc.data().currentBalance - amount;
+                          tx.update(accRef, { currentBalance: newBalance });
+                      }
                   } else if (freshRecurring.fromCreditCardId) {
                       const cardRef = doc(firestore, 'users', user.uid, 'creditCards', freshRecurring.fromCreditCardId);
-                      tx.update(cardRef, { $currentBalance: { increment: amount } });
+                      const cardDoc = await tx.get(cardRef);
+                      if (cardDoc.exists()) {
+                          const newBalance = cardDoc.data().currentBalance + amount;
+                          tx.update(cardRef, { currentBalance: newBalance });
+                      }
                   }
               } else if (type === 'transfer' && freshRecurring.fromBankAccountId && freshRecurring.toBankAccountId) {
                   const fromRef = doc(firestore, 'users', user.uid, 'bankAccounts', freshRecurring.fromBankAccountId);
                   const toRef = doc(firestore, 'users', user.uid, 'bankAccounts', freshRecurring.toBankAccountId);
-                  tx.update(fromRef, { $currentBalance: { increment: -amount } });
-                  tx.update(toRef, { $currentBalance: { increment: amount } });
+                  const fromDoc = await tx.get(fromRef);
+                  if(fromDoc.exists()){
+                      tx.update(fromRef, { currentBalance: fromDoc.data().currentBalance - amount });
+                  }
+                  const toDoc = await tx.get(toRef);
+                  if(toDoc.exists()){
+                      tx.update(toRef, { currentBalance: toDoc.data().currentBalance + amount });
+                  }
               } else if (type === 'credit_card_payment' && freshRecurring.fromBankAccountId && freshRecurring.toCreditCardId) {
                   const bankRef = doc(firestore, 'users', user.uid, 'bankAccounts', freshRecurring.fromBankAccountId);
                   const cardRef = doc(firestore, 'users', user.uid, 'creditCards', freshRecurring.toCreditCardId);
-                  tx.update(bankRef, { $currentBalance: { increment: -amount } });
-                  tx.update(cardRef, { $currentBalance: { increment: -amount } });
+                  const bankDoc = await tx.get(bankRef);
+                  if(bankDoc.exists()){
+                    tx.update(bankRef, { currentBalance: bankDoc.data().currentBalance - amount });
+                  }
+                  const cardDoc = await tx.get(cardRef);
+                  if(cardDoc.exists()){
+                    tx.update(cardRef, { currentBalance: cardDoc.data().currentBalance - amount });
+                  }
               }
 
               lastGeneratedThisRun = nextDate;

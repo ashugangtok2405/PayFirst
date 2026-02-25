@@ -32,12 +32,15 @@ export function UpcomingBills() {
     const recurringQuery = useMemoFirebase(
         () => user ? query(
             collection(firestore, 'users', user.uid, 'recurringTransactions'),
-            where('active', '==', true),
-            where('autoCreate', '==', false) // Only get reminders
+            where('active', '==', true)
         ) : null,
         [firestore, user]
     )
-    const { data: recurringTransactions, isLoading: loadingRecurring } = useCollection<RecurringTransaction>(recurringQuery)
+    const { data: activeRecurring, isLoading: loadingRecurring } = useCollection<RecurringTransaction>(recurringQuery)
+
+    const recurringTransactions = useMemo(() => {
+        return activeRecurring?.filter(t => t.autoCreate === false);
+    }, [activeRecurring]);
     
     const isLoading = loadingCreditCards || loadingRecurring
 
