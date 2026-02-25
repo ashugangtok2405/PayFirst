@@ -130,7 +130,7 @@ export function CashFlowChart() {
                     </div>
                     {isLoading ? (
                         <div className="mt-6 grid grid-cols-3 gap-4 text-center">
-                            {[...Array(3)].map(i => <Skeleton key={i} className="h-12 w-full" />)}
+                            {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
                         </div>
                     ) : (
                         <div className="mt-6 grid grid-cols-3 gap-4 text-center">
