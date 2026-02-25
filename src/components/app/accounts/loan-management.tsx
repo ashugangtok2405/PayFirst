@@ -4,7 +4,7 @@ import { useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
-import { MoreHorizontal, Edit, Trash2, BadgeIndianRupee } from 'lucide-react'
+import { MoreHorizontal, Edit, Trash2, BadgeIndianRupee, PlusCircle } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,6 +29,7 @@ import { collection, doc } from 'firebase/firestore'
 import type { Loan } from '@/lib/types'
 import { Skeleton } from '@/components/ui/skeleton'
 import { PayEmiDialog } from './pay-emi-dialog'
+import { AddAccountDialog } from './add-account-dialog'
 
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('en-IN', {
@@ -62,8 +63,14 @@ export function LoanManagement() {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Loan Management</CardTitle>
+        <AddAccountDialog defaultType="loan">
+            <Button variant="outline" size="sm">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add Loan
+            </Button>
+        </AddAccountDialog>
       </CardHeader>
       <CardContent className="space-y-6">
         {isLoading ? (
@@ -167,9 +174,14 @@ export function LoanManagement() {
             )
           })
         ) : (
-          <div className="text-center py-10">
-            <p className="text-muted-foreground">No loans found.</p>
-            <p className="text-sm text-muted-foreground">Add a new loan to get started.</p>
+          <div className="text-center py-10 space-y-4">
+            <div>
+              <p className="text-muted-foreground">No loans found.</p>
+              <p className="text-sm text-muted-foreground">Add a new loan to get started.</p>
+            </div>
+            <AddAccountDialog defaultType="loan">
+              <Button><PlusCircle className="mr-2 h-4 w-4"/>Add Your First Loan</Button>
+            </AddAccountDialog>
           </div>
         )}
       </CardContent>
