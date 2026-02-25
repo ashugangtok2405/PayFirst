@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { AlertCircle, Zap, ArrowRight, ShieldCheck, CalendarClock } from 'lucide-react'
@@ -31,6 +31,7 @@ const formatCurrency = (amount: number) => {
 export function SmartAlertsDashboard() {
     const firestore = useFirestore()
     const { user } = useUser()
+    const [showAll, setShowAll] = useState(false)
 
     const now = new Date()
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
@@ -58,23 +59,21 @@ export function SmartAlertsDashboard() {
 
     // Alert generation logic
     const alerts: Alert[] = useMemo(() => {
-        if (isLoading || !user) return [];
+        if (!bankAccounts || !creditCards || !transactions) return [];
 
         const generatedAlerts: Alert[] = [];
         const now = new Date();
 
         // Low balance alerts
-        if (bankAccounts) {
-            const LOW_BALANCE_THRESHOLD = 5000;
-            for (const account of bankAccounts) {
-                if (!account.isSavingsAccount && account.currentBalance < LOW_BALANCE_THRESHOLD) {
-                    generatedAlerts.push({
-                        id: `low-balance-${account.id}`,
-                        type: 'balance',
-                        severity: 'warning',
-                        message: `Your ${account.name} balance is low: ${formatCurrency(account.currentBalance)}.`,
-                    });
-                }
+        const LOW_BALANCE_THRESHOLD = 5000;
+        for (const account of bankAccounts) {
+            if (!account.isSavingsAccount && account.currentBalance < LOW_BALANCE_THRESHOLD) {
+                generatedAlerts.push({
+                    id: `low-balance-${account.id}`,
+                    type: 'balance',
+                    severity: 'warning',
+                    message: `Your ${account.name} balance is low: ${formatCurrency(account.currentBalance)}.`,
+                });
             }
         }
         
@@ -120,26 +119,24 @@ export function SmartAlertsDashboard() {
         }
 
         // Low Savings Rate Alert
-        if (transactions) {
-            const totalIncome = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
-            const totalExpense = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
-            
-            if (totalIncome > 0) {
-                const savings = totalIncome - totalExpense;
-                const savingsRate = (savings / totalIncome) * 100;
-                if (savingsRate < 10) {
-                     generatedAlerts.push({
-                        id: 'low-savings-rate',
-                        type: 'savings',
-                        severity: 'warning',
-                        message: `Your savings rate is low this month (${savingsRate.toFixed(0)}%).`,
-                    });
-                }
+        const totalIncome = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+        const totalExpense = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+        
+        if (totalIncome > 0) {
+            const savings = totalIncome - totalExpense;
+            const savingsRate = (savings / totalIncome) * 100;
+            if (savingsRate < 10) {
+                 generatedAlerts.push({
+                    id: 'low-savings-rate',
+                    type: 'savings',
+                    severity: 'warning',
+                    message: `Your savings rate is low this month (${savingsRate.toFixed(0)}%).`,
+                });
             }
         }
 
         return generatedAlerts;
-    }, [bankAccounts, creditCards, transactions, isLoading, user]);
+    }, [bankAccounts, creditCards, transactions]);
 
     // UI Rendering
     const alertConfig: Record<Alert['severity'], {icon: React.ElementType, iconColor: string, bgColor: string}> = {
@@ -172,27 +169,36 @@ export function SmartAlertsDashboard() {
         </div>
     );
 
-    const renderAlerts = () => (
-        <div className="space-y-4">
-            {alerts.map((alert) => {
-                const config = alertConfig[alert.severity];
-                const Icon = config.icon;
-                return (
-                    <div key={alert.id} className="flex items-start gap-4 p-3 rounded-lg hover:bg-muted/50">
-                        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${config.bgColor}`}>
-                            <Icon className={`h-5 w-5 ${config.iconColor}`} />
+    const renderAlerts = () => {
+        const alertsToShow = showAll ? alerts : alerts.slice(0, 3);
+    
+        return (
+            <div className="space-y-4">
+                {alertsToShow.map((alert) => {
+                    const config = alertConfig[alert.severity];
+                    const Icon = config.icon;
+                    return (
+                        <div key={alert.id} className="flex items-start gap-4 p-3 rounded-lg hover:bg-muted/50">
+                            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${config.bgColor}`}>
+                                <Icon className={`h-5 w-5 ${config.iconColor}`} />
+                            </div>
+                            <div className="flex-1">
+                                <p className="font-semibold text-sm">{alert.message}</p>
+                            </div>
                         </div>
-                        <div className="flex-1">
-                            <p className="font-semibold text-sm">{alert.message}</p>
-                        </div>
-                    </div>
-                )
-            })}
-             <Button variant="link" className="w-full text-primary">
-                View All Alerts <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-        </div>
-    );
+                    )
+                })}
+                 {alerts.length > 3 && !showAll && (
+                    <Button variant="link" className="w-full text-primary" onClick={() => setShowAll(true)}>
+                        View all {alerts.length} alerts <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                )}
+                {alerts.length > 3 && showAll && (
+                     <p className="text-sm text-center text-muted-foreground pt-2">No more alerts to show.</p>
+                )}
+            </div>
+        );
+    }
 
   return (
     <Card className="shadow-sm hover:shadow-md transition-shadow rounded-2xl">
