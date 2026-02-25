@@ -11,7 +11,7 @@ import { useAuth, useUser, useFirestore } from '@/firebase'
 import { useToast } from '@/hooks/use-toast'
 import { updateProfile } from 'firebase/auth'
 import { doc, updateDoc } from 'firebase/firestore'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { UpdateProfilePhoto } from './update-profile-photo'
 
 const profileSchema = z.object({
@@ -30,11 +30,20 @@ export function ProfileSettings() {
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
-    values: {
+    defaultValues: {
       displayName: user?.displayName ?? '',
       email: user?.email ?? '',
     },
   })
+
+  useEffect(() => {
+    if (user) {
+      form.reset({
+        displayName: user.displayName ?? '',
+        email: user.email ?? '',
+      })
+    }
+  }, [user, form.reset])
 
   const onSubmit = async (data: ProfileFormValues) => {
     setIsSubmitting(true)
@@ -47,6 +56,8 @@ export function ProfileSettings() {
     try {
       // Update Firebase Auth profile
       await updateProfile(auth.currentUser, { displayName: data.displayName })
+      // Force a reload of the user to get the latest profile data, which triggers onAuthStateChanged
+      await auth.currentUser.reload();
 
       // Update Firestore profile
       const userDocRef = doc(firestore, 'users', user.uid)
