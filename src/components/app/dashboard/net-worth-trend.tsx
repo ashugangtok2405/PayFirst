@@ -1,23 +1,21 @@
 'use client'
 
+import { useMemo, useState } from 'react'
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ArrowUp } from 'lucide-react'
+import { subMonths, format } from 'date-fns'
 
 // MOCK DATA - To be replaced with live data
-const netWorthData = [
-  { month: 'Jan', value: 350000 },
-  { month: 'Feb', value: 380000 },
-  { month: 'Mar', value: 370000 },
-  { month: 'Apr', value: 410000 },
-  { month: 'May', value: 450000 },
-  { month: 'Jun', value: 480000 },
-]
+const allNetWorthData = Array.from({ length: 12 }).map((_, i) => {
+    const date = subMonths(new Date(), 11 - i);
+    return {
+        month: format(date, 'MMM'),
+        value: 350000 + (i * 20000) + (Math.random() - 0.5) * 30000
+    }
+});
 
-const currentNetWorth = netWorthData[netWorthData.length - 1].value
-const previousNetWorth = netWorthData[netWorthData.length - 2].value
-const growth = ((currentNetWorth - previousNetWorth) / previousNetWorth) * 100
 
 const formatCurrency = (value: number) => `₹${(value / 100000).toFixed(1)}L`
 const formatCurrencyTooltip = (value: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(value)
@@ -35,6 +33,16 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   };
 
 export function NetWorthTrend() {
+  const [period, setPeriod] = useState('6');
+
+  const netWorthData = useMemo(() => {
+      return allNetWorthData.slice(-parseInt(period, 10));
+  }, [period]);
+
+  const currentNetWorth = netWorthData.length > 0 ? netWorthData[netWorthData.length - 1].value : 0;
+  const previousNetWorth = netWorthData.length > 1 ? netWorthData[netWorthData.length - 2].value : 0;
+  const growth = previousNetWorth > 0 ? ((currentNetWorth - previousNetWorth) / previousNetWorth) * 100 : 0;
+
   return (
     <Card className="shadow-sm hover:shadow-md transition-shadow rounded-2xl h-full">
       <CardHeader>
@@ -43,7 +51,7 @@ export function NetWorthTrend() {
                 <CardTitle className="text-xl">Net Worth</CardTitle>
                 <CardDescription>Growth over time</CardDescription>
             </div>
-             <Select defaultValue="6">
+             <Select value={period} onValueChange={setPeriod}>
                 <SelectTrigger className="w-[150px]">
                     <SelectValue placeholder="Last 6 Months" />
                 </SelectTrigger>
