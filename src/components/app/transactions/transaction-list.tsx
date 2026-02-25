@@ -162,15 +162,35 @@ export function TransactionList({ transactions, categories, accounts }: Transact
                                 {txs.map((tx) => {
                                     const category = tx.categoryId ? categoryMap[tx.categoryId] : null;
                                     const CategoryIcon = category ? (categoryIcons[category.name] || categoryIcons.default) : CircleDollarSign;
-                                    const isIncome = tx.type === 'income'
-                                    const amountSign = isIncome ? '+' : '-'
-                                    const amountColor = isIncome ? 'text-green-600' : (tx.type === 'expense' ? 'text-red-600' : '')
+                                    const isIncome = tx.type === 'income';
+                                    const isTransfer = tx.type === 'transfer' || tx.type === 'credit_card_payment';
+                                    
+                                    let amountSign = '-';
+                                    let amountColor = 'text-foreground';
+
+                                    if (isIncome) {
+                                        amountSign = '+';
+                                        amountColor = 'text-green-600';
+                                    } else if (tx.type === 'expense') {
+                                        amountSign = '-';
+                                        amountColor = 'text-red-600';
+                                    } else if (isTransfer) {
+                                        amountSign = '';
+                                        amountColor = 'text-blue-600';
+                                    }
                                     
                                     let accountName = 'N/A'
-                                    if(tx.fromBankAccountId) accountName = accountMap[tx.fromBankAccountId] ?? 'Unknown Account'
-                                    else if(tx.toBankAccountId) accountName = accountMap[tx.toBankAccountId] ?? 'Unknown Account'
-                                    else if(tx.fromCreditCardId) accountName = accountMap[tx.fromCreditCardId] ?? 'Unknown Card'
-                                    if(tx.type === 'transfer') accountName = `From ${accountMap[tx.fromBankAccountId!]} to ${accountMap[tx.toBankAccountId!]}`
+                                    if (tx.type === 'transfer') {
+                                        accountName = `From ${accountMap[tx.fromBankAccountId!] ?? '?'} to ${accountMap[tx.toBankAccountId!] ?? '?'}`
+                                    } else if (tx.type === 'credit_card_payment') {
+                                        accountName = `From ${accountMap[tx.fromBankAccountId!] ?? '?'} to ${accountMap[tx.toCreditCardId!] ?? '?'}`
+                                    } else if (tx.fromBankAccountId) {
+                                        accountName = accountMap[tx.fromBankAccountId] ?? 'Unknown Account'
+                                    } else if(tx.toBankAccountId) {
+                                        accountName = accountMap[tx.toBankAccountId] ?? 'Unknown Account'
+                                    } else if(tx.fromCreditCardId) {
+                                        accountName = accountMap[tx.fromCreditCardId] ?? 'Unknown Card'
+                                    }
                                     
                                     return (
                                         <AccordionItem value={tx.id} key={tx.id} className="border-b last:border-b-0">
@@ -189,7 +209,7 @@ export function TransactionList({ transactions, categories, accounts }: Transact
                                             </AccordionTrigger>
                                             <AccordionContent className="px-4 pb-4 bg-muted/30">
                                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm pt-4">
-                                                    <div><Badge variant="outline" className="capitalize flex gap-2 items-center"><TransactionTypeIcon type={tx.type} /> {tx.type.replace('_', ' ')}</Badge></div>
+                                                    <div><Badge variant="outline" className="capitalize flex gap-2 items-center"><TransactionTypeIcon type={tx.type} /> {tx.type.replace(/_/g, ' ')}</Badge></div>
                                                     <div><p className="text-muted-foreground">Category</p><p className="font-medium">{category?.name || 'N/A'}</p></div>
                                                     <div>
                                                         <p className="text-muted-foreground">From</p>

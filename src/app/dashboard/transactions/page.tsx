@@ -89,6 +89,27 @@ export default function TransactionsPage() {
     });
   }, [transactions, dateRange, typeFilter, accountFilter, searchTerm, categories])
 
+  const previousPeriodTransactions = useMemo(() => {
+    if (!transactions) return [];
+    
+    const diff = dateRange.to.getTime() - dateRange.from.getTime();
+    const prevFrom = new Date(dateRange.from.getTime() - diff - (24 * 60 * 60 * 1000));
+    const prevTo = new Date(dateRange.from.getTime() - (24 * 60 * 60 * 1000));
+
+    return transactions.filter(t => {
+      try {
+        const transactionDate = new Date(t.transactionDate);
+        if (isNaN(transactionDate.getTime())) return false;
+        const dateMatch = transactionDate >= prevFrom && transactionDate <= prevTo;
+        // Not filtering by other things for comparison, just date
+        return dateMatch;
+      } catch (e) {
+        return false;
+      }
+    });
+  }, [transactions, dateRange]);
+
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
@@ -115,7 +136,7 @@ export default function TransactionsPage() {
         </div>
       ) : (
         <>
-            <SummaryCards transactions={filteredTransactions} />
+            <SummaryCards transactions={filteredTransactions} previousTransactions={previousPeriodTransactions} />
             <TransactionFilters
                 accounts={accounts}
                 categories={categories ?? []}

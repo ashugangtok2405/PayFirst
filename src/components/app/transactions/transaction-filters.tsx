@@ -60,13 +60,13 @@ export function TransactionFilters({
 
     return (
         <Card>
-            <CardContent className="p-4 flex flex-col md:flex-row items-center gap-4">
-                <div className="w-full md:w-auto flex-grow grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <CardContent className="p-4 flex flex-wrap items-center gap-4">
+                <div className="flex-grow flex flex-wrap items-center gap-4">
                      <Popover>
                         <PopoverTrigger asChild>
                             <Button
                                 variant={"outline"}
-                                className="w-full justify-start text-left font-normal"
+                                className="w-full sm:w-[280px] justify-start text-left font-normal"
                             >
                                 <CalendarIcon className="mr-2 h-4 w-4" />
                                 {format(dateRange.from, "LLL dd, y")} - {format(dateRange.to, "LLL dd, y")}
@@ -87,7 +87,7 @@ export function TransactionFilters({
                         </PopoverContent>
                     </Popover>
                     <Select value={typeFilter} onValueChange={setTypeFilter}>
-                        <SelectTrigger><SelectValue placeholder="Transaction Type" /></SelectTrigger>
+                        <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="Transaction Type" /></SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">All Types</SelectItem>
                             <SelectItem value="income">Income</SelectItem>
@@ -97,20 +97,20 @@ export function TransactionFilters({
                         </SelectContent>
                     </Select>
                      <Select value={accountFilter} onValueChange={setAccountFilter}>
-                        <SelectTrigger><SelectValue placeholder="Account" /></SelectTrigger>
+                        <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="Account" /></SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">All Accounts</SelectItem>
                             {accounts.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
                         </SelectContent>
                     </Select>
-                    <div className="relative">
+                    <div className="relative flex-grow min-w-[200px]">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input placeholder="Search..." className="pl-9" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                        <Input placeholder="Search transactions..." className="pl-9" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                     </div>
                 </div>
-                <div className="w-full md:w-auto pt-2 md:pt-0">
+                <div className="w-full sm:w-auto">
                     <AddTransactionDialog>
-                        <Button className="w-full md:w-auto">
+                        <Button className="w-full">
                             <PlusCircle className="mr-2 h-4 w-4" /> Add Transaction
                         </Button>
                     </AddTransactionDialog>
