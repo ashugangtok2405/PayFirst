@@ -51,6 +51,14 @@ export function LoanManagement() {
   )
   const { data: loans, isLoading } = useCollection<Loan>(loansQuery)
 
+  const { totalLoanOutstanding, totalMonthlyEMI } = useMemo(() => {
+    if (!loans) return { totalLoanOutstanding: 0, totalMonthlyEMI: 0 }
+    const activeLoans = loans.filter(l => l.active);
+    const totalLoanOutstanding = activeLoans.reduce((sum, loan) => sum + loan.outstanding, 0)
+    const totalMonthlyEMI = activeLoans.reduce((sum, loan) => sum + loan.emiAmount, 0)
+    return { totalLoanOutstanding, totalMonthlyEMI }
+  }, [loans])
+
   const handleDelete = (loanId: string, loanName: string) => {
     if (!user) return;
     const docRef = doc(firestore, 'users', user.uid, 'loans', loanId)
@@ -63,10 +71,18 @@ export function LoanManagement() {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Loan Management</CardTitle>
+      <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+          <CardTitle>Loan Management</CardTitle>
+          {!isLoading && loans && loans.length > 0 && (
+            <div className="text-sm text-muted-foreground flex items-center flex-wrap gap-x-4 gap-y-1 mt-2">
+              <span>Total Outstanding: <span className="font-semibold text-foreground">{formatCurrency(totalLoanOutstanding)}</span></span>
+              <span>Total EMI / Month: <span className="font-semibold text-foreground">{formatCurrency(totalMonthlyEMI)}</span></span>
+            </div>
+          )}
+        </div>
         <AddAccountDialog defaultType="loan">
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" className="w-full md:w-auto">
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Add Loan
             </Button>

@@ -28,6 +28,9 @@ export function PersonalDebtManagement() {
   const debts = useMemo(() => allDebts?.filter(d => d.status === 'active') ?? [], [allDebts])
   const debtsLent = useMemo(() => debts.filter(d => d.type === 'lent'), [debts])
   const debtsBorrowed = useMemo(() => debts.filter(d => d.type === 'borrowed'), [debts])
+  
+  const totalLent = useMemo(() => debtsLent.reduce((sum, debt) => sum + debt.remainingAmount, 0), [debtsLent])
+  const totalBorrowed = useMemo(() => debtsBorrowed.reduce((sum, debt) => sum + debt.remainingAmount, 0), [debtsBorrowed])
 
   const handleDelete = (debt: PersonalDebt) => {
     if (!user) return;
@@ -106,13 +109,19 @@ export function PersonalDebtManagement() {
         ) : (
             <div className="space-y-8">
                 <div>
-                    <h3 className="text-lg font-semibold flex items-center gap-2 mb-4"><ArrowUpRight className="text-green-500"/>Money You've Lent</h3>
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-semibold flex items-center gap-2"><ArrowUpRight className="text-green-500"/>Money You've Lent</h3>
+                        {debtsLent.length > 0 && <span className="text-sm text-muted-foreground">Total Lent: <span className="font-semibold text-foreground">{formatCurrency(totalLent)}</span></span>}
+                    </div>
                     {debtsLent.length > 0 ? (
                         <div className="space-y-4">{debtsLent.map(d => <DebtCard key={d.id} debt={d} />)}</div>
                     ) : <p className="text-sm text-center text-muted-foreground py-4">You haven't recorded any money lent to others.</p>}
                 </div>
                  <div>
-                    <h3 className="text-lg font-semibold flex items-center gap-2 mb-4"><ArrowDownLeft className="text-orange-500"/>Money You've Borrowed</h3>
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-semibold flex items-center gap-2"><ArrowDownLeft className="text-orange-500"/>Money You've Borrowed</h3>
+                        {debtsBorrowed.length > 0 && <span className="text-sm text-muted-foreground">Total Borrowed: <span className="font-semibold text-foreground">{formatCurrency(totalBorrowed)}</span></span>}
+                    </div>
                     {debtsBorrowed.length > 0 ? (
                         <div className="space-y-4">{debtsBorrowed.map(d => <DebtCard key={d.id} debt={d} />)}</div>
                     ) : <p className="text-sm text-center text-muted-foreground py-4">You haven't recorded any money borrowed from others.</p>}
