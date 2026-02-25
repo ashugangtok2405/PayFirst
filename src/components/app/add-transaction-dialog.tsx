@@ -254,7 +254,7 @@ export function AddTransactionDialog() {
                     <SelectTrigger id="expense-account"><SelectValue placeholder="Select an account or card" /></SelectTrigger>
                     <SelectContent>
                         {bankAccounts?.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name} (Bank)</SelectItem>)}
-                        {creditCards?.map(card => <SelectItem key={acc.id} value={card.id}>{card.name} (Card)</SelectItem>)}
+                        {creditCards?.map(card => <SelectItem key={card.id} value={card.id}>{card.name} (Card)</SelectItem>)}
                     </SelectContent>
                 </Select>
             </div>
