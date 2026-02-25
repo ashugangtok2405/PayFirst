@@ -19,6 +19,11 @@
           "type": "string",
           "description": "A user-friendly name for display in the application."
         },
+        "photoURL": {
+          "type": "string",
+          "description": "URL of the user's profile picture.",
+          "format": "uri"
+        },
         "createdAt": {
           "type": "string",
           "description": "Timestamp when the user account was created.",
@@ -453,4 +458,5 @@
     "reasoning": "The recommended Firestore structure for PayFirst emphasizes strict user data isolation and simplified security rules by leveraging path-based ownership. All user-specific financial data (Categories, Bank Accounts, Credit Cards, Transactions, and Savings Rules) is nested directly under a user's unique profile document in the `/users/{userId}/` path.\n\nThis design achieves **Authorization Independence (CRITICAL)** by ensuring that the authorization context (the user's ID) is explicitly present in the path for every document. For example, a `Category` document will be stored at `/users/{userId}/categories/{categoryId}`. A security rule to access this document can simply check `request.auth.uid == userId`, directly comparing the authenticated user's ID with the `userId` wildcard in the path. This eliminates the need for expensive and complex `get()` calls to parent documents in security rules, which can break atomic operations and make debugging challenging. All authorization decisions are self-contained within the document's path and the `request.auth.uid`.\n\nFurthermore, this structure strongly supports **QAPs (Rules are not Filters)**. By structurally segregating each user's data into their own dedicated subcollections (e.g., `/users/{userId}/transactions`, `/users/{userId}/bankAccounts`), every document within these collections shares the same security posture: it is privately owned by the `userId` specified in the path. This means that `list` operations are inherently secure. When a user queries `/users/{userId}/transactions`, the security rules simply verify that `request.auth.uid` matches the `userId` in the path. Firestore's query-ability and security rules work in concert to ensure that a user can only list documents from their own designated data space, preventing data leakage and removing the need for rules to act as data filters after retrieval. This leads to clear, concise, and highly performant security rules that are easy to understand and debug, making the application's data highly secure by design."
   }
 }
+    
     

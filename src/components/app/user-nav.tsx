@@ -27,14 +27,16 @@ export function UserNav() {
                 <AvatarFallback>{getInitials(user?.email)}</AvatarFallback>
             </Avatar>
             <div className="truncate">
-                <p className="truncate text-sm font-semibold text-foreground">{user?.displayName ?? 'Ashish'}</p>
-                <p className="truncate text-xs text-muted-foreground">{user?.email ?? 'ashish@example.com'}</p>
+                <p className="truncate text-sm font-semibold text-foreground">{user?.displayName ?? 'User'}</p>
+                <p className="truncate text-xs text-muted-foreground">{user?.email ?? 'user@example.com'}</p>
             </div>
         </div>
 
         <div className="mt-4 space-y-2">
-            <Button variant="ghost" className="w-full justify-start bg-background text-sm text-foreground/80 hover:bg-muted">
-                <Settings className="mr-2 h-4 w-4" /> Settings
+            <Button variant="ghost" className="w-full justify-start bg-background text-sm text-foreground/80 hover:bg-muted" asChild>
+                <Link href="/dashboard/settings">
+                    <Settings className="mr-2 h-4 w-4" /> Settings
+                </Link>
             </Button>
 
             <Button variant="ghost" onClick={handleLogout} className="w-full justify-start text-sm text-red-500 hover:bg-red-50 hover:text-red-600">
