@@ -10,7 +10,7 @@ import { SmartAlertsDashboard } from '@/components/app/dashboard/smart-alerts-da
 
 export default function DashboardPage() {
   return (
-    <>
+    <div className="space-y-8">
       <KpiSummary />
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
         <div className="xl:col-span-2">
@@ -25,6 +25,6 @@ export default function DashboardPage() {
         <UpcomingBills />
         <SmartAlertsDashboard />
       </div>
-    </>
+    </div>
   )
 }
