@@ -51,7 +51,7 @@ export function useAlertManager() {
   const { data: transactions } = useCollection<Transaction>(transactionsQuery)
 
   const alertsQuery = useMemoFirebase(() => user ? query(collection(firestore, 'users', user.uid, 'alerts'), where('resolved', '==', false), where('type', 'in', ['credit_utilization', 'credit_due', 'low_balance', 'overspending', 'loan_due', 'personal_debt_due'])) : null, [firestore, user])
-  const { data: activeAlerts } = useCollection<Alert>(activeAlerts)
+  const { data: activeAlerts } = useCollection<Alert>(alertsQuery)
 
   useEffect(() => {
     if (!user || !firestore || !creditCards || !bankAccounts || !loans || !transactions || !activeAlerts || !personalDebts) {
