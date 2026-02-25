@@ -61,12 +61,12 @@ export default function DashboardLayout({
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-        <header className="flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6">
+        <header className="flex h-16 items-center gap-4 border-b bg-card px-4 md:px-6">
           <SidebarTrigger className="md:hidden" />
-          <h1 className="text-xl font-semibold">Dashboard</h1>
+          <h1 className="text-xl font-bold">Dashboard</h1>
           <div className="ml-auto flex items-center gap-4">
             <AddTransactionDialog>
-              <Button size="sm" variant="outline">
+              <Button size="sm">
                 <PlusCircle className="mr-2 h-4 w-4" /> Add Transaction
               </Button>
             </AddTransactionDialog>
@@ -80,7 +80,7 @@ export default function DashboardLayout({
             </Avatar>
           </div>
         </header>
-        <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
+        <main className="flex-1 space-y-8 p-4 md:p-8 lg:p-10">
           {children}
         </main>
       </SidebarInset>
