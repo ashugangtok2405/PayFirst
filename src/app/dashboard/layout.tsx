@@ -16,7 +16,7 @@ import {
   SidebarInset,
   SidebarSeparator,
 } from '@/components/ui/sidebar'
-import { PlusCircle, Landmark, CreditCard } from 'lucide-react'
+import { PlusCircle, Landmark, CreditCard, FileText, Handshake } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { AddTransactionDialog } from '@/components/app/add-transaction-dialog'
 import { Button } from '@/components/ui/button'
@@ -79,6 +79,22 @@ export default function DashboardLayout({
                   className="w-full justify-start border-gray-300 text-gray-700 hover:bg-gray-100"
                 >
                   <CreditCard className="mr-2" /> Add Credit Card
+                </Button>
+              </AddAccountDialog>
+              <AddAccountDialog defaultType="loan">
+                <Button
+                  variant="outline"
+                  className="w-full justify-start border-gray-300 text-gray-700 hover:bg-gray-100"
+                >
+                  <FileText className="mr-2" /> Add Loan / EMI
+                </Button>
+              </AddAccountDialog>
+              <AddAccountDialog defaultType="personal_debt">
+                <Button
+                  variant="outline"
+                  className="w-full justify-start border-gray-300 text-gray-700 hover:bg-gray-100"
+                >
+                  <Handshake className="mr-2" /> Add Personal Debt
                 </Button>
               </AddAccountDialog>
             </div>

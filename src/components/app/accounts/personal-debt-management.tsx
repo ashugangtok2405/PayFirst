@@ -4,7 +4,7 @@ import { useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
-import { MoreHorizontal, Edit, Trash2, ArrowUpRight, ArrowDownLeft, HandCoins } from 'lucide-react'
+import { MoreHorizontal, Edit, Trash2, ArrowUpRight, ArrowDownLeft, HandCoins, PlusCircle } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { useToast } from '@/hooks/use-toast'
@@ -13,6 +13,7 @@ import { collection, doc } from 'firebase/firestore'
 import type { PersonalDebt } from '@/lib/types'
 import { Skeleton } from '@/components/ui/skeleton'
 import { RecordRepaymentDialog } from './record-repayment-dialog'
+import { AddAccountDialog } from './add-account-dialog'
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount)
 
@@ -87,9 +88,17 @@ export function PersonalDebtManagement() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Personal Lending & Borrowing</CardTitle>
-        <CardDescription>Track money you've lent to or borrowed from others.</CardDescription>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+            <CardTitle>Personal Lending & Borrowing</CardTitle>
+            <CardDescription>Track money you've lent to or borrowed from others.</CardDescription>
+        </div>
+        <AddAccountDialog defaultType="personal_debt">
+            <Button variant="outline" size="sm">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add Entry
+            </Button>
+        </AddAccountDialog>
       </CardHeader>
       <CardContent className="space-y-6">
         {isLoading ? (
