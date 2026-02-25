@@ -24,8 +24,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Switch } from '@/components/ui/switch'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Calendar } from '@/components/ui/calendar'
 import {
   PlusCircle,
   ArrowDown,
@@ -33,16 +31,14 @@ import {
   ArrowRightLeft,
   CreditCard as CreditCardIcon,
   ChevronDown,
-  CalendarIcon,
 } from 'lucide-react'
-import { format, addDays, addWeeks, addMonths, addYears, parse } from 'date-fns'
+import { format, addDays, addWeeks, addMonths, addYears } from 'date-fns'
 import { useToast } from '@/hooks/use-toast'
 import {
   useFirestore,
   useUser,
   useCollection,
   useMemoFirebase,
-  addDocumentNonBlocking,
 } from '@/firebase'
 import { collection, doc, runTransaction } from 'firebase/firestore'
 import type { BankAccount, CreditCard, Category, Transaction, RecurringTransaction } from '@/lib/types'
@@ -57,7 +53,7 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
   
   // Common state
   const [amount, setAmount] = useState('')
-  const [date, setDate] = useState<Date | undefined>(new Date())
+  const [date, setDate] = useState(format(new Date(), 'dd/MM/yyyy'))
   const [notes, setNotes] = useState('')
 
   // Tab-specific state
@@ -71,7 +67,7 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
   // Recurring state
   const [isRecurring, setIsRecurring] = useState(false)
   const [frequency, setFrequency] = useState<Frequency>('monthly')
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined)
+  const [endDate, setEndDate] = useState('')
   const [autoCreate, setAutoCreate] = useState(true)
 
   const { toast } = useToast()
@@ -100,10 +96,10 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
     setFromAccountId('')
     setToAccountId('')
     setToCreditCardId('')
-    setDate(new Date())
+    setDate(format(new Date(), 'dd/MM/yyyy'))
     setIsRecurring(false)
     setFrequency('monthly')
-    setEndDate(undefined)
+    setEndDate('')
     setAutoCreate(true)
   }, [])
   
@@ -136,6 +132,36 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
       return
     }
     
+    let parsedDate: Date;
+    try {
+        const dateParts = date.split('/');
+        if (dateParts.length !== 3) throw new Error();
+        const day = parseInt(dateParts[0], 10);
+        const month = parseInt(dateParts[1], 10) - 1;
+        const year = parseInt(dateParts[2].length === 2 ? `20${dateParts[2]}` : dateParts[2], 10);
+        parsedDate = new Date(year, month, day);
+        if (isNaN(parsedDate.getTime())) throw new Error();
+    } catch {
+        toast({ variant: 'destructive', title: 'Invalid Date', description: 'Please use DD/MM/YYYY format.' });
+        return;
+    }
+
+    let parsedEndDate: Date | undefined = undefined;
+    if (isRecurring && endDate) {
+        try {
+            const dateParts = endDate.split('/');
+            if (dateParts.length !== 3) throw new Error();
+            const day = parseInt(dateParts[0], 10);
+            const month = parseInt(dateParts[1], 10) - 1;
+            const year = parseInt(dateParts[2].length === 2 ? `20${dateParts[2]}` : dateParts[2], 10);
+            parsedEndDate = new Date(year, month, day);
+            if (isNaN(parsedEndDate.getTime())) throw new Error();
+        } catch {
+            toast({ variant: 'destructive', title: 'Invalid End Date', description: 'Please use DD/MM/YYYY format for end date.' });
+            return;
+        }
+    }
+
     const newTransactionRef = doc(collection(firestore, 'users', user.uid, 'transactions'));
     const numericAmount = parseFloat(amount);
     const newRecurringTransactionRef = isRecurring ? doc(collection(firestore, 'users', user.uid, 'recurringTransactions')) : null;
@@ -146,7 +172,7 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
           userId: user.uid,
           type: activeTab,
           amount: numericAmount,
-          transactionDate: date.toISOString(),
+          transactionDate: parsedDate.toISOString(),
           description: notes || `New ${activeTab.replace('_', ' ')}`,
         }
 
@@ -164,14 +190,14 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
               const accountDoc = await transaction.get(accountRef);
               if (!accountDoc.exists()) throw new Error("Bank account not found.");
               const newBalance = accountDoc.data().currentBalance - numericAmount;
-              transaction.update(accountRef, { currentBalance: newBalance, updatedAt: date.toISOString() });
+              transaction.update(accountRef, { currentBalance: newBalance, updatedAt: parsedDate.toISOString() });
             } else if (creditCards?.some(c => c.id === accountId)) {
               transactionData.fromCreditCardId = accountId;
               const cardRef = doc(firestore, 'users', user.uid, 'creditCards', accountId);
               const cardDoc = await transaction.get(cardRef);
               if (!cardDoc.exists()) throw new Error("Credit card not found.");
               const newBalance = cardDoc.data().currentBalance + numericAmount;
-              transaction.update(cardRef, { currentBalance: newBalance, updatedAt: date.toISOString() });
+              transaction.update(cardRef, { currentBalance: newBalance, updatedAt: parsedDate.toISOString() });
             }
             transactionData.categoryId = categoryId
             break
@@ -183,7 +209,7 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
             const accountDoc = await transaction.get(accountRef);
             if (!accountDoc.exists()) throw new Error("Bank account not found.");
             const newBalance = accountDoc.data().currentBalance + numericAmount;
-            transaction.update(accountRef, { currentBalance: newBalance, updatedAt: date.toISOString() });
+            transaction.update(accountRef, { currentBalance: newBalance, updatedAt: parsedDate.toISOString() });
             transactionData.categoryId = categoryId;
             break
         
@@ -203,10 +229,10 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
             if (!toAccountDoc.exists()) throw new Error("Destination account not found.");
 
             const newFromBalance = fromAccountDoc.data().currentBalance - numericAmount;
-            transaction.update(fromAccountRef, { currentBalance: newFromBalance, updatedAt: date.toISOString() });
+            transaction.update(fromAccountRef, { currentBalance: newFromBalance, updatedAt: parsedDate.toISOString() });
 
             const newToBalance = toAccountDoc.data().currentBalance + numericAmount;
-            transaction.update(toAccountRef, { currentBalance: newToBalance, updatedAt: date.toISOString() });
+            transaction.update(toAccountRef, { currentBalance: newToBalance, updatedAt: parsedDate.toISOString() });
             break
 
           case 'credit_card_payment':
@@ -225,10 +251,10 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
             if (!cardDoc.exists()) throw new Error("Credit card not found.");
 
             const newBankBalance = bankAccountDoc.data().currentBalance - numericAmount;
-            transaction.update(bankAccountRef, { currentBalance: newBankBalance, updatedAt: date.toISOString() });
+            transaction.update(bankAccountRef, { currentBalance: newBankBalance, updatedAt: parsedDate.toISOString() });
 
             const newCardBalance = cardDoc.data().currentBalance - numericAmount;
-            transaction.update(cardRef, { currentBalance: newCardBalance, updatedAt: date.toISOString() });
+            transaction.update(cardRef, { currentBalance: newCardBalance, updatedAt: parsedDate.toISOString() });
             break
 
           default:
@@ -245,9 +271,9 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
                 type: transactionData.type!,
                 frequency,
                 startDate: transactionData.transactionDate,
-                endDate: endDate?.toISOString(),
+                endDate: parsedEndDate?.toISOString(),
                 lastGeneratedDate: transactionData.transactionDate,
-                nextGenerationDate: getNextGenerationDate(date, frequency).toISOString(),
+                nextGenerationDate: getNextGenerationDate(parsedDate, frequency).toISOString(),
                 autoCreate,
                 active: true,
                 createdAt: new Date().toISOString(),
@@ -385,15 +411,12 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
 
         <div className="space-y-2">
           <Label htmlFor="date">Date</Label>
-            <Popover>
-                <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-left font-normal">
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {date ? format(date, 'LLL dd, y') : <span>Pick a date</span>}
-                    </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={date} onSelect={setDate} initialFocus/></PopoverContent>
-            </Popover>
+            <Input
+                id="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                placeholder="DD/MM/YYYY"
+            />
         </div>
          <div className="space-y-2">
               <Label htmlFor="notes">Notes (Optional)</Label>
@@ -424,15 +447,12 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="end-date">End Date (Optional)</Label>
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <Button variant="outline" className="w-full justify-start text-left font-normal">
-                                        <CalendarIcon className="mr-2 h-4 w-4" />
-                                        {endDate ? format(endDate, 'LLL dd, y') : <span>Never</span>}
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus/></PopoverContent>
-                            </Popover>
+                            <Input
+                                id="end-date"
+                                value={endDate}
+                                onChange={(e) => setEndDate(e.target.value)}
+                                placeholder="DD/MM/YYYY"
+                            />
                         </div>
                     </div>
                      <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">

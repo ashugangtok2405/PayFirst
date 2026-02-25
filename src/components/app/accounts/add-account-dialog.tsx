@@ -15,12 +15,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Calendar } from '@/components/ui/calendar'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Landmark, CreditCard, ChevronDown, FileText, Handshake, CalendarIcon } from 'lucide-react'
-import { format } from 'date-fns'
+import { Landmark, CreditCard, ChevronDown, FileText, Handshake } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase'
 import { collection, addDoc, doc, runTransaction } from 'firebase/firestore'
@@ -47,7 +44,7 @@ export function AddAccountDialog({ children, defaultType = 'bank' }: { children:
     bankAccountName: '', bankName: '', openingBalance: '', isSavingsAccount: false,
     cardName: '', cardIssuer: '', creditLimit: '', cardCurrentBalance: '', apr: '', statementDay: '',
     loanName: '', loanOriginalAmount: '', loanOutstanding: '', loanInterestRate: '', loanEmiAmount: '', loanTenure: '', loanNextDueDay: '',
-    debtPersonName: '', debtType: 'lent', debtAmount: '', debtLinkedAccountId: '', debtDueDate: undefined as Date | undefined, debtInterestRate: '',
+    debtPersonName: '', debtType: 'lent', debtAmount: '', debtLinkedAccountId: '', debtDueDate: '', debtInterestRate: '',
   })
 
   const handleInputChange = (field: keyof typeof formState, value: any) => {
@@ -98,6 +95,22 @@ export function AddAccountDialog({ children, defaultType = 'bank' }: { children:
         } else if (accountType === 'personal_debt') {
             if (!formState.debtLinkedAccountId || !formState.debtPersonName || !formState.debtAmount) throw new Error("Please fill all required fields for the debt.");
 
+            let parsedDueDate: Date | null = null;
+            if (formState.debtDueDate) {
+                try {
+                    const dateParts = formState.debtDueDate.split('/');
+                    if (dateParts.length !== 3) throw new Error();
+                    const day = parseInt(dateParts[0], 10);
+                    const month = parseInt(dateParts[1], 10) - 1;
+                    const year = parseInt(dateParts[2].length === 2 ? `20${dateParts[2]}` : dateParts[2], 10);
+                    parsedDueDate = new Date(year, month, day);
+                    if (isNaN(parsedDueDate.getTime())) throw new Error();
+                } catch {
+                    toast({ variant: 'destructive', title: 'Invalid Date', description: 'Please use DD/MM/YYYY format for due date.' });
+                    return;
+                }
+            }
+
             const debtAmountNum = parseFloat(formState.debtAmount);
             await runTransaction(firestore, async (transaction) => {
                 const newDebtRef = doc(collection(firestore, 'users', user.uid, 'personalDebts'));
@@ -108,7 +121,7 @@ export function AddAccountDialog({ children, defaultType = 'bank' }: { children:
                 const newDebt: Omit<PersonalDebt, 'id'> = {
                     userId: user.uid, personName: formState.debtPersonName, type: formState.debtType as 'lent' | 'borrowed',
                     originalAmount: debtAmountNum, remainingAmount: debtAmountNum, status: 'active',
-                    interestRate: parseFloat(formState.debtInterestRate) || 0, dueDate: formState.debtDueDate?.toISOString() || null,
+                    interestRate: parseFloat(formState.debtInterestRate) || 0, dueDate: parsedDueDate?.toISOString() || null,
                     linkedAccountId: formState.debtLinkedAccountId, createdAt: now, updatedAt: now,
                 }
                 transaction.set(newDebtRef, newDebt);
@@ -183,7 +196,10 @@ export function AddAccountDialog({ children, defaultType = 'bank' }: { children:
                     </div>
                     <div className="space-y-2"><Label htmlFor="debt-linked-account">Linked Bank Account</Label><Select value={formState.debtLinkedAccountId} onValueChange={(v) => handleInputChange('debtLinkedAccountId', v)} disabled={loadingBankAccounts}><SelectTrigger id="debt-linked-account"><SelectValue placeholder="Select bank account" /></SelectTrigger><SelectContent>{bankAccounts?.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}</SelectContent></Select></div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2"><Label htmlFor="debt-due-date">Due Date (Optional)</Label><Popover><PopoverTrigger asChild><Button variant="outline" className="w-full justify-start text-left font-normal"><CalendarIcon className="mr-2 h-4 w-4" />{formState.debtDueDate ? format(formState.debtDueDate, 'LLL dd, y') : <span>Pick a date</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={formState.debtDueDate} onSelect={date => handleInputChange('debtDueDate', date)} initialFocus/></PopoverContent></Popover></div>
+                        <div className="space-y-2">
+                          <Label htmlFor="debt-due-date">Due Date (Optional)</Label>
+                          <Input id="debt-due-date" placeholder="DD/MM/YYYY" value={formState.debtDueDate} onChange={e => handleInputChange('debtDueDate', e.target.value)} />
+                        </div>
                         <div className="space-y-2"><Label htmlFor="debt-interest">Interest Rate (p.a. %, optional)</Label><Input id="debt-interest" type="number" placeholder="e.g. 5" value={formState.debtInterestRate} onChange={e => handleInputChange('debtInterestRate', e.target.value)} /></div>
                     </div>
                 </TabsContent>
