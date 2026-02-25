@@ -255,6 +255,10 @@
         "toCreditCardId": {
           "type": "string",
           "description": "Reference to the CreditCard to which a payment was made. (Relationship: CreditCard 1:N Transaction)"
+        },
+        "recurringTransactionId": {
+            "type": "string",
+            "description": "Reference to the RecurringTransaction that generated this transaction."
         }
       },
       "required": [
@@ -327,6 +331,31 @@
         "createdAt",
         "updatedAt"
       ]
+    },
+    "RecurringTransaction": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "RecurringTransaction",
+      "type": "object",
+      "description": "Defines a template for a transaction that occurs on a regular schedule.",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "description": { "type": "string" },
+        "amount": { "type": "number" },
+        "type": { "type": "string", "enum": ["income", "expense", "transfer", "credit_card_payment"] },
+        "frequency": { "type": "string", "enum": ["daily", "weekly", "monthly", "yearly"] },
+        "startDate": { "type": "string", "format": "date-time" },
+        "endDate": { "type": "string", "format": "date-time" },
+        "nextGenerationDate": { "type": "string", "format": "date-time" },
+        "lastGeneratedDate": { "type": "string", "format": "date-time" },
+        "autoCreate": { "type": "boolean" },
+        "categoryId": { "type": "string" },
+        "fromBankAccountId": { "type": "string" },
+        "toBankAccountId": { "type": "string" },
+        "fromCreditCardId": { "type": "string" },
+        "toCreditCardId": { "type": "string" }
+      },
+      "required": ["id", "userId", "description", "amount", "type", "frequency", "startDate", "nextGenerationDate", "autoCreate"]
     }
   },
   "auth": {
@@ -453,10 +482,28 @@
             }
           ]
         }
+      },
+      {
+        "path": "/users/{userId}/recurringTransactions/{recurringTransactionId}",
+        "definition": {
+          "entityName": "RecurringTransaction",
+          "schema": {
+            "$ref": "#/backend/entities/RecurringTransaction"
+          },
+          "description": "Stores user-defined recurring transactions. Backend processes will use these to automatically generate transaction documents.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The ID of the user who owns this recurring transaction."
+            },
+            {
+              "name": "recurringTransactionId",
+              "description": "The unique ID for the recurring transaction."
+            }
+          ]
+        }
       }
     ],
     "reasoning": "The recommended Firestore structure for PayFirst emphasizes strict user data isolation and simplified security rules by leveraging path-based ownership. All user-specific financial data (Categories, Bank Accounts, Credit Cards, Transactions, and Savings Rules) is nested directly under a user's unique profile document in the `/users/{userId}/` path.\n\nThis design achieves **Authorization Independence (CRITICAL)** by ensuring that the authorization context (the user's ID) is explicitly present in the path for every document. For example, a `Category` document will be stored at `/users/{userId}/categories/{categoryId}`. A security rule to access this document can simply check `request.auth.uid == userId`, directly comparing the authenticated user's ID with the `userId` wildcard in the path. This eliminates the need for expensive and complex `get()` calls to parent documents in security rules, which can break atomic operations and make debugging challenging. All authorization decisions are self-contained within the document's path and the `request.auth.uid`.\n\nFurthermore, this structure strongly supports **QAPs (Rules are not Filters)**. By structurally segregating each user's data into their own dedicated subcollections (e.g., `/users/{userId}/transactions`, `/users/{userId}/bankAccounts`), every document within these collections shares the same security posture: it is privately owned by the `userId` specified in the path. This means that `list` operations are inherently secure. When a user queries `/users/{userId}/transactions`, the security rules simply verify that `request.auth.uid` matches the `userId` in the path. Firestore's query-ability and security rules work in concert to ensure that a user can only list documents from their own designated data space, preventing data leakage and removing the need for rules to act as data filters after retrieval. This leads to clear, concise, and highly performant security rules that are easy to understand and debug, making the application's data highly secure by design."
   }
 }
-    
-    

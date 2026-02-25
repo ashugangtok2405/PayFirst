@@ -21,26 +21,35 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Switch } from '@/components/ui/switch'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Calendar } from '@/components/ui/calendar'
 import {
   PlusCircle,
   ArrowDown,
   ArrowUp,
   ArrowRightLeft,
   CreditCard as CreditCardIcon,
+  ChevronDown,
+  CalendarIcon,
 } from 'lucide-react'
-import { format } from 'date-fns'
+import { format, addDays, addWeeks, addMonths, addYears } from 'date-fns'
 import { useToast } from '@/hooks/use-toast'
 import {
   useFirestore,
   useUser,
   useCollection,
   useMemoFirebase,
+  addDocumentNonBlocking,
 } from '@/firebase'
 import { collection, doc, runTransaction } from 'firebase/firestore'
-import type { BankAccount, CreditCard, Category, Transaction } from '@/lib/types'
+import type { BankAccount, CreditCard, Category, Transaction, RecurringTransaction } from '@/lib/types'
 import { Skeleton } from '@/components/ui/skeleton'
 
 type TransactionType = 'expense' | 'income' | 'transfer' | 'credit_card_payment'
+type Frequency = 'daily' | 'weekly' | 'monthly' | 'yearly'
 
 export function AddTransactionDialog({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false)
@@ -58,6 +67,12 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
   const [fromAccountId, setFromAccountId] = useState('') // For transfer 'from' & cc payment 'from'
   const [toAccountId, setToAccountId] = useState('') // For transfer 'to'
   const [toCreditCardId, setToCreditCardId] = useState('') // For cc payment 'to'
+
+  // Recurring state
+  const [isRecurring, setIsRecurring] = useState(false)
+  const [frequency, setFrequency] = useState<Frequency>('monthly')
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined)
+  const [autoCreate, setAutoCreate] = useState(true)
 
   const { toast } = useToast()
   const firestore = useFirestore()
@@ -86,11 +101,34 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
     setToAccountId('')
     setToCreditCardId('')
     setDate(format(new Date(), 'dd/MM/yy'))
+    setIsRecurring(false)
+    setFrequency('monthly')
+    setEndDate(undefined)
+    setAutoCreate(true)
   }, [])
   
   useEffect(() => {
-    resetForm()
-  }, [activeTab, resetForm])
+    if (open) {
+        resetForm()
+    }
+  }, [open, resetForm])
+
+  useEffect(() => {
+    // Reset recurring fields if tab changes to one that doesn't support it
+    if (isRecurring && (activeTab === 'transfer' || activeTab === 'credit_card_payment')) {
+        setIsRecurring(false)
+    }
+  }, [activeTab, isRecurring])
+
+  const getNextGenerationDate = (startDate: Date, frequency: Frequency): Date => {
+    switch (frequency) {
+      case 'daily': return addDays(startDate, 1);
+      case 'weekly': return addWeeks(startDate, 1);
+      case 'monthly': return addMonths(startDate, 1);
+      case 'yearly': return addYears(startDate, 1);
+      default: return addMonths(startDate, 1);
+    }
+  }
 
   const handleSubmit = async () => {
     if (!user || !firestore || !date || !amount) {
@@ -114,6 +152,7 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
     
     const newTransactionRef = doc(collection(firestore, 'users', user.uid, 'transactions'));
     const numericAmount = parseFloat(amount);
+    const newRecurringTransactionRef = isRecurring ? doc(collection(firestore, 'users', user.uid, 'recurringTransactions')) : null;
 
     try {
       await runTransaction(firestore, async (transaction) => {
@@ -123,6 +162,10 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
           amount: numericAmount,
           transactionDate: parsedDate.toISOString(),
           description: notes || `New ${activeTab.replace('_', ' ')}`,
+        }
+
+        if (isRecurring && newRecurringTransactionRef) {
+          transactionData.recurringTransactionId = newRecurringTransactionRef.id;
         }
 
         switch (activeTab) {
@@ -167,14 +210,12 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
             const fromAccountRef = doc(firestore, 'users', user.uid, 'bankAccounts', fromAccountId);
             const toAccountRef = doc(firestore, 'users', user.uid, 'bankAccounts', toAccountId);
             
-            // Perform all reads first
             const fromAccountDoc = await transaction.get(fromAccountRef);
             const toAccountDoc = await transaction.get(toAccountRef);
 
             if (!fromAccountDoc.exists()) throw new Error("Source account not found.");
             if (!toAccountDoc.exists()) throw new Error("Destination account not found.");
 
-            // Now perform all writes
             const newFromBalance = fromAccountDoc.data().currentBalance - numericAmount;
             transaction.update(fromAccountRef, { currentBalance: newFromBalance, updatedAt: parsedDate.toISOString() });
 
@@ -191,14 +232,12 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
             const bankAccountRef = doc(firestore, 'users', user.uid, 'bankAccounts', fromAccountId);
             const cardRef = doc(firestore, 'users', user.uid, 'creditCards', toCreditCardId);
 
-            // Perform all reads first
             const bankAccountDoc = await transaction.get(bankAccountRef);
             const cardDoc = await transaction.get(cardRef);
 
             if (!bankAccountDoc.exists()) throw new Error("Bank account not found.");
             if (!cardDoc.exists()) throw new Error("Credit card not found.");
 
-            // Now perform all writes
             const newBankBalance = bankAccountDoc.data().currentBalance - numericAmount;
             transaction.update(bankAccountRef, { currentBalance: newBankBalance, updatedAt: parsedDate.toISOString() });
 
@@ -211,10 +250,31 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
         }
         
         transaction.set(newTransactionRef, transactionData);
+
+        if (isRecurring && newRecurringTransactionRef) {
+            const recurringData: Omit<RecurringTransaction, 'id'> = {
+                userId: user.uid,
+                description: transactionData.description!,
+                amount: transactionData.amount!,
+                type: transactionData.type!,
+                frequency,
+                startDate: transactionData.transactionDate,
+                endDate: endDate?.toISOString(),
+                lastGeneratedDate: transactionData.transactionDate,
+                nextGenerationDate: getNextGenerationDate(parsedDate, frequency).toISOString(),
+                autoCreate,
+                categoryId: transactionData.categoryId,
+                fromBankAccountId: transactionData.fromBankAccountId,
+                toBankAccountId: transactionData.toBankAccountId,
+                fromCreditCardId: transactionData.fromCreditCardId,
+                toCreditCardId: transactionData.toCreditCardId,
+            }
+            transaction.set(newRecurringTransactionRef, recurringData);
+        }
       });
 
       toast({
-        title: 'Transaction Added',
+        title: isRecurring ? 'Recurring Transaction Saved' : 'Transaction Added',
         description: `Your ${activeTab.replace('_', ' ')} has been successfully recorded.`,
       })
       setOpen(false)
@@ -237,6 +297,8 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
         </div>
       )
     }
+
+    const supportsRecurring = activeTab === 'expense' || activeTab === 'income';
 
     return (
       <div className="py-4 space-y-4">
@@ -346,6 +408,52 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
               <Label htmlFor="notes">Notes (Optional)</Label>
               <Input id="notes" placeholder="Add a note..." value={notes} onChange={e => setNotes(e.target.value)} />
           </div>
+
+        {supportsRecurring && (
+            <Collapsible open={isRecurring} onOpenChange={setIsRecurring}>
+                <div className="flex items-center space-x-2">
+                    <Checkbox id="recurring" checked={isRecurring} onCheckedChange={setIsRecurring} />
+                    <label htmlFor="recurring" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                        Make this recurring
+                    </label>
+                </div>
+                <CollapsibleContent className="space-y-4 pt-4 animate-in fade-in-0 zoom-in-95">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="frequency">Frequency</Label>
+                            <Select value={frequency} onValueChange={(v) => setFrequency(v as Frequency)}>
+                                <SelectTrigger id="frequency"><SelectValue placeholder="Select frequency" /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="daily">Daily</SelectItem>
+                                    <SelectItem value="weekly">Weekly</SelectItem>
+                                    <SelectItem value="monthly">Monthly</SelectItem>
+                                    <SelectItem value="yearly">Yearly</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="end-date">End Date (Optional)</Label>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                        {endDate ? format(endDate, 'LLL dd, y') : <span>Never</span>}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus/></PopoverContent>
+                            </Popover>
+                        </div>
+                    </div>
+                     <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
+                        <div className="space-y-0.5">
+                            <Label>Auto-create transaction</Label>
+                            <p className="text-xs text-muted-foreground">If enabled, transactions will be created automatically.</p>
+                        </div>
+                        <Switch checked={autoCreate} onCheckedChange={setAutoCreate} />
+                    </div>
+                </CollapsibleContent>
+            </Collapsible>
+        )}
       </div>
     )
   }

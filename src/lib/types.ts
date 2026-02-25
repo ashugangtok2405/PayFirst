@@ -36,6 +36,7 @@ export interface Transaction {
   toBankAccountId?: string;
   fromCreditCardId?: string;
   toCreditCardId?: string;
+  recurringTransactionId?: string;
 }
 
 export interface Category {
@@ -44,4 +45,23 @@ export interface Category {
     name: string;
     type: 'income' | 'expense';
     isDefault: boolean;
+}
+
+export interface RecurringTransaction {
+  id: string;
+  userId: string;
+  description: string;
+  amount: number;
+  type: 'income' | 'expense' | 'transfer' | 'credit_card_payment';
+  frequency: 'daily' | 'weekly' | 'monthly' | 'yearly';
+  startDate: string;
+  endDate?: string;
+  lastGeneratedDate: string;
+  nextGenerationDate: string;
+  categoryId?: string;
+  fromBankAccountId?: string;
+  toBankAccountId?: string;
+  fromCreditCardId?: string;
+  toCreditCardId?: string;
+  autoCreate: boolean;
 }
