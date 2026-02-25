@@ -13,32 +13,67 @@ import {
   where,
   writeBatch,
   doc,
+  Timestamp,
 } from 'firebase/firestore'
-import type { CreditCard, Alert } from '@/lib/types'
+import type { CreditCard, Alert, BankAccount, Transaction } from '@/lib/types'
+import { differenceInDays, parseISO } from 'date-fns'
 
-// Thresholds
-const CRITICAL_UTILIZATION = 80
-const WARNING_UTILIZATION = 60
+// --- Alerting Thresholds ---
+const CRITICAL_UTILIZATION = 80 // %
+const WARNING_UTILIZATION = 60 // %
+const LOW_BALANCE_THRESHOLD = 5000 // currency units
+const CRITICAL_LOW_BALANCE_FACTOR = 0.5 // e.g., 50% of threshold
+const DUE_DATE_WARNING_DAYS = 3 // days
+const WARNING_SPENDING_RATIO = 0.8 // 80%
+const CRITICAL_SPENDING_RATIO = 1.0 // 100%
 
 export function useAlertManager() {
   const { user } = useUser()
   const firestore = useFirestore()
+  const now = new Date()
+  const startOfMonthISO = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    1
+  ).toISOString()
 
-  // Fetch all credit cards
+  // --- Data Fetching ---
   const creditCardsQuery = useMemoFirebase(
     () => (user ? collection(firestore, 'users', user.uid, 'creditCards') : null),
     [firestore, user]
   )
   const { data: creditCards } = useCollection<CreditCard>(creditCardsQuery)
 
-  // Fetch all unresolved credit utilization alerts
+  const bankAccountsQuery = useMemoFirebase(
+    () => (user ? collection(firestore, 'users', user.uid, 'bankAccounts') : null),
+    [firestore, user]
+  )
+  const { data: bankAccounts } = useCollection<BankAccount>(bankAccountsQuery)
+
+  const transactionsQuery = useMemoFirebase(
+    () =>
+      user
+        ? query(
+            collection(firestore, 'users', user.uid, 'transactions'),
+            where('transactionDate', '>=', startOfMonthISO)
+          )
+        : null,
+    [firestore, user, startOfMonthISO]
+  )
+  const { data: transactions } = useCollection<Transaction>(transactionsQuery)
+
   const alertsQuery = useMemoFirebase(
     () =>
       user
         ? query(
             collection(firestore, 'users', user.uid, 'alerts'),
-            where('type', '==', 'credit_utilization'),
-            where('resolved', '==', false)
+            where('resolved', '==', false),
+            where('type', 'in', [
+              'credit_utilization',
+              'credit_due',
+              'low_balance',
+              'overspending',
+            ])
           )
         : null,
     [firestore, user]
@@ -46,105 +81,138 @@ export function useAlertManager() {
   const { data: activeAlerts } = useCollection<Alert>(alertsQuery)
 
   useEffect(() => {
-    if (!creditCards || !activeAlerts || !user || !firestore) {
+    if (!user || !firestore || !creditCards || !bankAccounts || !transactions || !activeAlerts) {
       return
     }
 
     const processAlerts = async () => {
       const batch = writeBatch(firestore)
-      const activeAlertsMap = new Map(
-        activeAlerts.map((a) => [a.accountId, a])
-      )
+      const now = new Date()
 
+      // --- Helper function to create an alert ---
+      const createAlert = (alertData: Omit<Alert, 'id' | 'createdAt'>) => {
+        const newAlertRef = doc(collection(firestore, 'users', user.uid, 'alerts'))
+        batch.set(newAlertRef, { ...alertData, createdAt: now.toISOString() })
+      }
+
+      // --- Alert Processing Logic ---
+      const activeAlertsMap = new Map(activeAlerts.map((a) => [a.type + '-' + (a.accountId || 'global'), a]))
+
+      // 1. Credit Utilization Alerts
       for (const card of creditCards) {
         if (card.creditLimit <= 0) continue
-
         const utilization = (card.currentBalance / card.creditLimit) * 100
-        const existingAlert = activeAlertsMap.get(card.id)
+        const existingAlert = activeAlertsMap.get(`credit_utilization-${card.id}`)
 
-        // Condition for creating a CRITICAL alert
         if (utilization >= CRITICAL_UTILIZATION) {
           if (existingAlert?.severity !== 'critical') {
-            // If there's an old warning alert, resolve it
-            if (existingAlert) {
-              const oldAlertRef = doc(
-                firestore,
-                'users',
-                user.uid,
-                'alerts',
-                existingAlert.id
-              )
-              batch.update(oldAlertRef, { resolved: true })
-            }
-            // Create a new critical alert
-            const newAlertRef = doc(
-              collection(firestore, 'users', user.uid, 'alerts')
-            )
-            const newAlert: Omit<Alert, 'id'> = {
-              userId: user.uid,
-              type: 'credit_utilization',
-              accountId: card.id,
-              title: 'High Credit Utilization',
-              message: `Your ${
-                card.name
-              } card is at ${utilization.toFixed(0)}% utilization.`,
-              severity: 'critical',
-              isRead: false,
-              resolved: false,
-              createdAt: new Date().toISOString(),
-              actionLink: '/dashboard/accounts',
-            }
-            batch.set(newAlertRef, newAlert)
+            if (existingAlert) batch.update(doc(firestore, 'users', user.uid, 'alerts', existingAlert.id), { resolved: true });
+            createAlert({
+              userId: user.uid, type: 'credit_utilization', accountId: card.id, title: 'Critical Credit Utilization',
+              message: `Your ${card.name} card is at ${utilization.toFixed(0)}% utilization.`,
+              severity: 'critical', isRead: false, resolved: false, actionLink: '/dashboard/accounts',
+            });
           }
-        }
-        // Condition for creating a WARNING alert
-        else if (utilization >= WARNING_UTILIZATION) {
+        } else if (utilization >= WARNING_UTILIZATION) {
           if (!existingAlert) {
-            // Create a new warning alert only if no active alert exists
-            const newAlertRef = doc(
-              collection(firestore, 'users', user.uid, 'alerts')
-            )
-            const newAlert: Omit<Alert, 'id'> = {
-              userId: user.uid,
-              type: 'credit_utilization',
-              accountId: card.id,
-              title: 'High Credit Utilization',
-              message: `Your ${
-                card.name
-              } card is at ${utilization.toFixed(0)}% utilization.`,
-              severity: 'warning',
-              isRead: false,
-              resolved: false,
-              createdAt: new Date().toISOString(),
-              actionLink: '/dashboard/accounts',
-            }
-            batch.set(newAlertRef, newAlert)
+            createAlert({
+              userId: user.uid, type: 'credit_utilization', accountId: card.id, title: 'High Credit Utilization',
+              message: `Your ${card.name} card is at ${utilization.toFixed(0)}% utilization.`,
+              severity: 'warning', isRead: false, resolved: false, actionLink: '/dashboard/accounts',
+            });
           }
-        }
-        // Condition for RESOLVING an existing alert
-        else {
+        } else {
           if (existingAlert) {
-            const oldAlertRef = doc(
-              firestore,
-              'users',
-              user.uid,
-              'alerts',
-              existingAlert.id
-            )
-            batch.update(oldAlertRef, { resolved: true })
+            batch.update(doc(firestore, 'users', user.uid, 'alerts', existingAlert.id), { resolved: true });
           }
         }
       }
+
+      // 2. Upcoming Due Date Alerts
+      for (const card of creditCards) {
+          if (card.currentBalance <= 0) continue
+          try {
+              const dueDate = parseISO(card.statementDueDate)
+              const daysUntilDue = differenceInDays(dueDate, now)
+              const existingAlert = activeAlertsMap.get(`credit_due-${card.id}`)
+              
+              if (daysUntilDue >= 0 && daysUntilDue <= DUE_DATE_WARNING_DAYS) {
+                  if (!existingAlert) {
+                      createAlert({
+                          userId: user.uid, type: 'credit_due', accountId: card.id, title: 'Credit Card Due Soon',
+                          message: `${card.name} bill of ${new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(card.currentBalance)} is due in ${daysUntilDue} day(s).`,
+                          severity: daysUntilDue <= 1 ? 'critical' : 'warning', isRead: false, resolved: false, actionLink: '/dashboard/accounts',
+                      })
+                  }
+              } else {
+                  if (existingAlert) {
+                      batch.update(doc(firestore, 'users', user.uid, 'alerts', existingAlert.id), { resolved: true })
+                  }
+              }
+          } catch(e) {/* ignore invalid dates */}
+      }
+
+      // 3. Low Balance Alerts
+      for (const account of bankAccounts) {
+        if (account.isSavingsAccount) continue
+        const existingAlert = activeAlertsMap.get(`low_balance-${account.id}`)
+
+        if (account.currentBalance < LOW_BALANCE_THRESHOLD) {
+            const severity = account.currentBalance < LOW_BALANCE_THRESHOLD * CRITICAL_LOW_BALANCE_FACTOR ? 'critical' : 'warning'
+            if (existingAlert?.severity !== severity) {
+                if (existingAlert) batch.update(doc(firestore, 'users', user.uid, 'alerts', existingAlert.id), { resolved: true });
+                createAlert({
+                    userId: user.uid, type: 'low_balance', accountId: account.id, title: 'Low Balance Alert',
+                    message: `Your ${account.name} balance is ${new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(account.currentBalance)}.`,
+                    severity, isRead: false, resolved: false, actionLink: '/dashboard/accounts',
+                })
+            }
+        } else {
+            if (existingAlert) {
+                batch.update(doc(firestore, 'users', user.uid, 'alerts', existingAlert.id), { resolved: true })
+            }
+        }
+      }
+
+      // 4. Overspending Alert
+      const monthlyIncome = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0)
+      const monthlyExpense = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0)
+      const existingAlert = activeAlertsMap.get('overspending-global')
+      
+      if (monthlyIncome > 0) {
+          const spendingRatio = monthlyExpense / monthlyIncome;
+          if (spendingRatio >= CRITICAL_SPENDING_RATIO) {
+              if (existingAlert?.severity !== 'critical') {
+                  if (existingAlert) batch.update(doc(firestore, 'users', user.uid, 'alerts', existingAlert.id), { resolved: true });
+                  createAlert({
+                      userId: user.uid, type: 'overspending', title: 'Overspending Alert',
+                      message: `You've spent ${Math.round(spendingRatio*100)}% of your monthly income.`,
+                      severity: 'critical', isRead: false, resolved: false, actionLink: '/dashboard/transactions',
+                  });
+              }
+          } else if (spendingRatio >= WARNING_SPENDING_RATIO) {
+              if (!existingAlert) {
+                   createAlert({
+                      userId: user.uid, type: 'overspending', title: 'High Spending Alert',
+                      message: `You've spent ${Math.round(spendingRatio*100)}% of your monthly income.`,
+                      severity: 'warning', isRead: false, resolved: false, actionLink: '/dashboard/transactions',
+                  });
+              }
+          } else {
+              if (existingAlert) {
+                  batch.update(doc(firestore, 'users', user.uid, 'alerts', existingAlert.id), { resolved: true });
+              }
+          }
+      }
+
 
       try {
         await batch.commit()
       } catch (error) {
-        // This might fail if another process is committing a batch simultaneously.
-        // It's generally safe to ignore for this use case, as the hook will re-run.
-        console.error('Error processing credit utilization alerts:', error)
+        console.warn('Could not commit alert batch:', error)
       }
     }
 
     processAlerts()
-  }, [creditCards, activeAlerts, user, firestore])
+  }, [creditCards, bankAccounts, transactions, activeAlerts, user, firestore])
 }
