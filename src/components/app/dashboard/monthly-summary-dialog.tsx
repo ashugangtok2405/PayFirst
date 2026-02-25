@@ -1,6 +1,8 @@
 'use client'
 
 import { useMemo } from 'react'
+import { useRouter } from 'next/navigation'
+import { formatISO, startOfMonth, endOfMonth } from 'date-fns'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -42,6 +44,8 @@ const getHealthIndicator = (netFlow: number, savingsRate: number) => {
 
 
 export function MonthlySummaryDialog({ isOpen, onClose, data }: MonthlySummaryDialogProps) {
+  const router = useRouter()
+
   const summary = useMemo(() => {
     if (!data) return null;
 
@@ -83,6 +87,15 @@ export function MonthlySummaryDialog({ isOpen, onClose, data }: MonthlySummaryDi
         health,
     }
   }, [data])
+
+  const handleViewTransactions = () => {
+    if (!data) return;
+    const monthDate = new Date(data.name); 
+    const startDate = formatISO(startOfMonth(monthDate), { representation: 'date' });
+    const endDate = formatISO(endOfMonth(monthDate), { representation: 'date' });
+    router.push(`/dashboard/transactions?startDate=${startDate}&endDate=${endDate}`);
+    onClose();
+  }
 
   if (!isOpen || !data || !summary) {
     return null;
@@ -157,7 +170,7 @@ export function MonthlySummaryDialog({ isOpen, onClose, data }: MonthlySummaryDi
             </div>
             <DialogFooter>
                 <Button variant="secondary" onClick={onClose}>Close</Button>
-                <Button>View Full Transactions</Button>
+                <Button onClick={handleViewTransactions}>View Full Transactions</Button>
             </DialogFooter>
         </DialogContent>
     </Dialog>

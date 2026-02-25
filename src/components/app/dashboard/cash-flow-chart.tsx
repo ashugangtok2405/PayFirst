@@ -4,9 +4,12 @@ import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, Cart
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { MonthlySummaryDialog } from './monthly-summary-dialog'
-import { subMonths, format } from 'date-fns'
+import { subMonths, format, startOfMonth } from 'date-fns'
 import { Skeleton } from '@/components/ui/skeleton'
-import * as React from 'react'
+
+import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase'
+import { collection, query, where, orderBy } from 'firebase/firestore'
+import type { Transaction, Category, CreditCard } from '@/lib/types'
 
 const formatCurrency = (value: number) => `₹${(value / 1000).toFixed(0)}k`
 const formatCurrencyTooltip = (value: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(value)
@@ -34,49 +37,83 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     return null;
   };
 
-// MOCK DATA
-const mockData = Array.from({ length: 12 }).map((_, i) => {
-  const date = subMonths(new Date(), 11 - i);
-  const income = 75000 + Math.random() * 25000;
-  const expense = 40000 + Math.random() * 30000;
-  return {
-    name: format(date, 'MMM yyyy'),
-    shortName: format(date, 'MMM'),
-    income,
-    expense,
-    transactions: [], // Empty for now to keep it simple
-    categories: [],
-    creditCards: [],
-  };
-});
-
 export function CashFlowChart() {
     const [period, setPeriod] = useState(6);
-    const [selectedMonth, setSelectedMonth] = useState<any | null>(null);
+    const [selectedMonthData, setSelectedMonthData] = useState<any | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
+    
+    const { user } = useUser()
+    const firestore = useFirestore()
 
-    React.useEffect(() => {
-        const timer = setTimeout(() => setIsLoading(false), 500);
-        return () => clearTimeout(timer);
-    }, []);
+    const twelveMonthsAgo = useMemo(() => subMonths(new Date(), 11), []);
+    const startOfTwelveMonths = useMemo(() => startOfMonth(twelveMonthsAgo), [twelveMonthsAgo]);
 
-    const monthlyData = useMemo(() => {
-        return mockData.slice(-period);
-    }, [period]);
+    const transactionsQuery = useMemoFirebase(() => user ? query(
+        collection(firestore, 'users', user.uid, 'transactions'), 
+        where('transactionDate', '>=', startOfTwelveMonths.toISOString()),
+        orderBy('transactionDate', 'desc')
+    ) : null, [firestore, user, startOfTwelveMonths]);
+    const { data: transactions, isLoading: loadingTransactions } = useCollection<Transaction>(transactionsQuery)
+    
+    const categoriesQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'categories') : null, [firestore, user])
+    const { data: categories, isLoading: loadingCategories } = useCollection<Category>(categoriesQuery)
+
+    const creditCardsQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'creditCards') : null, [firestore, user])
+    const { data: creditCards, isLoading: loadingCreditCards } = useCollection<CreditCard>(creditCardsQuery)
+
+    const isLoading = loadingTransactions || loadingCategories || loadingCreditCards;
+
+    const allMonthlyData = useMemo(() => {
+        const dataMap = new Map<string, { name: string, shortName: string, income: number, expense: number, transactions: Transaction[] }>();
+
+        for (let i = 11; i >= 0; i--) {
+            const date = subMonths(new Date(), i);
+            const name = format(date, 'MMM yyyy');
+            const shortName = format(date, 'MMM');
+            dataMap.set(name, { name, shortName, income: 0, expense: 0, transactions: [] });
+        }
+
+        if (transactions) {
+            transactions.forEach(t => {
+                try {
+                    const monthName = format(new Date(t.transactionDate), 'MMM yyyy');
+                    const monthData = dataMap.get(monthName);
+                    if (monthData) {
+                        if (t.type === 'income') {
+                            monthData.income += t.amount;
+                        } else if (t.type === 'expense') {
+                            monthData.expense += t.amount;
+                        }
+                        monthData.transactions.push(t);
+                    }
+                } catch (e) {
+                    // Ignore invalid transaction dates
+                }
+            });
+        }
+        return Array.from(dataMap.values());
+    }, [transactions]);
+    
+    const chartData = useMemo(() => {
+        return allMonthlyData.slice(-period);
+    }, [period, allMonthlyData]);
 
     const handleBarClick = (data: any) => {
         if (data && data.activePayload && data.activePayload.length > 0) {
             const monthIndex = data.activeTooltipIndex;
-            const clickedMonthData = monthlyData[monthIndex];
+            const clickedMonthData = chartData[monthIndex];
             
-            setSelectedMonth(clickedMonthData);
+            setSelectedMonthData({
+                ...clickedMonthData,
+                categories: categories ?? [],
+                creditCards: creditCards ?? [],
+            });
             setIsModalOpen(true);
         }
     };
     
-    const totalIncome = monthlyData.reduce((acc, item) => acc + item.income, 0)
-    const totalExpense = monthlyData.reduce((acc, item) => acc + item.expense, 0)
+    const totalIncome = chartData.reduce((acc, item) => acc + item.income, 0)
+    const totalExpense = chartData.reduce((acc, item) => acc + item.expense, 0)
     const netCashFlow = totalIncome - totalExpense
 
     return (
@@ -125,7 +162,7 @@ export function CashFlowChart() {
                          <Skeleton className="w-full h-[250px]" />
                     ) : (
                         <ResponsiveContainer width="100%" height={250}>
-                            <BarChart data={monthlyData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }} onClick={handleBarClick}>
+                            <BarChart data={chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }} onClick={handleBarClick}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                 <XAxis dataKey="shortName" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
                                 <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={formatCurrency} />
@@ -141,7 +178,7 @@ export function CashFlowChart() {
             <MonthlySummaryDialog 
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                data={selectedMonth}
+                data={selectedMonthData}
             />
         </>
     )

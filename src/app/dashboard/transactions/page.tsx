@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { startOfMonth, endOfMonth, subMonths, startOfWeek, endOfWeek } from 'date-fns'
+import { useState, useMemo, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { startOfMonth, endOfMonth, subMonths, startOfWeek, endOfWeek, parseISO } from 'date-fns'
 
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase'
 import { collection, query, orderBy } from 'firebase/firestore'
@@ -21,6 +22,26 @@ export default function TransactionsPage() {
   const [typeFilter, setTypeFilter] = useState('all')
   const [accountFilter, setAccountFilter] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    const startDateParam = searchParams.get('startDate')
+    const endDateParam = searchParams.get('endDate')
+    
+    if (startDateParam && endDateParam) {
+      try {
+        const from = parseISO(startDateParam)
+        const to = parseISO(endDateParam)
+        // Check if dates are valid to prevent crashes
+        if (!isNaN(from.getTime()) && !isNaN(to.getTime())) {
+          setDateRange({ from, to })
+        }
+      } catch (error) {
+        console.error('Failed to parse date range from URL params:', error);
+      }
+    }
+  }, [searchParams])
+
 
   const { user } = useUser()
   const firestore = useFirestore()
