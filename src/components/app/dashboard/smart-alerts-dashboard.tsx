@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { AlertCircle, Zap, ArrowRight, ShieldCheck, CalendarClock } from 'lucide-react'
@@ -19,13 +19,13 @@ export function SmartAlertsDashboard() {
       user
         ? query(
             collection(firestore, 'users', user.uid, 'alerts'),
-            where('resolved', '==', false),
             orderBy('createdAt', 'desc')
           )
         : null,
     [user, firestore]
   )
-  const { data: alerts, isLoading } = useCollection<Alert>(alertsQuery)
+  const { data: allAlerts, isLoading } = useCollection<Alert>(alertsQuery)
+  const alerts = useMemo(() => allAlerts?.filter((a) => !a.resolved), [allAlerts])
 
   const alertConfig: Record<Alert['severity'], { icon: React.ElementType; iconColor: string; bgColor: string }> = {
     critical: { icon: AlertCircle, iconColor: 'text-red-500', bgColor: 'bg-red-50' },

@@ -1,6 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { useMemo } from 'react'
 import { Bell, CircleAlert, Info, TriangleAlert } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 
@@ -27,7 +28,6 @@ import {
   collection,
   query,
   orderBy,
-  where,
   doc,
   updateDoc,
   writeBatch,
@@ -50,15 +50,15 @@ export function NotificationBell() {
       user
         ? query(
             collection(firestore, 'users', user.uid, 'alerts'),
-            where('resolved', '==', false),
             orderBy('createdAt', 'desc')
           )
         : null,
     [user, firestore]
   )
 
-  const { data: alerts, isLoading } = useCollection<Alert>(alertsQuery)
-  const unreadCount = alerts?.filter((a) => !a.isRead).length ?? 0
+  const { data: allAlerts, isLoading } = useCollection<Alert>(alertsQuery)
+  const alerts = useMemo(() => allAlerts?.filter((a) => !a.resolved), [allAlerts])
+  const unreadCount = useMemo(() => alerts?.filter((a) => !a.isRead).length ?? 0, [alerts])
 
   const handleAlertClick = (alert: Alert) => {
     if (!user) return
