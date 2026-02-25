@@ -33,7 +33,7 @@ body {
     --chart-3: 0 84% 60%; /* a red */
     --chart-4: 258 73% 66%;
     --chart-5: 45 93% 55%; /* accent */
-    --sidebar-background: 0 0% 100%;
+    --sidebar-background: 210 25% 98%; /* #f8fafc */
     --sidebar-foreground: 224 71% 15%;
     --sidebar-primary: 221 83% 53%;
     --sidebar-primary-foreground: 0 0% 100%;
@@ -68,7 +68,7 @@ body {
     --chart-3: 0 84% 70%;
     --chart-4: 258 73% 76%;
     --chart-5: 45 93% 65%;
-    --sidebar-background: 220 20% 13%;
+    --sidebar-background: 220 20% 12%;
     --sidebar-foreground: 0 0% 95%;
     --sidebar-primary: 221 83% 63%;
     --sidebar-primary-foreground: 224 71% 15%;

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -17,18 +17,24 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Landmark, CreditCard, ChevronDown, PlusCircle } from 'lucide-react'
+import { Landmark, CreditCard, ChevronDown } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { useFirestore, useUser, addDocumentNonBlocking } from '@/firebase'
 import { collection } from 'firebase/firestore'
 import type { BankAccount, CreditCard as CreditCardType } from '@/lib/types'
 
-export function AddAccountDialog() {
+export function AddAccountDialog({ children, defaultType = 'bank' }: { children: React.ReactNode; defaultType?: 'bank' | 'credit' }) {
   const [open, setOpen] = useState(false)
-  const [accountType, setAccountType] = useState('bank')
+  const [accountType, setAccountType] = useState(defaultType)
   const { toast } = useToast()
   const firestore = useFirestore()
   const { user } = useUser()
+
+  useEffect(() => {
+    if (open) {
+      setAccountType(defaultType)
+    }
+  }, [open, defaultType])
 
   // Bank Account State
   const [bankAccountName, setBankAccountName] = useState('')
@@ -88,9 +94,7 @@ export function AddAccountDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">
-          <PlusCircle className="mr-2 h-4 w-4" /> Add Account
-        </Button>
+        {children}
       </DialogTrigger>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
         <DialogHeader>

@@ -26,18 +26,18 @@ export function MainNav() {
   const pathname = usePathname()
 
   return (
-      <SidebarMenu className="flex-1 p-2">
+      <SidebarMenu className="flex-1 p-0">
         {menuItems.map((item) => (
           <SidebarMenuItem key={item.href}>
             <SidebarMenuButton
               asChild
               isActive={pathname === item.href}
               tooltip={item.label}
-              className="h-10"
+              className="h-12 justify-start data-[active=true]:bg-gradient-to-r data-[active=true]:from-blue-500 data-[active=true]:to-indigo-600 data-[active=true]:text-white data-[active=true]:shadow-md"
             >
               <Link href={item.href}>
-                <item.icon />
-                <span>{item.label}</span>
+                <item.icon className="h-5 w-5" />
+                <span className="font-medium">{item.label}</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

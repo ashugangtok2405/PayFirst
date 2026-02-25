@@ -14,11 +14,13 @@ import {
   SidebarFooter,
   SidebarTrigger,
   SidebarInset,
+  SidebarSeparator,
 } from '@/components/ui/sidebar'
-import { Bell, PlusCircle } from 'lucide-react'
+import { Bell, PlusCircle, Landmark, CreditCard } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { AddTransactionDialog } from '@/components/app/add-transaction-dialog'
 import { Button } from '@/components/ui/button'
+import { AddAccountDialog } from '@/components/app/accounts/add-account-dialog'
 
 export default function DashboardLayout({
   children,
@@ -50,15 +52,35 @@ export default function DashboardLayout({
   return (
     <SidebarProvider>
       <Sidebar>
-        <SidebarHeader className="p-4">
-          <Logo />
-        </SidebarHeader>
-        <SidebarContent>
-          <MainNav />
-        </SidebarContent>
-        <SidebarFooter className="p-4">
-          <UserNav />
-        </SidebarFooter>
+        <div className="flex h-full flex-col justify-between">
+          <div>
+            <SidebarHeader className="border-b border-sidebar-border p-6 pb-4">
+              <Logo />
+            </SidebarHeader>
+            <SidebarContent className="p-4">
+              <MainNav />
+            </SidebarContent>
+          </div>
+          <SidebarFooter className="space-y-4 p-4">
+            <div className="space-y-2">
+              <AddAccountDialog defaultType="bank">
+                <Button className="w-full justify-start bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-md transition hover:scale-[1.02]">
+                  <Landmark className="mr-2" /> Add Bank Account
+                </Button>
+              </AddAccountDialog>
+              <AddAccountDialog defaultType="credit">
+                <Button
+                  variant="outline"
+                  className="w-full justify-start border-gray-300 text-gray-700 hover:bg-gray-100"
+                >
+                  <CreditCard className="mr-2" /> Add Credit Card
+                </Button>
+              </AddAccountDialog>
+            </div>
+            <SidebarSeparator />
+            <UserNav />
+          </SidebarFooter>
+        </div>
       </Sidebar>
       <SidebarInset>
         <header className="flex h-16 items-center gap-4 border-b bg-card px-4 md:px-6">

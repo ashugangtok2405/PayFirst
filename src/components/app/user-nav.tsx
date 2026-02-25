@@ -2,7 +2,6 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "@/components/ui/sidebar"
 import { Settings, LogOut } from "lucide-react"
 import { useAuth, useUser } from "@/firebase"
 import Link from 'next/link'
@@ -21,33 +20,27 @@ export function UserNav() {
   }
 
   return (
-     <div className="flex flex-col gap-1 w-full">
-        <div className="flex items-center gap-3 p-2">
+    <div className="rounded-2xl bg-secondary/50 p-4 shadow-sm">
+        <div className="flex items-center gap-3">
             <Avatar className="h-10 w-10">
                 <AvatarImage src={user?.photoURL ?? undefined} alt={user?.displayName ?? "User"} />
                 <AvatarFallback>{getInitials(user?.email)}</AvatarFallback>
             </Avatar>
-            <div className="truncate group-data-[collapsible=icon]:hidden">
-                <p className="font-semibold text-sm truncate">{user?.displayName ?? 'Ashish'}</p>
-                <p className="text-xs text-muted-foreground truncate">{user?.email ?? 'ashish@example.com'}</p>
+            <div className="truncate">
+                <p className="truncate text-sm font-semibold text-foreground">{user?.displayName ?? 'Ashish'}</p>
+                <p className="truncate text-xs text-muted-foreground">{user?.email ?? 'ashish@example.com'}</p>
             </div>
         </div>
-        <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Settings" className="h-10">
-                <Link href="#">
-                  <Settings />
-                  <span>Settings</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-             <SidebarMenuItem>
-              <SidebarMenuButton onClick={handleLogout} tooltip="Log out" className="h-10 text-red-500 hover:bg-red-50 hover:text-red-600">
-                  <LogOut />
-                  <span>Log out</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-        </SidebarMenu>
+
+        <div className="mt-4 space-y-2">
+            <Button variant="ghost" className="w-full justify-start bg-background text-sm text-foreground/80 hover:bg-muted">
+                <Settings className="mr-2 h-4 w-4" /> Settings
+            </Button>
+
+            <Button variant="ghost" onClick={handleLogout} className="w-full justify-start text-sm text-red-500 hover:bg-red-50 hover:text-red-600">
+                <LogOut className="mr-2 h-4 w-4" /> Log out
+            </Button>
+        </div>
     </div>
   )
 }
