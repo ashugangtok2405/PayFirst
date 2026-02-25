@@ -1,5 +1,8 @@
 'use client'
 
+import { useMemo } from 'react'
+import Link from 'next/link'
+import { startOfMonth } from 'date-fns'
 import {
   Accordion,
   AccordionContent,
@@ -28,10 +31,11 @@ import {
 } from '@/components/ui/alert-dialog'
 import { useToast } from '@/hooks/use-toast'
 import { useFirestore, useUser, useCollection, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase'
-import { collection, doc } from 'firebase/firestore'
+import { collection, doc, query, orderBy } from 'firebase/firestore'
 import type { BankAccount, Transaction } from '@/lib/types'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AddTransactionDialog } from '../add-transaction-dialog'
+import { TransferMoneyDialog } from './transfer-money-dialog'
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -46,6 +50,8 @@ export function BankAccounts() {
   const { toast } = useToast()
   const firestore = useFirestore()
   const { user } = useUser()
+  const now = new Date()
+  const monthStart = startOfMonth(now).toISOString()
 
   const bankAccountsQuery = useMemoFirebase(
     () => user ? collection(firestore, 'users', user.uid, 'bankAccounts') : null,
@@ -54,13 +60,24 @@ export function BankAccounts() {
   const { data: bankAccounts, isLoading: loadingBankAccounts } = useCollection<BankAccount>(bankAccountsQuery)
 
   const transactionsQuery = useMemoFirebase(
-    () => user ? collection(firestore, 'users', user.uid, 'transactions') : null,
+    () => user ? query(collection(firestore, 'users', user.uid, 'transactions'), orderBy('transactionDate', 'desc')) : null,
     [firestore, user]
   );
   const { data: transactions, isLoading: loadingTransactions } = useCollection<Transaction>(transactionsQuery);
 
   const handleDelete = (accountId: string, accountName: string) => {
     if (!user) return;
+    
+    const hasTransactions = transactions?.some(t => t.fromBankAccountId === accountId || t.toBankAccountId === accountId);
+    if (hasTransactions) {
+      toast({
+        variant: 'destructive',
+        title: 'Deletion Failed',
+        description: `Cannot delete "${accountName}" as it has associated transactions. Please reassign or delete them first.`,
+      })
+      return;
+    }
+    
     const docRef = doc(firestore, 'users', user.uid, 'bankAccounts', accountId)
     deleteDocumentNonBlocking(docRef);
     toast({
@@ -84,10 +101,16 @@ export function BankAccounts() {
         ) : bankAccounts && bankAccounts.length > 0 ? (
             <Accordion type="single" collapsible className="w-full space-y-4">
             {bankAccounts.map((account) => {
-                const accountTransactions = transactions?.filter(t => t.fromBankAccountId === account.id || t.toBankAccountId === account.id).sort((a,b) => new Date(b.transactionDate).getTime() - new Date(a.transactionDate).getTime()).slice(0, 5) ?? [];
+                const accountTransactions = transactions?.filter(t => t.fromBankAccountId === account.id || t.toBankAccountId === account.id).slice(0, 5) ?? [];
                 
-                const monthlyInflow = transactions?.filter(t => t.toBankAccountId === account.id && t.type === 'income').reduce((sum, t) => sum + t.amount, 0) ?? 0;
-                const monthlyOutflow = transactions?.filter(t => t.fromBankAccountId === account.id && t.type === 'expense').reduce((sum, t) => sum + t.amount, 0) ?? 0;
+                const monthlyTxs = useMemo(() => transactions?.filter(t => {
+                    try {
+                       return new Date(t.transactionDate) >= new Date(monthStart)
+                    } catch(e) { return false }
+                }) ?? [], [transactions, monthStart]);
+
+                const monthlyInflow = monthlyTxs.filter(t => t.toBankAccountId === account.id && t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+                const monthlyOutflow = monthlyTxs.filter(t => t.fromBankAccountId === account.id && t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
 
                 return (
                 <AccordionItem value={account.id} key={account.id} className="border-b-0">
@@ -117,12 +140,18 @@ export function BankAccounts() {
                                         </div>
                                     </div>
                             </AccordionTrigger>
-                            <div className="mt-4 flex items-center gap-2">
+                            <div className="mt-4 flex flex-wrap items-center gap-2">
                                 <AddTransactionDialog>
                                     <Button size="sm" variant="outline"><PlusCircle className="mr-2 h-4 w-4" /> Add Transaction</Button>
                                 </AddTransactionDialog>
-                                <Button size="sm" variant="outline"><ArrowRightLeft className="mr-2 h-4 w-4" /> Transfer</Button>
-                                <Button size="sm" variant="ghost"><History className="mr-2 h-4 w-4" /> View History</Button>
+                                <TransferMoneyDialog>
+                                    <Button size="sm" variant="outline"><ArrowRightLeft className="mr-2 h-4 w-4" /> Transfer</Button>
+                                </TransferMoneyDialog>
+                                <Button size="sm" variant="ghost" asChild>
+                                    <Link href={`/dashboard/transactions?accountFilter=${account.id}`}>
+                                        <History className="mr-2 h-4 w-4" /> View History
+                                    </Link>
+                                </Button>
                                 <AlertDialog>
                                 <AlertDialogTrigger asChild>
                                     <Button size="sm" variant="ghost" className="text-red-500 hover:text-red-500 hover:bg-red-50">
@@ -134,7 +163,7 @@ export function BankAccounts() {
                                     <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                                     <AlertDialogDescription>
                                         This action cannot be undone. This will permanently delete your
-                                        bank account and all of its associated data.
+                                        bank account "{account.name}".
                                     </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>

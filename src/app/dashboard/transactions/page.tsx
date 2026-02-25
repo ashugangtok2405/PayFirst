@@ -27,6 +27,7 @@ export default function TransactionsPage() {
   useEffect(() => {
     const startDateParam = searchParams.get('startDate')
     const endDateParam = searchParams.get('endDate')
+    const accountFilterParam = searchParams.get('accountFilter');
     
     if (startDateParam && endDateParam) {
       try {
@@ -39,6 +40,10 @@ export default function TransactionsPage() {
       } catch (error) {
         console.error('Failed to parse date range from URL params:', error);
       }
+    }
+    
+    if (accountFilterParam) {
+        setAccountFilter(accountFilterParam)
     }
   }, [searchParams])
 
