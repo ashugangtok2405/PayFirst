@@ -64,8 +64,7 @@ export function TopExpenses() {
     const transactionsQuery = useMemoFirebase(
         () => user ? query(
             collection(firestore, 'users', user.uid, 'transactions'),
-            where('transactionDate', '>=', startOfCurrentMonth.toISOString()),
-            where('type', '==', 'expense')
+            where('transactionDate', '>=', startOfCurrentMonth.toISOString())
         ) : null,
         [firestore, user, startOfCurrentMonth]
     )
@@ -79,14 +78,18 @@ export function TopExpenses() {
     const topExpenses = useMemo(() => {
         if (!transactions || transactions.length === 0 || !categories) return [];
 
+        const expenseTransactions = transactions.filter(t => t.type === 'expense');
+
+        if (expenseTransactions.length === 0) return [];
+
         const categoryMap = categories.reduce((acc, cat) => {
             acc[cat.id] = cat.name;
             return acc;
         }, {} as Record<string, string>);
 
-        const totalExpenses = transactions.reduce((sum, t) => sum + t.amount, 0);
+        const totalExpenses = expenseTransactions.reduce((sum, t) => sum + t.amount, 0);
 
-        const breakdown = transactions.reduce((acc, t) => {
+        const breakdown = expenseTransactions.reduce((acc, t) => {
             const categoryName = t.categoryId ? categoryMap[t.categoryId] : 'Other';
             if (categoryName) {
                 if (!acc[categoryName]) {
@@ -137,7 +140,7 @@ export function TopExpenses() {
 
     const renderContent = () => (
         <div className="space-y-6">
-            {topExpenses.map((category) => {
+            {topExpenses && topExpenses.map((category) => {
                 const Icon = categoryIcons[category.name] || categoryIcons.default
                 const color = categoryColors[category.name] || categoryColors.default
                 return (
@@ -166,7 +169,7 @@ export function TopExpenses() {
         <CardDescription>Your biggest spending categories this month.</CardDescription>
       </CardHeader>
       <CardContent>
-        {isLoading ? renderLoading() : topExpenses.length === 0 ? renderEmpty() : renderContent()}
+        {isLoading ? renderLoading() : !topExpenses || topExpenses.length === 0 ? renderEmpty() : renderContent()}
       </CardContent>
     </Card>
   )
