@@ -33,11 +33,10 @@ import { useToast } from '@/hooks/use-toast'
 import {
   useFirestore,
   useUser,
-  addDocumentNonBlocking,
   useCollection,
   useMemoFirebase,
 } from '@/firebase'
-import { collection } from 'firebase/firestore'
+import { collection, doc, runTransaction } from 'firebase/firestore'
 import type { BankAccount, CreditCard, Category, Transaction } from '@/lib/types'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -93,7 +92,7 @@ export function AddTransactionDialog() {
     resetForm()
   }, [activeTab, resetForm])
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!user || !firestore || !date || !amount) {
       toast({ variant: 'destructive', title: 'Error', description: 'Please fill out all required fields.' })
       return
@@ -112,53 +111,98 @@ export function AddTransactionDialog() {
         toast({ variant: 'destructive', title: 'Invalid Date', description: 'Please use DD/MM/YY format.' });
         return;
     }
-
-    let transactionData: Partial<Transaction> = {
-      userId: user.uid,
-      type: activeTab,
-      amount: parseFloat(amount),
-      transactionDate: parsedDate.toISOString(),
-      description: notes || `New ${activeTab.replace('_', ' ')}`,
-    }
+    
+    const newTransactionRef = doc(collection(firestore, 'users', user.uid, 'transactions'));
+    const numericAmount = parseFloat(amount);
 
     try {
-      switch (activeTab) {
-        case 'expense':
-          if (!accountId || !categoryId) throw new Error("Account and category are required.");
-          if (bankAccounts?.some(b => b.id === accountId)) {
-            transactionData.fromBankAccountId = accountId;
-          } else if (creditCards?.some(c => c.id === accountId)) {
-            transactionData.fromCreditCardId = accountId;
-          }
-          transactionData.categoryId = categoryId
-          break
+      await runTransaction(firestore, async (transaction) => {
+        let transactionData: Partial<Transaction> = {
+          userId: user.uid,
+          type: activeTab,
+          amount: numericAmount,
+          transactionDate: parsedDate.toISOString(),
+          description: notes || `New ${activeTab.replace('_', ' ')}`,
+        }
+
+        switch (activeTab) {
+          case 'expense':
+            if (!accountId || !categoryId) throw new Error("Account and category are required.");
+            
+            if (bankAccounts?.some(b => b.id === accountId)) {
+              transactionData.fromBankAccountId = accountId;
+              const accountRef = doc(firestore, 'users', user.uid, 'bankAccounts', accountId);
+              const accountDoc = await transaction.get(accountRef);
+              if (!accountDoc.exists()) throw new Error("Bank account not found.");
+              const newBalance = accountDoc.data().currentBalance - numericAmount;
+              transaction.update(accountRef, { currentBalance: newBalance, updatedAt: parsedDate.toISOString() });
+            } else if (creditCards?.some(c => c.id === accountId)) {
+              transactionData.fromCreditCardId = accountId;
+              const cardRef = doc(firestore, 'users', user.uid, 'creditCards', accountId);
+              const cardDoc = await transaction.get(cardRef);
+              if (!cardDoc.exists()) throw new Error("Credit card not found.");
+              const newBalance = cardDoc.data().currentBalance + numericAmount;
+              transaction.update(cardRef, { currentBalance: newBalance, updatedAt: parsedDate.toISOString() });
+            }
+            transactionData.categoryId = categoryId
+            break
         
-        case 'income':
-          if (!accountId || !categoryId) throw new Error("Account and source are required.");
-          transactionData.toBankAccountId = accountId
-          transactionData.categoryId = categoryId
-          break
+          case 'income':
+            if (!accountId || !categoryId) throw new Error("Account and source are required.");
+            transactionData.toBankAccountId = accountId;
+            const accountRef = doc(firestore, 'users', user.uid, 'bankAccounts', accountId);
+            const accountDoc = await transaction.get(accountRef);
+            if (!accountDoc.exists()) throw new Error("Bank account not found.");
+            const newBalance = accountDoc.data().currentBalance + numericAmount;
+            transaction.update(accountRef, { currentBalance: newBalance, updatedAt: parsedDate.toISOString() });
+            transactionData.categoryId = categoryId;
+            break
         
-        case 'transfer':
-          if (!fromAccountId || !toAccountId) throw new Error("Both 'from' and 'to' accounts are required.");
-          if (fromAccountId === toAccountId) throw new Error("'From' and 'to' accounts cannot be the same.");
-          transactionData.fromBankAccountId = fromAccountId
-          transactionData.toBankAccountId = toAccountId
-          break
+          case 'transfer':
+            if (!fromAccountId || !toAccountId) throw new Error("Both 'from' and 'to' accounts are required.");
+            if (fromAccountId === toAccountId) throw new Error("'From' and 'to' accounts cannot be the same.");
+            transactionData.fromBankAccountId = fromAccountId;
+            transactionData.toBankAccountId = toAccountId;
+            
+            const fromAccountRef = doc(firestore, 'users', user.uid, 'bankAccounts', fromAccountId);
+            const fromAccountDoc = await transaction.get(fromAccountRef);
+            if (!fromAccountDoc.exists()) throw new Error("Source account not found.");
+            const newFromBalance = fromAccountDoc.data().currentBalance - numericAmount;
+            transaction.update(fromAccountRef, { currentBalance: newFromBalance, updatedAt: parsedDate.toISOString() });
 
-        case 'credit_card_payment':
-          if (!fromAccountId || !toCreditCardId) throw new Error("A source bank account and a credit card are required.");
-          transactionData.fromBankAccountId = fromAccountId;
-          transactionData.toCreditCardId = toCreditCardId;
-          transactionData.description = notes || `Payment for ${creditCards?.find(c => c.id === toCreditCardId)?.name}`
-          break
+            const toAccountRef = doc(firestore, 'users', user.uid, 'bankAccounts', toAccountId);
+            const toAccountDoc = await transaction.get(toAccountRef);
+            if (!toAccountDoc.exists()) throw new Error("Destination account not found.");
+            const newToBalance = toAccountDoc.data().currentBalance + numericAmount;
+            transaction.update(toAccountRef, { currentBalance: newToBalance, updatedAt: parsedDate.toISOString() });
+            break
 
-        default:
-          throw new Error("Invalid transaction type.")
-      }
+          case 'credit_card_payment':
+            if (!fromAccountId || !toCreditCardId) throw new Error("A source bank account and a credit card are required.");
+            transactionData.fromBankAccountId = fromAccountId;
+            transactionData.toCreditCardId = toCreditCardId;
+            transactionData.description = notes || `Payment for ${creditCards?.find(c => c.id === toCreditCardId)?.name}`
 
-      addDocumentNonBlocking(collection(firestore, 'users', user.uid, 'transactions'), transactionData)
-      
+            const bankAccountRef = doc(firestore, 'users', user.uid, 'bankAccounts', fromAccountId);
+            const bankAccountDoc = await transaction.get(bankAccountRef);
+            if (!bankAccountDoc.exists()) throw new Error("Bank account not found.");
+            const newBankBalance = bankAccountDoc.data().currentBalance - numericAmount;
+            transaction.update(bankAccountRef, { currentBalance: newBankBalance, updatedAt: parsedDate.toISOString() });
+
+            const cardRef = doc(firestore, 'users', user.uid, 'creditCards', toCreditCardId);
+            const cardDoc = await transaction.get(cardRef);
+            if (!cardDoc.exists()) throw new Error("Credit card not found.");
+            const newCardBalance = cardDoc.data().currentBalance - numericAmount;
+            transaction.update(cardRef, { currentBalance: newCardBalance, updatedAt: parsedDate.toISOString() });
+            break
+
+          default:
+            throw new Error("Invalid transaction type.")
+        }
+        
+        transaction.set(newTransactionRef, transactionData);
+      });
+
       toast({
         title: 'Transaction Added',
         description: `Your ${activeTab.replace('_', ' ')} has been successfully recorded.`,
@@ -167,7 +211,8 @@ export function AddTransactionDialog() {
       resetForm()
 
     } catch(error: any) {
-      toast({ variant: 'destructive', title: 'Validation Error', description: error.message })
+      console.error("Transaction failed: ", error);
+      toast({ variant: 'destructive', title: 'Transaction Failed', description: error.message })
     }
   }
 
@@ -209,7 +254,7 @@ export function AddTransactionDialog() {
                     <SelectTrigger id="expense-account"><SelectValue placeholder="Select an account or card" /></SelectTrigger>
                     <SelectContent>
                         {bankAccounts?.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name} (Bank)</SelectItem>)}
-                        {creditCards?.map(card => <SelectItem key={card.id} value={card.id}>{card.name} (Card)</SelectItem>)}
+                        {creditCards?.map(card => <SelectItem key={acc.id} value={card.id}>{card.name} (Card)</SelectItem>)}
                     </SelectContent>
                 </Select>
             </div>
@@ -279,13 +324,13 @@ export function AddTransactionDialog() {
         </TabsContent>
 
         <div className="space-y-2">
-            <Label htmlFor="date-input">Date</Label>
-            <Input
-                id="date-input"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                placeholder="DD/MM/YY"
-            />
+          <Label htmlFor="date">Date</Label>
+          <Input 
+            id="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            placeholder="DD/MM/YY"
+          />
         </div>
          <div className="space-y-2">
               <Label htmlFor="notes">Notes (Optional)</Label>
