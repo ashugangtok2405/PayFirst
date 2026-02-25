@@ -356,6 +356,57 @@
         "toCreditCardId": { "type": "string" }
       },
       "required": ["id", "userId", "description", "amount", "type", "frequency", "startDate", "nextGenerationDate", "autoCreate"]
+    },
+    "Alert": {
+      "title": "Alert",
+      "type": "object",
+      "description": "Represents a system-generated notification for a user regarding their financial activity.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Alert."
+        },
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user this alert belongs to."
+        },
+        "type": {
+          "type": "string",
+          "description": "The category or type of the alert (e.g., 'low_balance', 'high_utilization')."
+        },
+        "title": {
+          "type": "string",
+          "description": "A short, descriptive title for the alert."
+        },
+        "message": {
+          "type": "string",
+          "description": "The detailed message content of the alert."
+        },
+        "severity": {
+          "type": "string",
+          "description": "The severity level of the alert.",
+          "enum": ["info", "warning", "critical"]
+        },
+        "isRead": {
+          "type": "boolean",
+          "description": "Indicates if the user has read the alert."
+        },
+        "actionLink": {
+          "type": "string",
+          "description": "An optional URL path for the user to navigate to for more details or to take action."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the alert was created.",
+          "format": "date-time"
+        },
+        "expiresAt": {
+          "type": "string",
+          "description": "Optional timestamp when the alert should no longer be displayed.",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "userId", "type", "title", "message", "severity", "isRead", "createdAt"]
     }
   },
   "auth": {
@@ -499,6 +550,26 @@
             {
               "name": "recurringTransactionId",
               "description": "The unique ID for the recurring transaction."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/alerts/{alertId}",
+        "definition": {
+          "entityName": "Alert",
+          "schema": {
+            "$ref": "#/backend/entities/Alert"
+          },
+          "description": "Stores notifications and alerts for a specific user. Read access is limited to the user.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The ID of the user who owns this alert."
+            },
+            {
+              "name": "alertId",
+              "description": "The unique ID of the alert."
             }
           ]
         }

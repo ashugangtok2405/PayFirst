@@ -16,12 +16,13 @@ import {
   SidebarInset,
   SidebarSeparator,
 } from '@/components/ui/sidebar'
-import { Bell, PlusCircle, Landmark, CreditCard } from 'lucide-react'
+import { PlusCircle, Landmark, CreditCard } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { AddTransactionDialog } from '@/components/app/add-transaction-dialog'
 import { Button } from '@/components/ui/button'
 import { AddAccountDialog } from '@/components/app/accounts/add-account-dialog'
 import { RecurringProcessor } from '@/components/app/recurring-processor'
+import { NotificationBell } from '@/components/app/notifications/notification-bell'
 
 export default function DashboardLayout({
   children,
@@ -94,10 +95,7 @@ export default function DashboardLayout({
                 <PlusCircle className="mr-2 h-4 w-4" /> Add Transaction
               </Button>
             </AddTransactionDialog>
-            <button className="relative rounded-full p-2 hover:bg-muted">
-              <Bell className="h-5 w-5" />
-              <span className="sr-only">Notifications</span>
-            </button>
+            <NotificationBell />
             <Avatar className="h-9 w-9">
               <AvatarImage src={user?.photoURL ?? undefined} alt={user?.displayName ?? "User"} />
               <AvatarFallback>{getInitials(user?.email)}</AvatarFallback>

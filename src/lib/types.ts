@@ -67,3 +67,16 @@ export interface RecurringTransaction {
   active: boolean;
   createdAt: string;
 }
+
+export interface Alert {
+  id: string;
+  userId: string;
+  type: string;
+  title: string;
+  message: string;
+  severity: 'info' | 'warning' | 'critical';
+  isRead: boolean;
+  actionLink?: string;
+  createdAt: string;
+  expiresAt?: string;
+}
