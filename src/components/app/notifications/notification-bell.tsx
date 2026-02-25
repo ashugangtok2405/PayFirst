@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { Bell, Check, CircleAlert, Info, TriangleAlert } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Bell, CircleAlert, Info, TriangleAlert } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 
 import {
@@ -15,47 +15,24 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
-
-// Mock data - replace with real data from Firestore
-const mockAlerts = [
-  {
-    id: '1',
-    title: 'High Credit Utilization',
-    message: 'Your HDFC Infinia card is at 85% utilization.',
-    severity: 'critical' as const,
-    isRead: false,
-    createdAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-    actionLink: '/dashboard/accounts',
-  },
-  {
-    id: '2',
-    title: 'Low Balance',
-    message: 'Your ICICI Savings account balance is below ₹5,000.',
-    severity: 'warning' as const,
-    isRead: false,
-    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    actionLink: '/dashboard/accounts',
-  },
-  {
-    id: '3',
-    title: 'Upcoming Bill',
-    message: 'Your Airtel Postpaid bill of ₹1,199 is due in 3 days.',
-    severity: 'info' as const,
-    isRead: true,
-    createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-    actionLink: '/dashboard/transactions',
-  },
-    {
-    id: '4',
-    title: 'Large Transaction',
-    message: 'An expense of ₹15,000 was made at Croma.',
-    severity: 'info' as const,
-    isRead: true,
-    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    actionLink: '/dashboard/transactions',
-  },
-]
+import {
+  useUser,
+  useFirestore,
+  useCollection,
+  useMemoFirebase,
+} from '@/firebase'
+import {
+  collection,
+  query,
+  orderBy,
+  where,
+  doc,
+  updateDoc,
+  writeBatch,
+} from 'firebase/firestore'
+import type { Alert } from '@/lib/types'
 
 const severityIcons = {
   critical: <CircleAlert className="h-4 w-4 text-red-500" />,
@@ -64,20 +41,47 @@ const severityIcons = {
 }
 
 export function NotificationBell() {
-  // In a real implementation, this would come from useCollection and state updates
-  const [alerts, setAlerts] = useState(mockAlerts)
-  const unreadCount = alerts.filter((a) => !a.isRead).length
+  const router = useRouter()
+  const { user } = useUser()
+  const firestore = useFirestore()
 
-  const handleMarkAsRead = (alertId: string) => {
-    setAlerts((prev) =>
-      prev.map((alert) =>
-        alert.id === alertId ? { ...alert, isRead: true } : alert
-      )
-    )
+  const alertsQuery = useMemoFirebase(
+    () =>
+      user
+        ? query(
+            collection(firestore, 'users', user.uid, 'alerts'),
+            where('resolved', '==', false),
+            orderBy('createdAt', 'desc')
+          )
+        : null,
+    [user, firestore]
+  )
+
+  const { data: alerts, isLoading } = useCollection<Alert>(alertsQuery)
+  const unreadCount = alerts?.filter((a) => !a.isRead).length ?? 0
+
+  const handleAlertClick = (alert: Alert) => {
+    if (!user) return
+    const alertRef = doc(firestore, 'users', user.uid, 'alerts', alert.id)
+    if (!alert.isRead) {
+      updateDoc(alertRef, { isRead: true })
+    }
+    if (alert.actionLink) {
+      router.push(alert.actionLink)
+    }
   }
 
-  const handleMarkAllAsRead = () => {
-    setAlerts((prev) => prev.map((alert) => ({ ...alert, isRead: true })))
+  const handleMarkAllAsRead = async () => {
+    if (!user || !alerts || unreadCount === 0) return
+
+    const batch = writeBatch(firestore)
+    alerts.forEach((alert) => {
+      if (!alert.isRead) {
+        const alertRef = doc(firestore, 'users', user.uid, 'alerts', alert.id)
+        batch.update(alertRef, { isRead: true })
+      }
+    })
+    await batch.commit()
   }
 
   return (
@@ -112,15 +116,25 @@ export function NotificationBell() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <ScrollArea className="h-[300px]">
-          {alerts.length > 0 ? (
+          {isLoading && (
+            <div className="p-4 space-y-4">
+              {[...Array(3)].map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
+          )}
+          {!isLoading && alerts && alerts.length > 0 ? (
             alerts.map((alert) => (
               <DropdownMenuItem
                 key={alert.id}
                 className={cn(
-                  'flex items-start gap-3 p-3 focus:bg-accent',
+                  'flex items-start gap-3 p-3 focus:bg-accent cursor-pointer',
                   !alert.isRead && 'bg-blue-50/50 dark:bg-blue-900/20'
                 )}
-                onSelect={() => handleMarkAsRead(alert.id)}
+                onSelect={(e) => {
+                  e.preventDefault() // Prevent dropdown from closing immediately
+                  handleAlertClick(alert)
+                }}
               >
                 {!alert.isRead && (
                   <div className="mt-1 h-2 w-2 rounded-full bg-primary" />
@@ -144,14 +158,16 @@ export function NotificationBell() {
               </DropdownMenuItem>
             ))
           ) : (
-            <div className="p-4 text-center text-sm text-muted-foreground">
-              You have no new notifications.
-            </div>
+            !isLoading && (
+              <div className="p-4 text-center text-sm text-muted-foreground">
+                You have no new notifications.
+              </div>
+            )
           )}
         </ScrollArea>
         <DropdownMenuSeparator />
-        <DropdownMenuItem className="justify-center p-2 text-sm font-medium text-primary">
-            View all alerts
+        <DropdownMenuItem className="justify-center p-2 text-sm font-medium text-primary cursor-pointer">
+          View all alerts
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

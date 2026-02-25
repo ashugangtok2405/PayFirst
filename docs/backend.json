@@ -372,7 +372,11 @@
         },
         "type": {
           "type": "string",
-          "description": "The category or type of the alert (e.g., 'low_balance', 'high_utilization')."
+          "description": "The category or type of the alert (e.g., 'low_balance', 'credit_utilization')."
+        },
+        "accountId": {
+          "type": "string",
+          "description": "The ID of the account this alert is related to, if applicable."
         },
         "title": {
           "type": "string",
@@ -391,6 +395,10 @@
           "type": "boolean",
           "description": "Indicates if the user has read the alert."
         },
+        "resolved": {
+          "type": "boolean",
+          "description": "Indicates if the alert condition is no longer met."
+        },
         "actionLink": {
           "type": "string",
           "description": "An optional URL path for the user to navigate to for more details or to take action."
@@ -406,7 +414,7 @@
           "format": "date-time"
         }
       },
-      "required": ["id", "userId", "type", "title", "message", "severity", "isRead", "createdAt"]
+      "required": ["id", "userId", "type", "title", "message", "severity", "isRead", "resolved", "createdAt"]
     }
   },
   "auth": {

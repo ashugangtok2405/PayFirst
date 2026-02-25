@@ -76,6 +76,8 @@ export interface Alert {
   message: string;
   severity: 'info' | 'warning' | 'critical';
   isRead: boolean;
+  resolved: boolean;
+  accountId?: string;
   actionLink?: string;
   createdAt: string;
   expiresAt?: string;

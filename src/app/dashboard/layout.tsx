@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/button'
 import { AddAccountDialog } from '@/components/app/accounts/add-account-dialog'
 import { RecurringProcessor } from '@/components/app/recurring-processor'
 import { NotificationBell } from '@/components/app/notifications/notification-bell'
+import { AlertManager } from '@/components/app/alert-manager'
 
 export default function DashboardLayout({
   children,
@@ -54,6 +55,7 @@ export default function DashboardLayout({
   return (
     <SidebarProvider>
       <RecurringProcessor />
+      <AlertManager />
       <Sidebar>
         <div className="flex h-full flex-col justify-between">
           <div>
