@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { format, isToday, isYesterday, parseISO } from 'date-fns'
-import { Landmark, Fuel, ShoppingBag, CircleDollarSign, PiggyBank, Utensils, Tv, Car, ArrowDown, ArrowUp, ArrowRightLeft, CreditCard as CreditCardIcon, Edit, Trash2, PlusCircle } from 'lucide-react'
+import { Landmark, Fuel, ShoppingBag, CircleDollarSign, PiggyBank, Utensils, Tv, Car, ArrowDown, ArrowUp, ArrowRightLeft, CreditCard as CreditCardIcon, Edit, Trash2, PlusCircle, Percent } from 'lucide-react'
 
 import { Card, CardContent } from '@/components/ui/card'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
@@ -30,46 +30,53 @@ interface TransactionListProps {
     transactions: Transaction[],
     categories: Category[],
     accounts: {id: string, name: string}[],
+    totalIncome: number,
 }
 
-export function TransactionList({ transactions, categories, accounts }: TransactionListProps) {
+const TransactionTypeBadge = ({ type }: { type: Transaction['type']}) => {
+    const config = {
+        income: { icon: ArrowUp, color: 'text-green-700 bg-green-50 border-green-200', label: 'Income' },
+        expense: { icon: ArrowDown, color: 'text-red-700 bg-red-50 border-red-200', label: 'Expense' },
+        transfer: { icon: ArrowRightLeft, color: 'text-blue-700 bg-blue-50 border-blue-200', label: 'Transfer' },
+        credit_card_payment: { icon: CreditCardIcon, color: 'text-orange-700 bg-orange-50 border-orange-200', label: 'Payment' },
+    }[type] || { icon: CircleDollarSign, color: 'text-gray-700 bg-gray-50 border-gray-200', label: 'Transaction'}
+
+    const Icon = config.icon;
+    return (
+        <Badge variant="outline" className={`capitalize text-xs font-normal gap-1.5 pl-1.5 pr-2 ${config.color}`}>
+            <Icon className="size-3" /> 
+            {config.label}
+        </Badge>
+    )
+}
+
+export function TransactionList({ transactions, categories, accounts, totalIncome }: TransactionListProps) {
     const { toast } = useToast()
     const { user } = useUser()
     const firestore = useFirestore()
 
-    const categoryMap = useMemo(() => {
-        return categories.reduce((acc, cat) => {
-            acc[cat.id] = cat;
-            return acc;
-        }, {} as Record<string, Category>);
-    }, [categories]);
-
-    const accountMap = useMemo(() => {
-        return accounts.reduce((acc, accnt) => {
-            acc[accnt.id] = accnt.name;
-            return acc;
-        }, {} as Record<string, string>);
-    }, [accounts]);
+    const categoryMap = useMemo(() => categories.reduce((acc, cat) => ({...acc, [cat.id]: cat }), {} as Record<string, Category>), [categories]);
+    const accountMap = useMemo(() => accounts.reduce((acc, accnt) => ({...acc, [accnt.id]: accnt.name }), {} as Record<string, string>), [accounts]);
     
     const groupedTransactions = useMemo(() => {
         return transactions.reduce((acc, transaction) => {
             const date = parseISO(transaction.transactionDate);
-            let group: string;
-            if (isToday(date)) {
-                group = 'Today';
-            } else if (isYesterday(date)) {
-                group = 'Yesterday';
-            } else {
-                group = format(date, 'MMMM yyyy');
-            }
+            const group = format(date, 'yyyy-MM-dd');
 
-            if (!acc[group]) {
-                acc[group] = [];
-            }
+            if (!acc[group]) acc[group] = [];
             acc[group].push(transaction);
             return acc;
         }, {} as Record<string, Transaction[]>);
     }, [transactions]);
+    
+    const sortedGroups = useMemo(() => Object.keys(groupedTransactions).sort((a, b) => b.localeCompare(a)), [groupedTransactions]);
+
+    const getGroupTitle = (group: string) => {
+        const date = parseISO(group);
+        if (isToday(date)) return 'Today';
+        if (isYesterday(date)) return 'Yesterday';
+        return format(date, 'E, dd MMM yyyy');
+    }
 
     const handleDelete = async (transaction: Transaction) => {
         if (!user || !firestore) return;
@@ -77,47 +84,28 @@ export function TransactionList({ transactions, categories, accounts }: Transact
         try {
             await runFirestoreTransaction(firestore, async (tx) => {
                 const txRef = doc(firestore, 'users', user.uid, 'transactions', transaction.id);
-                
                 const amount = transaction.amount;
-                // Reverse expense from bank
-                if(transaction.type === 'expense' && transaction.fromBankAccountId) {
-                    const accRef = doc(firestore, 'users', user.uid, 'bankAccounts', transaction.fromBankAccountId);
-                    const accDoc = await tx.get(accRef);
-                    if(accDoc.exists()) tx.update(accRef, { currentBalance: accDoc.data().currentBalance + amount });
+                // Reverse operations based on type
+                if(transaction.fromBankAccountId) {
+                    const ref = doc(firestore, 'users', user.uid, 'bankAccounts', transaction.fromBankAccountId);
+                    const accDoc = await tx.get(ref);
+                    if(accDoc.exists()) tx.update(ref, { currentBalance: accDoc.data().currentBalance + amount });
                 }
-                // Reverse expense from card
-                if(transaction.type === 'expense' && transaction.fromCreditCardId) {
-                    const cardRef = doc(firestore, 'users', user.uid, 'creditCards', transaction.fromCreditCardId);
-                    const cardDoc = await tx.get(cardRef);
-                    if(cardDoc.exists()) tx.update(cardRef, { currentBalance: cardDoc.data().currentBalance - amount });
+                if(transaction.toBankAccountId) {
+                    const ref = doc(firestore, 'users', user.uid, 'bankAccounts', transaction.toBankAccountId);
+                    const accDoc = await tx.get(ref);
+                    if(accDoc.exists()) tx.update(ref, { currentBalance: accDoc.data().currentBalance - amount });
                 }
-                // Reverse income
-                if(transaction.type === 'income' && transaction.toBankAccountId) {
-                    const accRef = doc(firestore, 'users', user.uid, 'bankAccounts', transaction.toBankAccountId);
-                    const accDoc = await tx.get(accRef);
-                    if(accDoc.exists()) tx.update(accRef, { currentBalance: accDoc.data().currentBalance - amount });
+                if(transaction.fromCreditCardId) {
+                    const ref = doc(firestore, 'users', user.uid, 'creditCards', transaction.fromCreditCardId);
+                    const cardDoc = await tx.get(ref);
+                    if(cardDoc.exists()) tx.update(ref, { currentBalance: cardDoc.data().currentBalance - amount });
                 }
-                // Reverse transfer
-                if(transaction.type === 'transfer' && transaction.fromBankAccountId && transaction.toBankAccountId) {
-                    const fromAccRef = doc(firestore, 'users', user.uid, 'bankAccounts', transaction.fromBankAccountId);
-                    const fromAccDoc = await tx.get(fromAccRef);
-                    if(fromAccDoc.exists()) tx.update(fromAccRef, { currentBalance: fromAccDoc.data().currentBalance + amount });
-
-                    const toAccRef = doc(firestore, 'users', user.uid, 'bankAccounts', transaction.toBankAccountId);
-                    const toAccDoc = await tx.get(toAccRef);
-                    if(toAccDoc.exists()) tx.update(toAccRef, { currentBalance: toAccDoc.data().currentBalance - amount });
+                if(transaction.toCreditCardId) {
+                    const ref = doc(firestore, 'users', user.uid, 'creditCards', transaction.toCreditCardId);
+                    const cardDoc = await tx.get(ref);
+                    if(cardDoc.exists()) tx.update(ref, { currentBalance: cardDoc.data().currentBalance + amount });
                 }
-                // Reverse credit card payment
-                if(transaction.type === 'credit_card_payment' && transaction.fromBankAccountId && transaction.toCreditCardId) {
-                    const fromAccRef = doc(firestore, 'users', user.uid, 'bankAccounts', transaction.fromBankAccountId);
-                    const fromAccDoc = await tx.get(fromAccRef);
-                    if(fromAccDoc.exists()) tx.update(fromAccRef, { currentBalance: fromAccDoc.data().currentBalance + amount });
-
-                    const toCardRef = doc(firestore, 'users', user.uid, 'creditCards', transaction.toCreditCardId);
-                    const toCardDoc = await tx.get(toCardRef);
-                    if(toCardDoc.exists()) tx.update(toCardRef, { currentBalance: toCardDoc.data().currentBalance + amount });
-                }
-
                 tx.delete(txRef);
             });
             toast({ title: "Transaction Deleted", description: "The transaction has been removed and account balances updated." });
@@ -129,126 +117,102 @@ export function TransactionList({ transactions, categories, accounts }: Transact
 
     if (transactions.length === 0) {
         return (
-            <Card>
-                <CardContent className="p-12 text-center">
-                    <h3 className="text-xl font-semibold">No transactions found</h3>
-                    <p className="text-muted-foreground mt-2">Try adjusting your filters or adding a new transaction.</p>
-                    <AddTransactionDialog>
-                        <Button className="mt-4"><PlusCircle className="mr-2 h-4 w-4"/>Add Your First Transaction</Button>
-                    </AddTransactionDialog>
-                </CardContent>
-            </Card>
+            <Card><CardContent className="p-12 text-center">
+                <h3 className="text-xl font-semibold">No transactions found</h3>
+                <p className="text-muted-foreground mt-2">Try adjusting your filters or adding a new transaction.</p>
+                <AddTransactionDialog><Button className="mt-4"><PlusCircle className="mr-2 h-4 w-4"/>Add Your First Transaction</Button></AddTransactionDialog>
+            </CardContent></Card>
         )
-    }
-
-    const TransactionTypeIcon = ({ type }: { type: Transaction['type']}) => {
-        switch (type) {
-            case 'income': return <ArrowUp className="size-4 text-green-500"/>
-            case 'expense': return <ArrowDown className="size-4 text-red-500"/>
-            case 'transfer': return <ArrowRightLeft className="size-4 text-blue-500"/>
-            case 'credit_card_payment': return <CreditCardIcon className="size-4 text-orange-500"/>
-            default: return null
-        }
     }
 
     return (
         <div className="space-y-6">
-            {Object.entries(groupedTransactions).map(([group, txs]) => (
-                <div key={group}>
-                    <h2 className="text-lg font-semibold mb-2 px-1">{group}</h2>
-                    <Card>
-                        <CardContent className="p-0">
-                             <Accordion type="multiple" className="w-full">
-                                {txs.map((tx) => {
-                                    const category = tx.categoryId ? categoryMap[tx.categoryId] : null;
-                                    const CategoryIcon = category ? (categoryIcons[category.name] || categoryIcons.default) : CircleDollarSign;
-                                    const isIncome = tx.type === 'income';
-                                    const isTransfer = tx.type === 'transfer' || tx.type === 'credit_card_payment';
-                                    
-                                    let amountSign = '-';
-                                    let amountColor = 'text-foreground';
+            {sortedGroups.map(group => {
+                const txs = groupedTransactions[group];
+                const groupIncome = txs.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+                const groupExpense = txs.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+                const groupNet = groupIncome - groupExpense;
 
-                                    if (isIncome) {
-                                        amountSign = '+';
-                                        amountColor = 'text-green-600';
-                                    } else if (tx.type === 'expense') {
-                                        amountSign = '-';
-                                        amountColor = 'text-red-600';
-                                    } else if (isTransfer) {
-                                        amountSign = '';
-                                        amountColor = 'text-blue-600';
-                                    }
-                                    
-                                    let accountName = 'N/A'
-                                    if (tx.type === 'transfer') {
-                                        accountName = `From ${accountMap[tx.fromBankAccountId!] ?? '?'} to ${accountMap[tx.toBankAccountId!] ?? '?'}`
-                                    } else if (tx.type === 'credit_card_payment') {
-                                        accountName = `From ${accountMap[tx.fromBankAccountId!] ?? '?'} to ${accountMap[tx.toCreditCardId!] ?? '?'}`
-                                    } else if (tx.fromBankAccountId) {
-                                        accountName = accountMap[tx.fromBankAccountId] ?? 'Unknown Account'
-                                    } else if(tx.toBankAccountId) {
-                                        accountName = accountMap[tx.toBankAccountId] ?? 'Unknown Account'
-                                    } else if(tx.fromCreditCardId) {
-                                        accountName = accountMap[tx.fromCreditCardId] ?? 'Unknown Card'
-                                    }
-                                    
-                                    return (
-                                        <AccordionItem value={tx.id} key={tx.id} className="border-b last:border-b-0">
-                                            <AccordionTrigger className="px-4 py-3 hover:bg-muted/50 hover:no-underline rounded-lg">
-                                                <div className="flex items-center gap-4 w-full">
-                                                    <div className="bg-muted p-2 rounded-full"><CategoryIcon className="size-5 text-muted-foreground" /></div>
-                                                    <div className="flex-1 text-left">
-                                                        <p className="font-semibold">{tx.description}</p>
-                                                        <p className="text-sm text-muted-foreground">{accountName}</p>
+                return (
+                    <div key={group}>
+                        <div className="flex justify-between items-baseline mb-2 px-1">
+                            <h2 className="text-lg font-semibold">{getGroupTitle(group)}</h2>
+                            <div className="text-sm font-medium">
+                                {groupExpense > 0 && <span className="text-red-500">-{formatCurrency(groupExpense)}</span>}
+                                {groupIncome > 0 && groupExpense > 0 && <span className="text-muted-foreground mx-1">/</span>}
+                                {groupIncome > 0 && <span className="text-green-500">+{formatCurrency(groupIncome)}</span>}
+                                {groupNet !== 0 && groupIncome > 0 && groupExpense > 0 && (
+                                    <span className={`ml-2 ${groupNet > 0 ? 'text-blue-500' : 'text-orange-500'}`}>({formatCurrency(groupNet)})</span>
+                                )}
+                            </div>
+                        </div>
+                        <Card>
+                            <CardContent className="p-0">
+                                <Accordion type="multiple" className="w-full">
+                                    {txs.map((tx) => {
+                                        const category = tx.categoryId ? categoryMap[tx.categoryId] : null;
+                                        const CategoryIcon = category ? (categoryIcons[category.name] || categoryIcons.default) : CircleDollarSign;
+                                        const percentageOfIncome = totalIncome > 0 && tx.type === 'expense' ? (tx.amount / totalIncome) * 100 : 0;
+                                        
+                                        const amountConfig = {
+                                            income: { sign: '+', color: 'text-green-600' },
+                                            expense: { sign: '-', color: 'text-red-600' },
+                                            transfer: { sign: '', color: 'text-blue-600' },
+                                            credit_card_payment: { sign: '', color: 'text-orange-600' },
+                                        }[tx.type] || { sign: '', color: 'text-foreground' };
+
+                                        let accountName = 'N/A'
+                                        if (tx.type === 'transfer') accountName = `From ${accountMap[tx.fromBankAccountId!] ?? '?'} to ${accountMap[tx.toBankAccountId!] ?? '?'}`
+                                        else if (tx.type === 'credit_card_payment') accountName = `From ${accountMap[tx.fromBankAccountId!] ?? '?'} to ${accountMap[tx.toCreditCardId!] ?? '?'}`
+                                        else if (tx.fromBankAccountId) accountName = accountMap[tx.fromBankAccountId] ?? '?'
+                                        else if (tx.toBankAccountId) accountName = accountMap[tx.toBankAccountId] ?? '?'
+                                        else if (tx.fromCreditCardId) accountName = accountMap[tx.fromCreditCardId] ?? '?'
+                                        
+                                        return (
+                                            <AccordionItem value={tx.id} key={tx.id} className="border-b last:border-b-0">
+                                                <AccordionTrigger className="px-4 py-3 hover:bg-muted/50 hover:no-underline rounded-lg">
+                                                    <div className="flex items-center gap-4 w-full">
+                                                        <div className="bg-muted p-2 rounded-full"><CategoryIcon className="size-5 text-muted-foreground" /></div>
+                                                        <div className="flex-1 text-left">
+                                                            <div className="flex items-center gap-2">
+                                                                <p className="font-semibold">{tx.description}</p>
+                                                                <TransactionTypeBadge type={tx.type} />
+                                                            </div>
+                                                            <p className="text-sm text-muted-foreground">{accountName}</p>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <p className={`font-bold ${amountConfig.color}`}>{amountConfig.sign}{formatCurrency(tx.amount)}</p>
+                                                        </div>
                                                     </div>
-                                                    <div className="text-right">
-                                                        <p className={`font-bold ${amountColor}`}>{amountSign}{formatCurrency(tx.amount)}</p>
-                                                        <p className="text-sm text-muted-foreground">{format(parseISO(tx.transactionDate), 'MMM dd')}</p>
+                                                </AccordionTrigger>
+                                                <AccordionContent className="px-4 pb-4 bg-muted/30">
+                                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm pt-4">
+                                                        <div><p className="text-muted-foreground">Date</p><p className="font-medium">{format(parseISO(tx.transactionDate), 'dd MMM yyyy, hh:mm a')}</p></div>
+                                                        <div><p className="text-muted-foreground">Category</p><p className="font-medium">{category?.name || 'N/A'}</p></div>
+                                                        {tx.type === 'expense' && percentageOfIncome > 0 && (
+                                                            <div><p className="text-muted-foreground">% of Income</p><p className="font-medium flex items-center"><Percent className="size-3 mr-1" /> {percentageOfIncome.toFixed(1)}%</p></div>
+                                                        )}
                                                     </div>
-                                                </div>
-                                            </AccordionTrigger>
-                                            <AccordionContent className="px-4 pb-4 bg-muted/30">
-                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm pt-4">
-                                                    <div><Badge variant="outline" className="capitalize flex gap-2 items-center"><TransactionTypeIcon type={tx.type} /> {tx.type.replace(/_/g, ' ')}</Badge></div>
-                                                    <div><p className="text-muted-foreground">Category</p><p className="font-medium">{category?.name || 'N/A'}</p></div>
-                                                    <div>
-                                                        <p className="text-muted-foreground">From</p>
-                                                        <p className="font-medium">{tx.fromBankAccountId ? accountMap[tx.fromBankAccountId] : (tx.fromCreditCardId ? accountMap[tx.fromCreditCardId] : 'N/A')}</p>
+                                                    <div className="flex justify-end gap-2 mt-4">
+                                                        <Button variant="ghost" size="sm"><Edit className="mr-2 h-4 w-4"/> Edit</Button>
+                                                        <AlertDialog>
+                                                            <AlertDialogTrigger asChild><Button variant="ghost" size="sm" className="text-red-500 hover:bg-red-50 hover:text-red-600"><Trash2 className="mr-2 h-4 w-4"/> Delete</Button></AlertDialogTrigger>
+                                                            <AlertDialogContent>
+                                                                <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will permanently delete the transaction and update linked account balances. This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
+                                                                <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(tx)}>Confirm Delete</AlertDialogAction></AlertDialogFooter>
+                                                            </AlertDialogContent>
+                                                        </AlertDialog>
                                                     </div>
-                                                    <div>
-                                                        <p className="text-muted-foreground">To</p>
-                                                        <p className="font-medium">{tx.toBankAccountId ? accountMap[tx.toBankAccountId] : (tx.toCreditCardId ? accountMap[tx.toCreditCardId] : 'N/A')}</p>
-                                                    </div>
-                                                </div>
-                                                <div className="flex justify-end gap-2 mt-4">
-                                                    <Button variant="ghost" size="sm"><Edit className="mr-2 h-4 w-4"/> Edit</Button>
-                                                    <AlertDialog>
-                                                        <AlertDialogTrigger asChild>
-                                                            <Button variant="ghost" size="sm" className="text-red-500 hover:bg-red-50 hover:text-red-600"><Trash2 className="mr-2 h-4 w-4"/> Delete</Button>
-                                                        </AlertDialogTrigger>
-                                                        <AlertDialogContent>
-                                                            <AlertDialogHeader>
-                                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                                <AlertDialogDescription>
-                                                                    This will permanently delete the transaction and update linked account balances. This action cannot be undone.
-                                                                </AlertDialogDescription>
-                                                            </AlertDialogHeader>
-                                                            <AlertDialogFooter>
-                                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                                <AlertDialogAction onClick={() => handleDelete(tx)}>Confirm Delete</AlertDialogAction>
-                                                            </AlertDialogFooter>
-                                                        </AlertDialogContent>
-                                                    </AlertDialog>
-                                                </div>
-                                            </AccordionContent>
-                                        </AccordionItem>
-                                    )
-                                })}
-                             </Accordion>
-                        </CardContent>
-                    </Card>
-                </div>
-            ))}
+                                                </AccordionContent>
+                                            </AccordionItem>
+                                        )
+                                    })}
+                                </Accordion>
+                            </CardContent>
+                        </Card>
+                    </div>
+                )
+            })}
         </div>
     )
 }

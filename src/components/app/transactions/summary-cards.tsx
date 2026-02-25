@@ -1,9 +1,7 @@
 'use client'
 
-import { useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { ArrowDown, ArrowUp, Scale, TrendingUp, TrendingDown } from 'lucide-react'
-import type { Transaction } from '@/lib/types'
+import { ArrowDown, ArrowUp, Scale, TrendingUp, TrendingDown, Repeat } from 'lucide-react'
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -14,80 +12,52 @@ const formatCurrency = (amount: number) => {
     }).format(amount)
 }
 
-interface SummaryCardsProps {
-    transactions: Transaction[],
-    previousTransactions: Transaction[]
-}
-
-const calculateSummary = (transactions: Transaction[]) => {
-    const income = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0)
-    const expense = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0)
-    const net = income - expense
-    return { income, expense, net }
-}
-
 const calculatePercentageChange = (current: number, previous: number) => {
-    if (previous === 0) {
-        return current > 0 ? 100 : 0;
-    }
-    return ((current - previous) / previous) * 100;
+    if (previous === 0) return current > 0 ? 100 : 0
+    if (current === 0 && previous > 0) return -100
+    return ((current - previous) / previous) * 100
 }
 
-const ChangeIndicator = ({ value }: { value: number }) => {
-    if (value === 0 || !isFinite(value)) {
-        return null;
-    }
-    const isIncrease = value > 0;
+const ChangeIndicator = ({ value, invertColors = false }: { value: number, invertColors?: boolean }) => {
+    if (value === 0 || !isFinite(value)) return <p className="text-xs text-muted-foreground">&nbsp;</p>
+    let isIncrease = value > 0
+    if (invertColors) isIncrease = !isIncrease
+
     return (
         <p className={`flex items-center text-xs font-medium ${isIncrease ? 'text-green-600' : 'text-red-600'}`}>
-            {isIncrease ? <TrendingUp className="mr-1 h-4 w-4" /> : <TrendingDown className="mr-1 h-4 w-4" />}
+            {isIncrease ? <TrendingUp className="mr-1 h-3 w-3" /> : <TrendingDown className="mr-1 h-3 w-3" />}
             {Math.abs(value).toFixed(1)}% vs last period
         </p>
     )
 }
 
-export function SummaryCards({ transactions, previousTransactions }: SummaryCardsProps) {
-    const currentSummary = useMemo(() => calculateSummary(transactions), [transactions])
-    const previousSummary = useMemo(() => calculateSummary(previousTransactions), [previousTransactions])
+const StatCard = ({ title, value, change, icon: Icon, iconBg, trendUpIsGood = true }: { title: string, value: string, change: number, icon: React.ElementType, iconBg: string, trendUpIsGood?: boolean}) => (
+    <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">{title}</CardTitle>
+            <div className={`flex items-center justify-center size-8 rounded-lg ${iconBg}`}>
+                <Icon className="size-4 text-primary-foreground" />
+            </div>
+        </CardHeader>
+        <CardContent>
+            <div className="text-2xl font-bold">{value}</div>
+            <ChangeIndicator value={change} invertColors={!trendUpIsGood} />
+        </CardContent>
+    </Card>
+)
 
+export function SummaryCards({ currentSummary, previousSummary, averageDailySpend, previousAverageDailySpend }: any) {
     const incomeChange = calculatePercentageChange(currentSummary.income, previousSummary.income)
     const expenseChange = calculatePercentageChange(currentSummary.expense, previousSummary.expense)
     const netChange = calculatePercentageChange(currentSummary.net, previousSummary.net)
+    const avgSpendChange = calculatePercentageChange(averageDailySpend, previousAverageDailySpend)
 
     return (
-        <div className="grid gap-6 md:grid-cols-3">
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Income</CardTitle>
-                    <ArrowUp className="h-5 w-5 text-green-500" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-3xl font-bold text-green-600">{formatCurrency(currentSummary.income)}</div>
-                    <ChangeIndicator value={incomeChange} />
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Expense</CardTitle>
-                    <ArrowDown className="h-5 w-5 text-red-500" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-3xl font-bold text-red-600">{formatCurrency(currentSummary.expense)}</div>
-                    <ChangeIndicator value={expenseChange * -1} /> 
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Net Cash Flow</CardTitle>
-                    <Scale className="h-5 w-5 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                    <div className={`text-3xl font-bold ${currentSummary.net >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
-                        {formatCurrency(currentSummary.net)}
-                    </div>
-                    <ChangeIndicator value={netChange} />
-                </CardContent>
-            </Card>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <StatCard title="Total Income" value={formatCurrency(currentSummary.income)} change={incomeChange} icon={ArrowUp} iconBg="bg-green-500" trendUpIsGood={true} />
+            <StatCard title="Total Expense" value={formatCurrency(currentSummary.expense)} change={expenseChange} icon={ArrowDown} iconBg="bg-red-500" trendUpIsGood={false} />
+            <StatCard title="Net Flow" value={formatCurrency(currentSummary.net)} change={netChange} icon={Scale} iconBg="bg-blue-500" trendUpIsGood={true} />
+            <StatCard title="Avg. Daily Spend" value={formatCurrency(averageDailySpend)} change={avgSpendChange} icon={Repeat} iconBg="bg-orange-500" trendUpIsGood={false} />
         </div>
     )
 }
