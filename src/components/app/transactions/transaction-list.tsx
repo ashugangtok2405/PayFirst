@@ -135,9 +135,9 @@ export function TransactionList({ transactions, categories, accounts, totalIncom
 
                 return (
                     <div key={group}>
-                        <div className="flex justify-between items-baseline mb-2 px-1">
-                            <h2 className="text-lg font-semibold">{getGroupTitle(group)}</h2>
-                            <div className="text-sm font-semibold">
+                        <div className="flex justify-between items-baseline mb-2 px-2 py-1 bg-muted/60 rounded-md">
+                            <h2 className="text-base font-semibold">{getGroupTitle(group)}</h2>
+                            <div className="text-sm font-semibold text-right">
                                 {groupExpense > 0 && <span className="text-red-500">-{formatCurrency(groupExpense)}</span>}
                                 {groupIncome > 0 && groupExpense > 0 && <span className="text-muted-foreground mx-1.5">/</span>}
                                 {groupIncome > 0 && <span className="text-green-500">+{formatCurrency(groupIncome)}</span>}
@@ -174,10 +174,7 @@ export function TransactionList({ transactions, categories, accounts, totalIncom
                                                     <div className="flex items-center gap-4 w-full">
                                                         <div className="bg-muted p-2 rounded-full"><CategoryIcon className="size-5 text-muted-foreground" /></div>
                                                         <div className="flex-1 text-left">
-                                                            <div className="flex items-center gap-2">
-                                                                <p className="font-semibold">{tx.description}</p>
-                                                                <TransactionTypeBadge type={tx.type} />
-                                                            </div>
+                                                            <p className="font-semibold">{tx.description}</p>
                                                             <p className="text-sm text-muted-foreground">{accountName}</p>
                                                         </div>
                                                         <div className="text-right">
@@ -192,6 +189,7 @@ export function TransactionList({ transactions, categories, accounts, totalIncom
                                                 </AccordionTrigger>
                                                 <AccordionContent className="px-4 pb-4 bg-muted/30">
                                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm pt-4">
+                                                        <div><p className="text-muted-foreground">Type</p><p className="font-medium"><TransactionTypeBadge type={tx.type} /></p></div>
                                                         <div><p className="text-muted-foreground">Date</p><p className="font-medium">{format(parseISO(tx.transactionDate), 'dd MMM yyyy, hh:mm a')}</p></div>
                                                         <div><p className="text-muted-foreground">Category</p><p className="font-medium">{category?.name || 'N/A'}</p></div>
                                                         {tx.type === 'expense' && percentageOfIncome > 0 && (
