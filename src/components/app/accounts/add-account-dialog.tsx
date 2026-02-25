@@ -17,13 +17,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Landmark, CreditCard, ChevronDown } from 'lucide-react'
+import { Landmark, CreditCard, ChevronDown, FileText } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { useFirestore, useUser, addDocumentNonBlocking } from '@/firebase'
-import { collection } from 'firebase/firestore'
-import type { BankAccount, CreditCard as CreditCardType } from '@/lib/types'
+import { collection, addDoc } from 'firebase/firestore'
+import type { BankAccount, CreditCard as CreditCardType, Loan } from '@/lib/types'
 
-export function AddAccountDialog({ children, defaultType = 'bank' }: { children: React.ReactNode; defaultType?: 'bank' | 'credit' }) {
+export function AddAccountDialog({ children, defaultType = 'bank' }: { children: React.ReactNode; defaultType?: 'bank' | 'credit' | 'loan' }) {
   const [open, setOpen] = useState(false)
   const [accountType, setAccountType] = useState(defaultType)
   const { toast } = useToast()
@@ -50,41 +50,74 @@ export function AddAccountDialog({ children, defaultType = 'bank' }: { children:
   const [apr, setApr] = useState('')
   const [statementDay, setStatementDay] = useState('')
 
-  const handleAddAccount = () => {
+  // Loan State
+  const [loanName, setLoanName] = useState('')
+  const [loanOriginalAmount, setLoanOriginalAmount] = useState('')
+  const [loanOutstanding, setLoanOutstanding] = useState('')
+  const [loanInterestRate, setLoanInterestRate] = useState('')
+  const [loanEmiAmount, setLoanEmiAmount] = useState('')
+  const [loanTenure, setLoanTenure] = useState('')
+  const [loanNextDueDay, setLoanNextDueDay] = useState('')
+
+  const handleAddAccount = async () => {
     if (!user) {
         toast({ variant: "destructive", title: "Error", description: "You must be logged in to add an account." });
         return;
     }
 
+    const now = new Date().toISOString();
+
     if (accountType === 'bank') {
-        const bankAccount: Omit<BankAccount, 'id' | 'userId' | 'currency'> = {
+        const bankAccount: Omit<BankAccount, 'id'> = {
+            userId: user.uid,
             name: bankAccountName,
             bankName: bankName,
             currentBalance: parseFloat(openingBalance) || 0,
             isSavingsAccount: isSavingsAccount,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
+            currency: 'INR',
+            createdAt: now,
+            updatedAt: now,
         }
-        addDocumentNonBlocking(collection(firestore, 'users', user.uid, 'bankAccounts'), { ...bankAccount, userId: user.uid, currency: 'INR' });
+        addDocumentNonBlocking(collection(firestore, 'users', user.uid, 'bankAccounts'), bankAccount);
         toast({ title: 'Account Added', description: `Your new bank account has been added.` })
-    } else {
-        const creditCard: Omit<CreditCardType, 'id' | 'userId' | 'lastFourDigits' | 'statementDueDate'> = {
+    } else if (accountType === 'credit') {
+        const dueDate = new Date();
+        if (statementDay) dueDate.setDate(parseInt(statementDay, 10));
+
+        const creditCard: Omit<CreditCardType, 'id'> = {
+            userId: user.uid,
             name: cardName,
             issuer: cardIssuer,
             creditLimit: parseFloat(creditLimit) || 0,
             currentBalance: parseFloat(cardCurrentBalance) || 0,
             apr: parseFloat(apr) || 0,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
+            lastFourDigits: '0000', 
+            statementDueDate: dueDate.toISOString(),
+            createdAt: now,
+            updatedAt: now,
         }
-        
-        const dueDate = new Date();
-        if (statementDay) {
-          dueDate.setDate(parseInt(statementDay, 10));
-        }
-
-        addDocumentNonBlocking(collection(firestore, 'users', user.uid, 'creditCards'), { ...creditCard, userId: user.uid, lastFourDigits: '0000', statementDueDate: dueDate.toISOString() });
+        addDocumentNonBlocking(collection(firestore, 'users', user.uid, 'creditCards'), creditCard);
         toast({ title: 'Account Added', description: `Your new credit card has been added.` })
+    } else if (accountType === 'loan') {
+        const dueDate = new Date();
+        if (loanNextDueDay) dueDate.setDate(parseInt(loanNextDueDay, 10));
+
+        const loan: Omit<Loan, 'id'> = {
+            userId: user.uid,
+            name: loanName,
+            originalAmount: parseFloat(loanOriginalAmount) || 0,
+            outstanding: parseFloat(loanOutstanding) || parseFloat(loanOriginalAmount) || 0,
+            interestRate: parseFloat(loanInterestRate) || 0,
+            emiAmount: parseFloat(loanEmiAmount) || 0,
+            tenureMonths: parseInt(loanTenure) || 0,
+            remainingMonths: parseInt(loanTenure) || 0,
+            nextDueDate: dueDate.toISOString(),
+            active: true,
+            createdAt: now,
+            updatedAt: now,
+        }
+        await addDoc(collection(firestore, 'users', user.uid, 'loans'), loan);
+        toast({ title: 'Loan Added', description: 'Your new loan has been added.' });
     }
     setOpen(false)
   }
@@ -100,12 +133,12 @@ export function AddAccountDialog({ children, defaultType = 'bank' }: { children:
         <DialogHeader>
           <DialogTitle>Add New Account</DialogTitle>
           <DialogDescription>
-            Connect a new bank account or credit card to start tracking.
+            Connect a new bank account, credit card or loan to start tracking.
           </DialogDescription>
         </DialogHeader>
         <div className="flex-grow overflow-y-auto pr-4 -mr-4">
             <Tabs value={accountType} onValueChange={setAccountType} className="w-full">
-                <TabsList className="grid w-full grid-cols-2 h-auto p-1">
+                <TabsList className="grid w-full grid-cols-3 h-auto p-1">
                     <TabsTrigger value="bank" className="h-20 flex flex-col gap-2 rounded-lg data-[state=active]:shadow-lg">
                         <Landmark className="h-6 w-6"/>
                         <span className="font-semibold">Bank Account</span>
@@ -114,8 +147,13 @@ export function AddAccountDialog({ children, defaultType = 'bank' }: { children:
                         <CreditCard className="h-6 w-6"/>
                         <span className="font-semibold">Credit Card</span>
                     </TabsTrigger>
+                    <TabsTrigger value="loan" className="h-20 flex flex-col gap-2 rounded-lg data-[state=active]:shadow-lg">
+                        <FileText className="h-6 w-6"/>
+                        <span className="font-semibold">Loan</span>
+                    </TabsTrigger>
                 </TabsList>
                 <TabsContent value="bank" className="py-4 space-y-6">
+                    {/* Bank Account Form... */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="bank-acc-name">Account Name</Label>
@@ -167,6 +205,7 @@ export function AddAccountDialog({ children, defaultType = 'bank' }: { children:
                     </Collapsible>
                 </TabsContent>
                 <TabsContent value="credit" className="py-4 space-y-6">
+                    {/* Credit Card Form... */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="cc-name">Card Name</Label>
@@ -224,6 +263,56 @@ export function AddAccountDialog({ children, defaultType = 'bank' }: { children:
                             </div>
                         </CollapsibleContent>
                     </Collapsible>
+                </TabsContent>
+                <TabsContent value="loan" className="py-4 space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="loan-name">Loan Name</Label>
+                            <Input id="loan-name" placeholder="e.g. Home Loan" value={loanName} onChange={e => setLoanName(e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="loan-amount">Original Loan Amount</Label>
+                             <div className="relative">
+                                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">₹</span>
+                                <Input id="loan-amount" type="number" placeholder="e.g. 50,00,000" className="pl-7" value={loanOriginalAmount} onChange={e => setLoanOriginalAmount(e.target.value)} />
+                            </div>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                         <div className="space-y-2">
+                            <Label htmlFor="loan-outstanding">Current Outstanding Principal</Label>
+                             <div className="relative">
+                                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">₹</span>
+                                <Input id="loan-outstanding" type="number" placeholder="If different from original amount" className="pl-7" value={loanOutstanding} onChange={e => setLoanOutstanding(e.target.value)} />
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="loan-emi">EMI Amount</Label>
+                            <div className="relative">
+                                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">₹</span>
+                                <Input id="loan-emi" type="number" placeholder="e.g. 45,000" className="pl-7" value={loanEmiAmount} onChange={e => setLoanEmiAmount(e.target.value)} />
+                            </div>
+                        </div>
+                    </div>
+                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="loan-interest-rate">Interest Rate (p.a. %)</Label>
+                            <Input id="loan-interest-rate" type="number" placeholder="e.g. 8.5" value={loanInterestRate} onChange={e => setLoanInterestRate(e.target.value)} />
+                        </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="loan-tenure">Tenure (in months)</Label>
+                            <Input id="loan-tenure" type="number" placeholder="e.g. 240" value={loanTenure} onChange={e => setLoanTenure(e.target.value)} />
+                        </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="loan-due-day">Next Due Day</Label>
+                             <Select onValueChange={setLoanNextDueDay}>
+                                <SelectTrigger id="loan-due-day"><SelectValue placeholder="Select day of month" /></SelectTrigger>
+                                <SelectContent>
+                                    {days.map(day => <SelectItem key={day} value={day.toString()}>{day}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
                 </TabsContent>
             </Tabs>
         </div>

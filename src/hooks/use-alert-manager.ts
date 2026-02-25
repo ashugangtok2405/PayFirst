@@ -15,7 +15,7 @@ import {
   doc,
   Timestamp,
 } from 'firebase/firestore'
-import type { CreditCard, Alert, BankAccount, Transaction } from '@/lib/types'
+import type { CreditCard, Alert, BankAccount, Transaction, Loan } from '@/lib/types'
 import { differenceInDays, parseISO } from 'date-fns'
 
 // --- Alerting Thresholds ---
@@ -49,6 +49,12 @@ export function useAlertManager() {
     [firestore, user]
   )
   const { data: bankAccounts } = useCollection<BankAccount>(bankAccountsQuery)
+  
+  const loansQuery = useMemoFirebase(
+    () => (user ? collection(firestore, 'users', user.uid, 'loans') : null),
+    [firestore, user]
+  )
+  const { data: loans } = useCollection<Loan>(loansQuery)
 
   const transactionsQuery = useMemoFirebase(
     () =>
@@ -73,6 +79,7 @@ export function useAlertManager() {
               'credit_due',
               'low_balance',
               'overspending',
+              'loan_due',
             ])
           )
         : null,
@@ -81,7 +88,7 @@ export function useAlertManager() {
   const { data: activeAlerts } = useCollection<Alert>(alertsQuery)
 
   useEffect(() => {
-    if (!user || !firestore || !creditCards || !bankAccounts || !transactions || !activeAlerts) {
+    if (!user || !firestore || !creditCards || !bankAccounts || !loans || !transactions || !activeAlerts) {
       return
     }
 
@@ -128,7 +135,7 @@ export function useAlertManager() {
         }
       }
 
-      // 2. Upcoming Due Date Alerts
+      // 2. Upcoming Due Date Alerts (Credit Cards)
       for (const card of creditCards) {
           if (card.currentBalance <= 0) continue
           try {
@@ -151,8 +158,32 @@ export function useAlertManager() {
               }
           } catch(e) {/* ignore invalid dates */}
       }
+      
+      // 3. Upcoming Due Date Alerts (Loans)
+      for (const loan of loans) {
+          if (!loan.active || loan.outstanding <= 0) continue
+          try {
+              const dueDate = parseISO(loan.nextDueDate)
+              const daysUntilDue = differenceInDays(dueDate, now)
+              const existingAlert = activeAlertsMap.get(`loan_due-${loan.id}`)
+              
+              if (daysUntilDue >= 0 && daysUntilDue <= DUE_DATE_WARNING_DAYS) {
+                  if (!existingAlert) {
+                      createAlert({
+                          userId: user.uid, type: 'loan_due', accountId: loan.id, title: 'Loan EMI Due Soon',
+                          message: `${loan.name} EMI of ${new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(loan.emiAmount)} is due in ${daysUntilDue} day(s).`,
+                          severity: daysUntilDue <= 1 ? 'critical' : 'warning', isRead: false, resolved: false, actionLink: '/dashboard/accounts',
+                      })
+                  }
+              } else {
+                  if (existingAlert) {
+                      batch.update(doc(firestore, 'users', user.uid, 'alerts', existingAlert.id), { resolved: true })
+                  }
+              }
+          } catch(e) {/* ignore invalid dates */}
+      }
 
-      // 3. Low Balance Alerts
+      // 4. Low Balance Alerts
       for (const account of bankAccounts) {
         if (account.isSavingsAccount) continue
         const existingAlert = activeAlertsMap.get(`low_balance-${account.id}`)
@@ -174,7 +205,7 @@ export function useAlertManager() {
         }
       }
 
-      // 4. Overspending Alert
+      // 5. Overspending Alert
       const monthlyIncome = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0)
       const monthlyExpense = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0)
       const existingAlert = activeAlertsMap.get('overspending-global')
@@ -214,5 +245,5 @@ export function useAlertManager() {
     }
 
     processAlerts()
-  }, [creditCards, bankAccounts, transactions, activeAlerts, user, firestore])
+  }, [creditCards, bankAccounts, loans, transactions, activeAlerts, user, firestore])
 }

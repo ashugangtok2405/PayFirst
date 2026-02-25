@@ -115,6 +115,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
               { name: 'Shopping', type: 'expense', isDefault: true },
               { name: 'Utilities', type: 'expense', isDefault: true },
               { name: 'Rent', type: 'expense', isDefault: true },
+              { name: 'Loan Interest', type: 'expense', isDefault: true },
               { name: 'Salary', type: 'income', isDefault: true },
               { name: 'Freelance', type: 'income', isDefault: true },
               { name: 'Investment', type: 'income', isDefault: true },

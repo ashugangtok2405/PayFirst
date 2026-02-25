@@ -24,6 +24,23 @@ export interface CreditCard {
   updatedAt?: string;
 }
 
+export interface Loan {
+  id: string;
+  userId: string;
+  name: string;
+  originalAmount: number;
+  outstanding: number;
+  interestRate: number;
+  emiAmount: number;
+  tenureMonths: number;
+  remainingMonths: number;
+  nextDueDate: string;
+  linkedBankAccountId?: string;
+  active: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface Transaction {
   id: string;
   userId?: string;

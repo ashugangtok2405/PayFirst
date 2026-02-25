@@ -205,6 +205,29 @@
         "updatedAt"
       ]
     },
+    "Loan": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Loan",
+      "type": "object",
+      "description": "Represents a loan or EMI, tracking its outstanding balance, tenure, and payment details.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the Loan entity." },
+        "userId": { "type": "string", "description": "Reference to the User who owns this loan." },
+        "name": { "type": "string", "description": "A user-friendly name for the loan (e.g., 'Home Loan', 'Car Loan')." },
+        "originalAmount": { "type": "number", "description": "The principal amount of the loan when it was taken." },
+        "outstanding": { "type": "number", "description": "The current outstanding principal balance of the loan." },
+        "interestRate": { "type": "number", "description": "The annual interest rate (APR) for the loan." },
+        "emiAmount": { "type": "number", "description": "The Equated Monthly Installment (EMI) amount." },
+        "tenureMonths": { "type": "number", "description": "The total tenure of the loan in months." },
+        "remainingMonths": { "type": "number", "description": "The number of remaining months for the loan tenure." },
+        "nextDueDate": { "type": "string", "format": "date-time", "description": "The due date for the next EMI payment." },
+        "linkedBankAccountId": { "type": "string", "description": "The bank account from which EMI is typically paid. (Optional)" },
+        "active": { "type": "boolean", "description": "Indicates if the loan is currently active." },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "name", "originalAmount", "outstanding", "interestRate", "emiAmount", "tenureMonths", "nextDueDate", "active"]
+    },
     "Transaction": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Transaction",
@@ -503,6 +526,20 @@
         }
       },
       {
+        "path": "/users/{userId}/loans/{loanId}",
+        "definition": {
+          "entityName": "Loan",
+          "schema": {
+            "$ref": "#/backend/entities/Loan"
+          },
+          "description": "Stores details for a user's loans. Nested under a specific user for privacy.",
+          "params": [
+            { "name": "userId", "description": "The ID of the user who owns this loan." },
+            { "name": "loanId", "description": "The unique ID of the loan." }
+          ]
+        }
+      },
+      {
         "path": "/users/{userId}/transactions/{transactionId}",
         "definition": {
           "entityName": "Transaction",
@@ -583,6 +620,6 @@
         }
       }
     ],
-    "reasoning": "The recommended Firestore structure for PayFirst emphasizes strict user data isolation and simplified security rules by leveraging path-based ownership. All user-specific financial data (Categories, Bank Accounts, Credit Cards, Transactions, and Savings Rules) is nested directly under a user's unique profile document in the `/users/{userId}/` path.\n\nThis design achieves **Authorization Independence (CRITICAL)** by ensuring that the authorization context (the user's ID) is explicitly present in the path for every document. For example, a `Category` document will be stored at `/users/{userId}/categories/{categoryId}`. A security rule to access this document can simply check `request.auth.uid == userId`, directly comparing the authenticated user's ID with the `userId` wildcard in the path. This eliminates the need for expensive and complex `get()` calls to parent documents in security rules, which can break atomic operations and make debugging challenging. All authorization decisions are self-contained within the document's path and the `request.auth.uid`.\n\nFurthermore, this structure strongly supports **QAPs (Rules are not Filters)**. By structurally segregating each user's data into their own dedicated subcollections (e.g., `/users/{userId}/transactions`, `/users/{userId}/bankAccounts`), every document within these collections shares the same security posture: it is privately owned by the `userId` specified in the path. This means that `list` operations are inherently secure. When a user queries `/users/{userId}/transactions`, the security rules simply verify that `request.auth.uid` matches the `userId` in the path. Firestore's query-ability and security rules work in concert to ensure that a user can only list documents from their own designated data space, preventing data leakage and removing the need for rules to act as data filters after retrieval. This leads to clear, concise, and highly performant security rules that are easy to understand and debug, making the application's data highly secure by design."
+    "reasoning": "The recommended Firestore structure for PayFirst emphasizes strict user data isolation and simplified security rules by leveraging path-based ownership. All user-specific financial data (Categories, Bank Accounts, Credit Cards, Transactions, and Savings Rules) is nested directly under a user's unique profile document in the `/users/{userId}/` path.\n\nThis design achieves **Authorization Independence (CRITICAL)** by ensuring that the authorization context (the user's ID) is explicitly present in the path for every document. For example, a `Category` document will be stored at `/users/{userId}/categories/{categoryId}`. A security rule to access this document can simply check `request.auth.uid == userId`, directly comparing the authenticated user's ID with the `userId` wildcard in the path. This eliminates the need for expensive and complex `get()` calls to parent documents in security rules, which can break atomic operations and make debugging challenging. All authorization decisions are self-contained within the document's path and the `request.auth.uid`.\n\nFurthermore, this structure strongly supports **QAPs (Rules are not Filters)**. By structurally segregating each user's data into their own dedicated data space (e.g., `/users/{userId}/transactions`, `/users/{userId}/bankAccounts`), every document within these collections shares the same security posture: it is privately owned by the `userId` specified in the path. This means that `list` operations are inherently secure. When a user queries `/users/{userId}/transactions`, the security rules simply verify that `request.auth.uid` matches the `userId` in the path. Firestore's query-ability and security rules work in concert to ensure that a user can only list documents from their own designated data space, preventing data leakage and removing the need for rules to act as data filters after retrieval. This leads to clear, concise, and highly performant security rules that are easy to understand and debug, making the application's data highly secure by design."
   }
 }
