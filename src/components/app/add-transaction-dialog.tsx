@@ -165,14 +165,19 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
             transactionData.toBankAccountId = toAccountId;
             
             const fromAccountRef = doc(firestore, 'users', user.uid, 'bankAccounts', fromAccountId);
+            const toAccountRef = doc(firestore, 'users', user.uid, 'bankAccounts', toAccountId);
+            
+            // Perform all reads first
             const fromAccountDoc = await transaction.get(fromAccountRef);
+            const toAccountDoc = await transaction.get(toAccountRef);
+
             if (!fromAccountDoc.exists()) throw new Error("Source account not found.");
+            if (!toAccountDoc.exists()) throw new Error("Destination account not found.");
+
+            // Now perform all writes
             const newFromBalance = fromAccountDoc.data().currentBalance - numericAmount;
             transaction.update(fromAccountRef, { currentBalance: newFromBalance, updatedAt: parsedDate.toISOString() });
 
-            const toAccountRef = doc(firestore, 'users', user.uid, 'bankAccounts', toAccountId);
-            const toAccountDoc = await transaction.get(toAccountRef);
-            if (!toAccountDoc.exists()) throw new Error("Destination account not found.");
             const newToBalance = toAccountDoc.data().currentBalance + numericAmount;
             transaction.update(toAccountRef, { currentBalance: newToBalance, updatedAt: parsedDate.toISOString() });
             break
@@ -184,14 +189,19 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
             transactionData.description = notes || `Payment for ${creditCards?.find(c => c.id === toCreditCardId)?.name}`
 
             const bankAccountRef = doc(firestore, 'users', user.uid, 'bankAccounts', fromAccountId);
+            const cardRef = doc(firestore, 'users', user.uid, 'creditCards', toCreditCardId);
+
+            // Perform all reads first
             const bankAccountDoc = await transaction.get(bankAccountRef);
+            const cardDoc = await transaction.get(cardRef);
+
             if (!bankAccountDoc.exists()) throw new Error("Bank account not found.");
+            if (!cardDoc.exists()) throw new Error("Credit card not found.");
+
+            // Now perform all writes
             const newBankBalance = bankAccountDoc.data().currentBalance - numericAmount;
             transaction.update(bankAccountRef, { currentBalance: newBankBalance, updatedAt: parsedDate.toISOString() });
 
-            const cardRef = doc(firestore, 'users', user.uid, 'creditCards', toCreditCardId);
-            const cardDoc = await transaction.get(cardRef);
-            if (!cardDoc.exists()) throw new Error("Credit card not found.");
             const newCardBalance = cardDoc.data().currentBalance - numericAmount;
             transaction.update(cardRef, { currentBalance: newCardBalance, updatedAt: parsedDate.toISOString() });
             break
