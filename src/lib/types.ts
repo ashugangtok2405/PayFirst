@@ -41,6 +41,30 @@ export interface Loan {
   updatedAt?: string;
 }
 
+export interface PersonalDebt {
+  id: string;
+  userId: string;
+  personName: string;
+  type: 'lent' | 'borrowed';
+  originalAmount: number;
+  remainingAmount: number;
+  interestRate?: number;
+  dueDate?: string | null;
+  linkedAccountId: string;
+  status: 'active' | 'closed';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Repayment {
+  id: string;
+  debtId: string;
+  userId: string;
+  amount: number;
+  repaymentDate: string;
+  notes?: string;
+}
+
 export interface Transaction {
   id: string;
   userId?: string;

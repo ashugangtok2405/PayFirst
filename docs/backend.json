@@ -228,6 +228,40 @@
       },
       "required": ["id", "userId", "name", "originalAmount", "outstanding", "interestRate", "emiAmount", "tenureMonths", "nextDueDate", "active"]
     },
+    "PersonalDebt": {
+      "title": "Personal Debt",
+      "type": "object",
+      "description": "Represents money lent to or borrowed from another person.",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "personName": { "type": "string" },
+        "type": { "type": "string", "enum": ["lent", "borrowed"] },
+        "originalAmount": { "type": "number" },
+        "remainingAmount": { "type": "number" },
+        "interestRate": { "type": "number" },
+        "dueDate": { "type": "string", "format": "date-time" },
+        "linkedAccountId": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "closed"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "personName", "type", "originalAmount", "remainingAmount", "linkedAccountId", "status", "createdAt", "updatedAt"]
+    },
+    "Repayment": {
+      "title": "Repayment",
+      "type": "object",
+      "description": "Represents a single repayment installment for a personal debt.",
+      "properties": {
+        "id": { "type": "string" },
+        "debtId": { "type": "string" },
+        "userId": { "type": "string" },
+        "amount": { "type": "number" },
+        "repaymentDate": { "type": "string", "format": "date-time" },
+        "notes": { "type": "string" }
+      },
+      "required": ["debtId", "userId", "amount", "repaymentDate"]
+    },
     "Transaction": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Transaction",
@@ -537,6 +571,26 @@
             { "name": "userId", "description": "The ID of the user who owns this loan." },
             { "name": "loanId", "description": "The unique ID of the loan." }
           ]
+        }
+      },
+      {
+        "path": "/users/{userId}/personalDebts/{debtId}",
+        "definition": {
+          "entityName": "PersonalDebt",
+          "schema": {
+            "$ref": "#/backend/entities/PersonalDebt"
+          },
+          "description": "Stores personal lending and borrowing records for a user."
+        }
+      },
+      {
+        "path": "/users/{userId}/personalDebts/{debtId}/repayments/{repaymentId}",
+        "definition": {
+          "entityName": "Repayment",
+          "schema": {
+            "$ref": "#/backend/entities/Repayment"
+          },
+          "description": "Stores repayment history for a specific personal debt."
         }
       },
       {

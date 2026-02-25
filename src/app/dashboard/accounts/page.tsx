@@ -4,6 +4,7 @@ import { NetWorthSummary } from '@/components/app/accounts/net-worth-summary'
 import { BankAccounts } from '@/components/app/accounts/bank-accounts'
 import { CreditCardManagement } from '@/components/app/accounts/credit-card-management'
 import { LoanManagement } from '@/components/app/accounts/loan-management'
+import { PersonalDebtManagement } from '@/components/app/accounts/personal-debt-management'
 import { SmartAlerts } from '@/components/app/accounts/smart-alerts'
 import { TransferMoneyDialog } from '@/components/app/accounts/transfer-money-dialog'
 import { AddAccountDialog } from '@/components/app/accounts/add-account-dialog'
@@ -32,6 +33,7 @@ export default function AccountsPage() {
           <BankAccounts />
           <CreditCardManagement />
           <LoanManagement />
+          <PersonalDebtManagement />
         </div>
         <div className="lg:col-span-1">
           <SmartAlerts />
