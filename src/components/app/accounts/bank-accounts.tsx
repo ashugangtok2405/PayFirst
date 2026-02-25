@@ -88,6 +88,16 @@ export function BankAccounts() {
   
   const isLoading = loadingBankAccounts || loadingTransactions;
 
+  const monthlyTxs = useMemo(() => {
+    if (!transactions) return [];
+    const startOfMonthDate = new Date(monthStart);
+    return transactions.filter(t => {
+        try {
+           return new Date(t.transactionDate) >= startOfMonthDate;
+        } catch(e) { return false }
+    });
+  }, [transactions, monthStart]);
+
   return (
     <Card>
       <CardHeader>
@@ -103,12 +113,6 @@ export function BankAccounts() {
             {bankAccounts.map((account) => {
                 const accountTransactions = transactions?.filter(t => t.fromBankAccountId === account.id || t.toBankAccountId === account.id).slice(0, 5) ?? [];
                 
-                const monthlyTxs = useMemo(() => transactions?.filter(t => {
-                    try {
-                       return new Date(t.transactionDate) >= new Date(monthStart)
-                    } catch(e) { return false }
-                }) ?? [], [transactions, monthStart]);
-
                 const monthlyInflow = monthlyTxs.filter(t => t.toBankAccountId === account.id && t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
                 const monthlyOutflow = monthlyTxs.filter(t => t.fromBankAccountId === account.id && t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
 
