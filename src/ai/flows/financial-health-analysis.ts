@@ -6,7 +6,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-export const FinancialHealthInputSchema = z.object({
+const FinancialHealthInputSchema = z.object({
   monthlyIncome: z.number().describe("The user's total income for the current month."),
   monthlyExpense: z.number().describe("The user's total expenses for the current month."),
   last3MonthsExpenses: z.array(z.number()).describe("An array of the total expenses for each of the last three months, starting with the most recent."),
@@ -17,7 +17,7 @@ export const FinancialHealthInputSchema = z.object({
 });
 export type FinancialHealthInput = z.infer<typeof FinancialHealthInputSchema>;
 
-export const FinancialHealthOutputSchema = z.object({
+const FinancialHealthOutputSchema = z.object({
   finalScore: z.number().min(0).max(100).describe("The final calculated financial health score, from 0 to 100."),
   status: z.enum(["Excellent", "Stable", "Moderate Risk", "High Risk", "Critical"]).describe("A qualitative status label based on the final score."),
   aiSummary: z.string().describe("A very short, 2-3 line summary of the user's financial health, highlighting the most important factor."),
