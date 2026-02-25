@@ -137,12 +137,12 @@ export function TransactionList({ transactions, categories, accounts, totalIncom
                     <div key={group}>
                         <div className="flex justify-between items-baseline mb-2 px-1">
                             <h2 className="text-lg font-semibold">{getGroupTitle(group)}</h2>
-                            <div className="text-sm font-medium">
+                            <div className="text-sm font-semibold">
                                 {groupExpense > 0 && <span className="text-red-500">-{formatCurrency(groupExpense)}</span>}
-                                {groupIncome > 0 && groupExpense > 0 && <span className="text-muted-foreground mx-1">/</span>}
+                                {groupIncome > 0 && groupExpense > 0 && <span className="text-muted-foreground mx-1.5">/</span>}
                                 {groupIncome > 0 && <span className="text-green-500">+{formatCurrency(groupIncome)}</span>}
                                 {groupNet !== 0 && groupIncome > 0 && groupExpense > 0 && (
-                                    <span className={`ml-2 ${groupNet > 0 ? 'text-blue-500' : 'text-orange-500'}`}>({formatCurrency(groupNet)})</span>
+                                    <span className={`ml-2.5 ${groupNet > 0 ? 'text-blue-500' : 'text-orange-500'}`}>({formatCurrency(groupNet)})</span>
                                 )}
                             </div>
                         </div>
@@ -181,7 +181,12 @@ export function TransactionList({ transactions, categories, accounts, totalIncom
                                                             <p className="text-sm text-muted-foreground">{accountName}</p>
                                                         </div>
                                                         <div className="text-right">
-                                                            <p className={`font-bold ${amountConfig.color}`}>{amountConfig.sign}{formatCurrency(tx.amount)}</p>
+                                                            <p className={`font-bold text-lg ${amountConfig.color}`}>{amountConfig.sign}{formatCurrency(tx.amount)}</p>
+                                                            {tx.type === 'expense' && percentageOfIncome > 0.1 && (
+                                                                <Badge variant="outline" className="font-normal text-xs mt-1 border-none p-0 text-muted-foreground">
+                                                                    {percentageOfIncome.toFixed(1)}% of income
+                                                                </Badge>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </AccordionTrigger>
