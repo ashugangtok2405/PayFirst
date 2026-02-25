@@ -12,15 +12,17 @@ export async function getFinancialHealthAnalysisAction(input: FinancialHealthInp
     const calculatedMetrics = calculateFinancialHealth(input);
     
     let aiOutput = null;
+    let aiErrorString: string | null = null;
+
     try {
       // Step 2: Try to get the AI-generated narratives.
       aiOutput = await getFinancialHealthNarrative({
         ...input,
         ...calculatedMetrics
       });
-    } catch (aiError) {
+    } catch (aiError: any) {
       console.error('Error generating AI narrative:', aiError);
-      // AI call failed, but we can proceed with a fallback.
+      aiErrorString = aiError.message || 'An unknown error occurred while generating the AI narrative.';
     }
 
     // Step 3: Combine calculated data with AI narratives (or fallbacks).
@@ -33,15 +35,15 @@ export async function getFinancialHealthAnalysisAction(input: FinancialHealthInp
       cashRunwayMonths: calculatedMetrics.cashRunwayMonths,
       creditUtilization: calculatedMetrics.creditUtilization,
       
-      // Use AI output or fallbacks
-      aiSummary: aiOutput?.aiSummary ?? "Your financial metrics have been calculated. The AI summary could not be generated at this time.",
-      aiDetailedInsight: aiOutput?.aiDetailedInsight ?? "### Analysis Unavailable\n\nThe AI-powered detailed analysis could not be generated. Please check your key metrics for an overview of your financial health."
+      // Use AI output or provide a detailed fallback with the specific error.
+      aiSummary: aiOutput?.aiSummary ?? "Metrics calculated, but AI summary failed. See details below.",
+      aiDetailedInsight: aiOutput?.aiDetailedInsight ?? `### AI Analysis Unavailable\n\nThe AI-powered detailed analysis could not be generated.\n\n**Reason:** ${aiErrorString}`
     };
 
     return { success: true, data: finalResult };
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in financial health analysis action:', error);
-    return { success: false, error: 'Failed to calculate financial metrics. Please check the input data.' }
+    return { success: false, error: `Failed to calculate financial metrics: ${error.message}` }
   }
 }
