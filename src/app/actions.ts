@@ -3,7 +3,7 @@
 import {
   getFinancialHealthNarrative,
 } from '@/ai/flows/financial-health-analysis'
-import type { FinancialHealthInput, FinancialHealthOutput } from '@/ai/flows/types'
+import type { FinancialHealthInput, FinancialHealthOutput, FinancialHealthStructuredAIOutput } from '@/ai/flows/types'
 import { calculateFinancialHealth } from '@/lib/financial-health'
 
 export async function getFinancialHealthAnalysisAction(input: FinancialHealthInput): Promise<{ success: boolean, data?: FinancialHealthOutput, error?: string }> {
@@ -11,7 +11,7 @@ export async function getFinancialHealthAnalysisAction(input: FinancialHealthInp
     // Step 1: Calculate all metrics and the score deterministically in TypeScript.
     const calculatedMetrics = calculateFinancialHealth(input);
     
-    let aiOutput = null;
+    let aiOutput: FinancialHealthStructuredAIOutput | null = null;
     let aiErrorString: string | null = null;
 
     try {
@@ -36,8 +36,10 @@ export async function getFinancialHealthAnalysisAction(input: FinancialHealthInp
       creditUtilization: calculatedMetrics.creditUtilization,
       
       // Use AI output or provide a detailed fallback with the specific error.
-      aiSummary: aiOutput?.aiSummary ?? "Metrics calculated, but AI summary failed. See details below.",
-      aiDetailedInsight: aiOutput?.aiDetailedInsight ?? `### AI Analysis Unavailable\n\nThe AI-powered detailed analysis could not be generated.\n\n**Reason:** ${aiErrorString}`
+      aiSummary: aiOutput?.financialHealthSummary ?? "Metrics calculated, but AI summary failed. See details below.",
+      aiDetailedInsight: aiOutput 
+        ? `### Spending Insight\n${aiOutput.spendingInsight}\n\n### Cash Flow Insight\n${aiOutput.cashFlowInsight}\n\n### Debt Insight\n${aiOutput.debtInsight}\n\n### Forecast Insight\n${aiOutput.forecastInsight}`
+        : `### AI Analysis Unavailable\n\nThe AI-powered detailed analysis could not be generated.\n\n**Reason:** ${aiErrorString}`
     };
 
     return { success: true, data: finalResult };

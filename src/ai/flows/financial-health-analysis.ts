@@ -4,88 +4,101 @@
  */
 
 import {ai} from '@/ai/genkit';
-import { FinancialHealthAnalysisPromptInputSchema, FinancialHealthAIOutputSchema, type FinancialHealthAnalysisPromptInput, type FinancialHealthAIOutput } from './types';
+import { FinancialHealthAnalysisPromptInputSchema, FinancialHealthStructuredAIOutputSchema, type FinancialHealthAnalysisPromptInput, type FinancialHealthStructuredAIOutput } from './types';
 
 // This function now expects the full prompt input and returns only the AI narratives
 export async function getFinancialHealthNarrative(
   input: FinancialHealthAnalysisPromptInput
-): Promise<FinancialHealthAIOutput> {
+): Promise<FinancialHealthStructuredAIOutput> {
   return financialHealthNarrativeFlow(input);
 }
 
 const prompt = ai.definePrompt({
     name: 'financialHealthNarrativePrompt',
     input: {schema: FinancialHealthAnalysisPromptInputSchema},
-    output: {schema: FinancialHealthAIOutputSchema},
-    prompt: `You are a senior financial analyst acting as a personal CFO.
+    output: {schema: FinancialHealthStructuredAIOutputSchema},
+    prompt: `You are a senior financial analyst AI acting as a personal CFO.
 
-Generate a professional financial performance report using ONLY the provided data.
+Your task is to generate structured financial commentary based ONLY on the provided metrics.
 
-STRICT REQUIREMENTS:
-- Use a formal, analytical tone.
+IMPORTANT RULES:
+- Do NOT invent numbers.
+- Do NOT recalculate anything.
+- Use ONLY the data provided.
+- Do NOT repeat numbers excessively.
+- Keep tone professional, analytical, and executive-level.
 - Avoid exaggerated praise.
 - Avoid generic advice.
-- Do not repeat metrics unnecessarily.
-- Do not invent assumptions.
-- Compare values against financial benchmarks.
-- Identify strengths, inefficiencies, and optimization opportunities.
-- Be precise and data-driven.
+- Be concise but insightful.
+- Focus on interpretation and financial implications.
+- Do not use emojis.
+
+Output format EXACTLY as follows:
+
+{
+  "financialHealthSummary": "...",
+  "spendingInsight": "...",
+  "cashFlowInsight": "...",
+  "debtInsight": "...",
+  "forecastInsight": "..."
+}
+
+GUIDELINES FOR EACH SECTION:
+
+financialHealthSummary:
+- Interpret the overall financial health score.
+- Comment on structural strengths or weaknesses.
+- Mention balance between income, debt, liquidity.
+
+spendingInsight:
+- Interpret category concentration.
+- Comment on spending distribution.
+- Mention risk if concentration is high.
+- Mention efficiency if balanced.
+
+cashFlowInsight:
+- Analyze burn rate and survival time.
+- Assess stability of income vs expenses.
+- Comment on trend direction (improving, declining, stable).
+
+debtInsight:
+- Evaluate debt-to-income ratio.
+- Evaluate credit utilization.
+- Assess pressure level (low, moderate, high).
+- Mention structural financial risk if present.
+
+forecastInsight:
+- Interpret projected month-end balance.
+- Assess sustainability of current spending pace.
+- Mention if adjustment is needed.
+
+FINANCIAL BENCHMARKS:
+Healthy Savings Rate: 15–25%
+Safe DTI: <35%
+Ideal Credit Utilization: <30%
+Emergency Fund Target: 3–6 months
 
 USER DATA:
+
 Financial Health Score: {{{finalScore}}}
-Status: {{{status}}}
+Health Status: {{{status}}}
+
 Savings Rate: {{{savingsRate}}}%
-Debt-to-Income Ratio: {{{debtToIncomeRatio}}}%
-Cash Runway: {{{cashRunwayMonths}}} months
-Credit Utilization: {{{creditUtilization}}}%
 Monthly Income: {{{monthlyIncome}}}
 Monthly Expense: {{{monthlyExpense}}}
-Monthly EMI: {{{totalMonthlyEmi}}}
 
-Generate the report in the required JSON format.
+Monthly Burn Rate: {{{monthlyBurnRate}}}
+Cash Runway: {{{cashRunwayMonths}}} months
 
-For the 'aiSummary' field, provide an "Executive Summary" of 3-4 analytical sentences.
-
-For the 'aiDetailedInsight' field, provide the rest of the report in Markdown format, structured EXACTLY as follows:
-
-### Savings Analysis
-- Interpret savings efficiency.
-- Compare to benchmark (15–25%).
-- Explain structural strength or weakness.
-
-### Debt & Credit Analysis
-- Evaluate DTI (safe <35%).
-- Evaluate credit utilization (ideal <30%).
-- Identify leverage exposure or absence of financial leverage.
-
-### Liquidity Analysis
-- Compare runway to 3–6 month benchmark.
-- Assess resilience level.
-
-### Risk Assessment
-- Identify current risk profile.
-- Mention potential structural vulnerabilities (if any).
-- Avoid saying "no risk".
-
-### Strategic Recommendations
-Provide 2–3 prioritized, high-impact recommendations.
-Label them as:
-Priority 1:
-Priority 2:
-(Optional) Priority 3:
-
-Financial Benchmarks for your analysis:
-- Savings Rate Healthy Range: 15–25%
-- Debt-to-Income Safe Level: <35%
-- Credit Utilization Ideal: <30%
-- Emergency Fund Target: 3–6 months`,
+Debt-to-Income Ratio: {{{debtToIncomeRatio}}}%
+Credit Utilization: {{{creditUtilization}}}%`,
   });
 
 const financialHealthNarrativeFlow = ai.defineFlow(
     {
       name: 'financialHealthNarrativeFlow',
       inputSchema: FinancialHealthAnalysisPromptInputSchema,
-      outputSchema: FinancialHealthAIOutputSchema,
+      outputSchema: FinancialHealthStructuredAIOutputSchema,
     },
     async (input) => {
       const {output} = await prompt(input);

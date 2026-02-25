@@ -180,7 +180,7 @@ export function FinancialHealthAnalysis() {
                     </Card>
                 ))}
             </div>
-            <Accordion type="single" collapsible>
+            <Accordion type="single" collapsible className="w-full">
               <AccordionItem value="item-1">
                 <Card>
                     <AccordionTrigger className="p-6 text-lg font-semibold hover:no-underline">
