@@ -96,6 +96,8 @@ export default function SignupPage() {
         description = 'The sign-in window was closed. Please try again.';
       } else if (error.code === 'auth/operation-not-allowed') {
         description = 'Google Sign-In is not enabled for this app. Please contact support.';
+      } else if (error.message) {
+        description = error.message;
       }
       toast({
         variant: 'destructive',
