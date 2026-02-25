@@ -53,7 +53,7 @@ export function LoanManagement() {
 
   const { totalLoanOutstanding, totalMonthlyEMI } = useMemo(() => {
     if (!loans) return { totalLoanOutstanding: 0, totalMonthlyEMI: 0 }
-    const activeLoans = loans.filter(l => l.active);
+    const activeLoans = loans.filter(l => l.outstanding > 0);
     const totalLoanOutstanding = activeLoans.reduce((sum, loan) => sum + loan.outstanding, 0)
     const totalMonthlyEMI = activeLoans.reduce((sum, loan) => sum + loan.emiAmount, 0)
     return { totalLoanOutstanding, totalMonthlyEMI }

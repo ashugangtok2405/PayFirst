@@ -111,7 +111,12 @@ export function PersonalDebtManagement() {
                 <div>
                     <div className="flex justify-between items-center mb-4">
                         <h3 className="text-lg font-semibold flex items-center gap-2"><ArrowUpRight className="text-green-500"/>Money You've Lent</h3>
-                        {debtsLent.length > 0 && <span className="text-sm text-muted-foreground">Total Lent: <span className="font-semibold text-foreground">{formatCurrency(totalLent)}</span></span>}
+                        {debtsLent.length > 0 && (
+                          <div className="text-right">
+                            <p className="text-xs text-muted-foreground">Total You Are Owed</p>
+                            <p className="text-xl font-bold text-green-600">{formatCurrency(totalLent)}</p>
+                          </div>
+                        )}
                     </div>
                     {debtsLent.length > 0 ? (
                         <div className="space-y-4">{debtsLent.map(d => <DebtCard key={d.id} debt={d} />)}</div>
@@ -120,7 +125,12 @@ export function PersonalDebtManagement() {
                  <div>
                     <div className="flex justify-between items-center mb-4">
                         <h3 className="text-lg font-semibold flex items-center gap-2"><ArrowDownLeft className="text-orange-500"/>Money You've Borrowed</h3>
-                        {debtsBorrowed.length > 0 && <span className="text-sm text-muted-foreground">Total Borrowed: <span className="font-semibold text-foreground">{formatCurrency(totalBorrowed)}</span></span>}
+                        {debtsBorrowed.length > 0 && (
+                          <div className="text-right">
+                            <p className="text-xs text-muted-foreground">Total You Owe</p>
+                            <p className="text-xl font-bold text-orange-500">{formatCurrency(totalBorrowed)}</p>
+                          </div>
+                        )}
                     </div>
                     {debtsBorrowed.length > 0 ? (
                         <div className="space-y-4">{debtsBorrowed.map(d => <DebtCard key={d.id} debt={d} />)}</div>
