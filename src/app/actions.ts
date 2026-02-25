@@ -2,8 +2,8 @@
 
 import {
   getFinancialHealthAnalysis,
-  type FinancialHealthInput,
 } from '@/ai/flows/financial-health-analysis'
+import type { FinancialHealthInput } from '@/ai/flows/types'
 
 export async function getFinancialHealthAnalysisAction(input: FinancialHealthInput) {
   try {
