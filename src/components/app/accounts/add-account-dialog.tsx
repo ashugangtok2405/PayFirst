@@ -21,7 +21,7 @@ import { Landmark, CreditCard, ChevronDown, FileText, Handshake } from 'lucide-r
 import { useToast } from '@/hooks/use-toast'
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase'
 import { collection, addDoc, doc, runTransaction } from 'firebase/firestore'
-import type { BankAccount, CreditCard as CreditCardType, Loan, PersonalDebt } from '@/lib/types'
+import type { BankAccount, CreditCard as CreditCardType, Loan, PersonalDebt, Transaction } from '@/lib/types'
 
 export function AddAccountDialog({ children, defaultType = 'bank' }: { children: React.ReactNode; defaultType?: 'bank' | 'credit' | 'loan' | 'personal_debt' }) {
   const [open, setOpen] = useState(false)
@@ -127,13 +127,28 @@ export function AddAccountDialog({ children, defaultType = 'bank' }: { children:
                 transaction.set(newDebtRef, newDebt);
 
                 let newBalance;
+                let transactionData: Omit<Transaction, 'id'>;
                 if (formState.debtType === 'lent') {
                     newBalance = bankAccountDoc.data().currentBalance - debtAmountNum;
                     if (newBalance < 0) throw new Error("Insufficient funds in linked account.");
+                    transactionData = {
+                        userId: user.uid, type: 'debt_lent', amount: debtAmountNum,
+                        description: `Lent to ${formState.debtPersonName}`, transactionDate: now,
+                        fromBankAccountId: formState.debtLinkedAccountId,
+                    }
                 } else {
                     newBalance = bankAccountDoc.data().currentBalance + debtAmountNum;
+                    transactionData = {
+                        userId: user.uid, type: 'debt_borrowed', amount: debtAmountNum,
+                        description: `Borrowed from ${formState.debtPersonName}`, transactionDate: now,
+                        toBankAccountId: formState.debtLinkedAccountId,
+                    }
                 }
                 transaction.update(bankAccountRef, { currentBalance: newBalance });
+
+                // Create a corresponding transaction for ledger completeness
+                const newTransactionRef = doc(collection(firestore, 'users', user.uid, 'transactions'));
+                transaction.set(newTransactionRef, transactionData);
             });
             toast({ title: 'Personal Debt Added', description: 'The new debt record has been created.' });
         }

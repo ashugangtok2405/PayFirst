@@ -2,7 +2,11 @@
 
 import { useMemo } from 'react'
 import { format, isToday, isYesterday, parseISO } from 'date-fns'
-import { Landmark, Fuel, ShoppingBag, CircleDollarSign, PiggyBank, Utensils, Tv, Car, ArrowDown, ArrowUp, ArrowRightLeft, CreditCard as CreditCardIcon, Edit, Trash2, PlusCircle, Percent } from 'lucide-react'
+import { 
+    Landmark, Fuel, ShoppingBag, CircleDollarSign, PiggyBank, Utensils, Tv, Car, 
+    ArrowDown, ArrowUp, ArrowRightLeft, CreditCard as CreditCardIcon, Edit, Trash2, 
+    PlusCircle, Percent, BadgeIndianRupee, HandCoins, ArrowUpRight, ArrowDownLeft
+} from 'lucide-react'
 
 import { Card, CardContent } from '@/components/ui/card'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
@@ -38,7 +42,12 @@ const TransactionTypeBadge = ({ type }: { type: Transaction['type']}) => {
         income: { icon: ArrowUp, color: 'text-green-700 bg-green-50 border-green-200', label: 'Income' },
         expense: { icon: ArrowDown, color: 'text-red-700 bg-red-50 border-red-200', label: 'Expense' },
         transfer: { icon: ArrowRightLeft, color: 'text-blue-700 bg-blue-50 border-blue-200', label: 'Transfer' },
-        credit_card_payment: { icon: CreditCardIcon, color: 'text-orange-700 bg-orange-50 border-orange-200', label: 'Payment' },
+        credit_card_payment: { icon: CreditCardIcon, color: 'text-orange-700 bg-orange-50 border-orange-200', label: 'CC Payment' },
+        loan_payment: { icon: BadgeIndianRupee, color: 'text-cyan-700 bg-cyan-50 border-cyan-200', label: 'Loan Payment' },
+        debt_lent: { icon: ArrowUpRight, color: 'text-orange-700 bg-orange-50 border-orange-200', label: 'Lent' },
+        debt_borrowed: { icon: ArrowDownLeft, color: 'text-purple-700 bg-purple-50 border-purple-200', label: 'Borrowed' },
+        debt_repayment_in: { icon: HandCoins, color: 'text-teal-700 bg-teal-50 border-teal-200', label: 'Repayment In' },
+        debt_repayment_out: { icon: HandCoins, color: 'text-indigo-700 bg-indigo-50 border-indigo-200', label: 'Repayment Out' },
     }[type] || { icon: CircleDollarSign, color: 'text-gray-700 bg-gray-50 border-gray-200', label: 'Transaction'}
 
     const Icon = config.icon;
@@ -85,7 +94,13 @@ export function TransactionList({ transactions, categories, accounts, totalIncom
             await runFirestoreTransaction(firestore, async (tx) => {
                 const txRef = doc(firestore, 'users', user.uid, 'transactions', transaction.id);
                 const amount = transaction.amount;
-                // Reverse operations based on type
+                
+                // This logic is complex because it has to reverse any kind of transaction.
+                if (transaction.type === 'loan_payment') {
+                    toast({ variant: 'destructive', title: 'Action Not Supported', description: 'Deleting EMI payments is not yet supported.' });
+                    throw new Error("EMI payment deletion not supported.");
+                }
+
                 if(transaction.fromBankAccountId) {
                     const ref = doc(firestore, 'users', user.uid, 'bankAccounts', transaction.fromBankAccountId);
                     const accDoc = await tx.get(ref);
@@ -111,7 +126,9 @@ export function TransactionList({ transactions, categories, accounts, totalIncom
             toast({ title: "Transaction Deleted", description: "The transaction has been removed and account balances updated." });
         } catch(error: any) {
             console.error("Failed to delete transaction:", error);
-            toast({ variant: 'destructive', title: 'Delete Failed', description: error.message });
+            if (error.message !== "EMI payment deletion not supported.") {
+              toast({ variant: 'destructive', title: 'Delete Failed', description: error.message });
+            }
         }
     }
 
@@ -158,7 +175,12 @@ export function TransactionList({ transactions, categories, accounts, totalIncom
                                             income: { sign: '+', color: 'text-green-600' },
                                             expense: { sign: '-', color: 'text-red-600' },
                                             transfer: { sign: '', color: 'text-blue-600' },
-                                            credit_card_payment: { sign: '', color: 'text-orange-600' },
+                                            credit_card_payment: { sign: '-', color: 'text-orange-600' },
+                                            loan_payment: { sign: '-', color: 'text-cyan-600' },
+                                            debt_lent: { sign: '-', color: 'text-red-600' },
+                                            debt_borrowed: { sign: '+', color: 'text-green-600' },
+                                            debt_repayment_in: { sign: '+', color: 'text-green-600' },
+                                            debt_repayment_out: { sign: '-', color: 'text-red-600' },
                                         }[tx.type] || { sign: '', color: 'text-foreground' };
 
                                         let accountName = 'N/A'

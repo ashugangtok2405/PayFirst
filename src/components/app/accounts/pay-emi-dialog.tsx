@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast'
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase'
 import { collection, doc, runTransaction, addDoc } from 'firebase/firestore'
-import type { BankAccount, Loan, Category } from '@/lib/types'
+import type { BankAccount, Loan, Category, Transaction } from '@/lib/types'
 import { addMonths } from 'date-fns'
 
 const formatCurrency = (amount: number) => {
@@ -53,34 +53,11 @@ export function PayEmiDialog({ children, loan }: { children: React.ReactNode, lo
         return
     }
 
-    let loanInterestCategoryId: string;
-
-    // Find or create the 'Loan Interest' category
-    try {
-        let loanInterestCategory = categories?.find(c => c.name === 'Loan Interest' && c.type === 'expense');
-        
-        if (!loanInterestCategory) {
-            const newCategoryRef = await addDoc(collection(firestore, 'users', user.uid, 'categories'), {
-                userId: user.uid,
-                name: 'Loan Interest',
-                type: 'expense',
-                isDefault: true,
-            });
-            loanInterestCategoryId = newCategoryRef.id;
-            toast({ title: 'Setup Complete', description: '"Loan Interest" category was created automatically.' });
-        } else {
-            loanInterestCategoryId = loanInterestCategory.id;
-        }
-    } catch (error) {
-        toast({ variant: 'destructive', title: 'Setup Failed', description: 'Could not create the required "Loan Interest" category.' });
-        return;
-    }
-
     try {
         await runTransaction(firestore, async (transaction) => {
             const loanRef = doc(firestore, 'users', user.uid, 'loans', loan.id);
             const bankAccountRef = doc(firestore, 'users', user.uid, 'bankAccounts', fromAccountId);
-            const interestTransactionRef = doc(collection(firestore, 'users', user.uid, 'transactions'));
+            const newTransactionRef = doc(collection(firestore, 'users', user.uid, 'transactions'));
             
             // 1. Get current state
             const loanDoc = await transaction.get(loanRef);
@@ -111,16 +88,16 @@ export function PayEmiDialog({ children, loan }: { children: React.ReactNode, lo
                 active: (currentLoanData.remainingMonths - 1) > 0,
             });
 
-            // Create interest expense transaction
-            transaction.set(interestTransactionRef, {
+            // Create a single 'loan_payment' transaction for the full EMI amount
+            const newTransaction: Omit<Transaction, 'id'> = {
                 userId: user.uid,
-                type: 'expense',
-                amount: interestPortion,
-                description: `Interest for ${loan.name}`,
+                type: 'loan_payment',
+                amount: loan.emiAmount,
+                description: `EMI for ${loan.name}`,
                 transactionDate: new Date().toISOString(),
-                categoryId: loanInterestCategoryId,
-                fromBankAccountId: fromAccountId, // This is an expense from the bank account conceptually
-            });
+                fromBankAccountId: fromAccountId,
+            };
+            transaction.set(newTransactionRef, newTransaction);
         });
 
         toast({

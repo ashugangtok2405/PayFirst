@@ -9,7 +9,7 @@ import { format } from 'date-fns'
 import { useToast } from '@/hooks/use-toast'
 import { useFirestore, useUser } from '@/firebase'
 import { collection, doc, runTransaction } from 'firebase/firestore'
-import type { BankAccount, PersonalDebt, Repayment } from '@/lib/types'
+import type { BankAccount, PersonalDebt, Repayment, Transaction } from '@/lib/types'
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amount)
 
@@ -54,6 +54,7 @@ export function RecordRepaymentDialog({ children, debt }: { children: React.Reac
             const debtRef = doc(firestore, 'users', user.uid, 'personalDebts', debt.id);
             const bankAccountRef = doc(firestore, 'users', user.uid, 'bankAccounts', debt.linkedAccountId);
             const repaymentRef = doc(collection(firestore, 'users', user.uid, 'personalDebts', debt.id, 'repayments'));
+            const newTransactionRef = doc(collection(firestore, 'users', user.uid, 'transactions'));
 
             const debtDoc = await transaction.get(debtRef);
             const bankAccountDoc = await transaction.get(bankAccountRef);
@@ -68,11 +69,23 @@ export function RecordRepaymentDialog({ children, debt }: { children: React.Reac
             const newStatus = newRemaining <= 0 ? 'closed' : 'active';
             
             let newBankBalance;
+            let transactionData: Omit<Transaction, 'id'>;
+
             if(debt.type === 'lent') {
                 newBankBalance = currentBank.currentBalance + repaymentAmount;
+                transactionData = {
+                    userId: user.uid, type: 'debt_repayment_in', amount: repaymentAmount,
+                    description: `Repayment from ${debt.personName}`, transactionDate: parsedDate.toISOString(),
+                    toBankAccountId: debt.linkedAccountId
+                };
             } else { // borrowed
                 newBankBalance = currentBank.currentBalance - repaymentAmount;
                 if (newBankBalance < 0) throw new Error("Insufficient funds for repayment.");
+                 transactionData = {
+                    userId: user.uid, type: 'debt_repayment_out', amount: repaymentAmount,
+                    description: `Repayment to ${debt.personName}`, transactionDate: parsedDate.toISOString(),
+                    fromBankAccountId: debt.linkedAccountId
+                };
             }
 
             // Update bank balance
@@ -87,6 +100,9 @@ export function RecordRepaymentDialog({ children, debt }: { children: React.Reac
                 repaymentDate: parsedDate.toISOString(), notes: notes || ''
             }
             transaction.set(repaymentRef, newRepayment);
+
+            // Create ledger transaction
+            transaction.set(newTransactionRef, transactionData);
         });
 
         toast({ title: 'Repayment Recorded', description: `${formatCurrency(repaymentAmount)} has been successfully recorded.` });
