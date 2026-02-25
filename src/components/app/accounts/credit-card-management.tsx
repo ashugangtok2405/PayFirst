@@ -27,6 +27,7 @@ import { useFirestore, useUser, useCollection, useMemoFirebase, deleteDocumentNo
 import { collection, doc } from 'firebase/firestore'
 import type { CreditCard as CreditCardType } from '@/lib/types'
 import { Skeleton } from '@/components/ui/skeleton'
+import { AddTransactionDialog } from '../add-transaction-dialog'
 
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('en-IN', {
@@ -164,9 +165,11 @@ export function CreditCardManagement() {
                   <Button size="sm">
                     <CreditCardIcon className="mr-2 h-4 w-4" /> Pay Bill
                   </Button>
-                  <Button size="sm" variant="outline">
-                    <PlusCircle className="mr-2 h-4 w-4" /> Add Expense
-                  </Button>
+                  <AddTransactionDialog>
+                    <Button size="sm" variant="outline">
+                      <PlusCircle className="mr-2 h-4 w-4" /> Add Expense
+                    </Button>
+                  </AddTransactionDialog>
                   <Button size="sm" variant="ghost">
                     <FileText className="mr-2 h-4 w-4" /> View Statement
                   </Button>

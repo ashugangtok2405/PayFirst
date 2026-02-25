@@ -31,6 +31,7 @@ import { useFirestore, useUser, useCollection, useMemoFirebase, deleteDocumentNo
 import { collection, doc } from 'firebase/firestore'
 import type { BankAccount, Transaction } from '@/lib/types'
 import { Skeleton } from '@/components/ui/skeleton'
+import { AddTransactionDialog } from '../add-transaction-dialog'
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -117,7 +118,9 @@ export function BankAccounts() {
                                     </div>
                             </AccordionTrigger>
                             <div className="mt-4 flex items-center gap-2">
-                                <Button size="sm" variant="outline"><PlusCircle className="mr-2 h-4 w-4" /> Add Transaction</Button>
+                                <AddTransactionDialog>
+                                    <Button size="sm" variant="outline"><PlusCircle className="mr-2 h-4 w-4" /> Add Transaction</Button>
+                                </AddTransactionDialog>
                                 <Button size="sm" variant="outline"><ArrowRightLeft className="mr-2 h-4 w-4" /> Transfer</Button>
                                 <Button size="sm" variant="ghost"><History className="mr-2 h-4 w-4" /> View History</Button>
                                 <AlertDialog>

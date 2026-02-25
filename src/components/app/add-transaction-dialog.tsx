@@ -42,7 +42,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 
 type TransactionType = 'expense' | 'income' | 'transfer' | 'credit_card_payment'
 
-export function AddTransactionDialog() {
+export function AddTransactionDialog({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<TransactionType>('expense')
   
@@ -343,9 +343,7 @@ export function AddTransactionDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline">
-          <PlusCircle className="mr-2 h-4 w-4" /> Add Transaction
-        </Button>
+        {children}
       </DialogTrigger>
       <DialogContent 
         className="sm:max-w-md"

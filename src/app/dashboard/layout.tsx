@@ -15,9 +15,10 @@ import {
   SidebarTrigger,
   SidebarInset,
 } from '@/components/ui/sidebar'
-import { Bell } from 'lucide-react'
+import { Bell, PlusCircle } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { AddTransactionDialog } from '@/components/app/add-transaction-dialog'
+import { Button } from '@/components/ui/button'
 
 export default function DashboardLayout({
   children,
@@ -64,7 +65,11 @@ export default function DashboardLayout({
           <SidebarTrigger className="md:hidden" />
           <h1 className="text-xl font-semibold">Dashboard</h1>
           <div className="ml-auto flex items-center gap-4">
-            <AddTransactionDialog />
+            <AddTransactionDialog>
+              <Button size="sm" variant="outline">
+                <PlusCircle className="mr-2 h-4 w-4" /> Add Transaction
+              </Button>
+            </AddTransactionDialog>
             <button className="relative rounded-full p-2 hover:bg-muted">
               <Bell className="h-5 w-5" />
               <span className="sr-only">Notifications</span>
