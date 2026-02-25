@@ -36,6 +36,7 @@ import type { BankAccount, Transaction } from '@/lib/types'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AddTransactionDialog } from '../add-transaction-dialog'
 import { TransferMoneyDialog } from './transfer-money-dialog'
+import { AddAccountDialog } from './add-account-dialog'
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -64,6 +65,12 @@ export function BankAccounts() {
     [firestore, user]
   );
   const { data: transactions, isLoading: loadingTransactions } = useCollection<Transaction>(transactionsQuery);
+
+  const totalBalance = useMemo(() => {
+    if (!bankAccounts) return 0;
+    return bankAccounts.reduce((sum, account) => sum + account.currentBalance, 0);
+  }, [bankAccounts]);
+
 
   const handleDelete = (accountId: string, accountName: string) => {
     if (!user) return;
@@ -100,8 +107,20 @@ export function BankAccounts() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Bank Accounts</CardTitle>
+      <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+          <CardTitle>Bank Accounts</CardTitle>
+          {!isLoading && bankAccounts && bankAccounts.length > 0 && (
+            <div className="text-sm text-muted-foreground flex items-center flex-wrap gap-x-4 gap-y-1 mt-2">
+              <span>Total Available Balance: <span className="font-semibold text-foreground">{formatCurrency(totalBalance)}</span></span>
+            </div>
+          )}
+        </div>
+        <AddAccountDialog defaultType="bank">
+            <Button variant="outline" size="sm" className="w-full md:w-auto">
+                <PlusCircle className="mr-2 h-4 w-4" /> Add Account
+            </Button>
+        </AddAccountDialog>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -113,8 +132,8 @@ export function BankAccounts() {
             {bankAccounts.map((account) => {
                 const accountTransactions = transactions?.filter(t => t.fromBankAccountId === account.id || t.toBankAccountId === account.id).slice(0, 5) ?? [];
                 
-                const monthlyInflow = monthlyTxs.filter(t => t.toBankAccountId === account.id && t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
-                const monthlyOutflow = monthlyTxs.filter(t => t.fromBankAccountId === account.id && t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+                const monthlyInflow = monthlyTxs.filter(t => t.toBankAccountId === account.id && ['income', 'debt_borrowed', 'debt_repayment_in'].includes(t.type)).reduce((sum, t) => sum + t.amount, 0);
+                const monthlyOutflow = monthlyTxs.filter(t => t.fromBankAccountId === account.id && ['expense', 'credit_card_payment', 'loan_payment', 'debt_lent', 'debt_repayment_out'].includes(t.type)).reduce((sum, t) => sum + t.amount, 0);
 
                 return (
                 <AccordionItem value={account.id} key={account.id} className="border-b-0">
@@ -185,17 +204,20 @@ export function BankAccounts() {
                             {accountTransactions.length > 0 ? (
                                 <Table>
                                     <TableBody>
-                                        {accountTransactions.map((tx) => (
-                                        <TableRow key={tx.id}>
-                                            <TableCell>
-                                                <p className="font-medium">{tx.description}</p>
-                                                <p className="text-xs text-muted-foreground">{new Date(tx.transactionDate).toLocaleDateString()}</p>
-                                            </TableCell>
-                                            <TableCell className={`text-right font-medium ${tx.type === 'income' || (tx.type === 'transfer' && tx.toBankAccountId === account.id) ? 'text-green-600' : 'text-red-600'}`}>
-                                                {(tx.type === 'income' || (tx.type === 'transfer' && tx.toBankAccountId === account.id)) ? '+' : '-'}{formatCurrency(tx.amount)}
-                                            </TableCell>
-                                        </TableRow>
-                                        ))}
+                                        {accountTransactions.map((tx) => {
+                                            const isPositive = (tx.type === 'income' || tx.type === 'debt_borrowed' || tx.type === 'debt_repayment_in' || (tx.type === 'transfer' && tx.toBankAccountId === account.id));
+                                            return (
+                                                <TableRow key={tx.id}>
+                                                    <TableCell>
+                                                        <p className="font-medium">{tx.description}</p>
+                                                        <p className="text-xs text-muted-foreground">{new Date(tx.transactionDate).toLocaleDateString()}</p>
+                                                    </TableCell>
+                                                    <TableCell className={`text-right font-medium ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                                                        {isPositive ? '+' : '-'}{formatCurrency(tx.amount)}
+                                                    </TableCell>
+                                                </TableRow>
+                                            )
+                                        })}
                                     </TableBody>
                                 </Table>
                             ) : (
@@ -207,10 +229,15 @@ export function BankAccounts() {
                 )})}
             </Accordion>
         ) : (
-          <div className="text-center py-10">
-            <p className="text-muted-foreground">No bank accounts found.</p>
-            <p className="text-sm text-muted-foreground">Add a new account to get started.</p>
-          </div>
+            <div className="text-center py-10 space-y-4">
+                <div>
+                <p className="text-muted-foreground">No bank accounts found.</p>
+                <p className="text-sm text-muted-foreground">Add a new account to get started.</p>
+                </div>
+                <AddAccountDialog defaultType="bank">
+                <Button><PlusCircle className="mr-2 h-4 w-4"/>Add Your First Bank Account</Button>
+                </AddAccountDialog>
+            </div>
         )}
       </CardContent>
     </Card>

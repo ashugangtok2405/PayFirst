@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
@@ -28,6 +29,7 @@ import { collection, doc } from 'firebase/firestore'
 import type { CreditCard as CreditCardType } from '@/lib/types'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AddTransactionDialog } from '../add-transaction-dialog'
+import { AddAccountDialog } from './add-account-dialog'
 
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('en-IN', {
@@ -49,6 +51,16 @@ export function CreditCardManagement() {
   )
   const { data: creditCards, isLoading } = useCollection<CreditCardType>(creditCardsQuery)
 
+  const { totalLimit, totalOutstanding, overallUtilization } = useMemo(() => {
+    if (!creditCards) return { totalLimit: 0, totalOutstanding: 0, overallUtilization: 0 };
+    
+    const totalLimit = creditCards.reduce((sum, card) => sum + card.creditLimit, 0);
+    const totalOutstanding = creditCards.reduce((sum, card) => sum + card.currentBalance, 0);
+    const overallUtilization = totalLimit > 0 ? (totalOutstanding / totalLimit) * 100 : 0;
+    
+    return { totalLimit, totalOutstanding, overallUtilization };
+  }, [creditCards]);
+
   const handleDelete = (cardId: string, cardName: string) => {
     if (!user) return;
     const docRef = doc(firestore, 'users', user.uid, 'creditCards', cardId)
@@ -61,8 +73,22 @@ export function CreditCardManagement() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Credit Card Management</CardTitle>
+      <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+          <CardTitle>Credit Card Management</CardTitle>
+          {!isLoading && creditCards && creditCards.length > 0 && (
+            <div className="text-sm text-muted-foreground flex items-center flex-wrap gap-x-4 gap-y-1 mt-2">
+              <span>Total Limit: <span className="font-semibold text-foreground">{formatCurrency(totalLimit)}</span></span>
+              <span>Total Used: <span className="font-semibold text-foreground">{formatCurrency(totalOutstanding)} ({overallUtilization.toFixed(0)}%)</span></span>
+            </div>
+          )}
+        </div>
+        <AddAccountDialog defaultType="credit">
+            <Button variant="outline" size="sm" className="w-full md:w-auto">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add Card
+            </Button>
+        </AddAccountDialog>
       </CardHeader>
       <CardContent className="space-y-6">
         {isLoading ? (
