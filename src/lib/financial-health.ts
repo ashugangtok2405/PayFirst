@@ -1,4 +1,3 @@
-'use server';
 
 import type { FinancialHealthInput } from '@/ai/flows/types';
 
