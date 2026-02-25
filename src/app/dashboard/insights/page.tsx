@@ -1,11 +1,11 @@
 
-import { AiInsightsTool } from "@/components/app/ai-insights-tool";
+import { FinancialHealthAnalysis } from "@/components/app/insights/financial-health-analysis";
 
 export default function InsightsPage() {
   return (
     <div>
-      <h1 className="text-lg font-semibold md:text-2xl mb-4">AI Spending Insights</h1>
-      <AiInsightsTool />
+      <h1 className="text-lg font-semibold md:text-2xl mb-4">AI Financial Health Analysis</h1>
+      <FinancialHealthAnalysis />
     </div>
   )
 }
