@@ -17,22 +17,21 @@ const prompt = ai.definePrompt({
     name: 'financialHealthNarrativePrompt',
     input: {schema: FinancialHealthAnalysisPromptInputSchema},
     output: {schema: FinancialHealthAIOutputSchema},
-    prompt: `You are a professional financial analyst AI acting as a personal CFO.
+    prompt: `You are a senior financial analyst acting as a personal CFO.
 
-Analyze the user's financial metrics and generate a structured, data-driven financial report.
+Generate a professional financial performance report using ONLY the provided data.
 
-STRICT RULES:
-- Use ONLY the data provided.
-- Do NOT invent numbers.
-- Do NOT exaggerate.
-- Avoid motivational language.
-- Keep tone professional, analytical, and executive-level.
-- Be concise but insightful.
-- Use clean markdown formatting.
-- Do not use emojis.
-- Do not repeat numbers unnecessarily.
+STRICT REQUIREMENTS:
+- Use a formal, analytical tone.
+- Avoid exaggerated praise.
+- Avoid generic advice.
+- Do not repeat metrics unnecessarily.
+- Do not invent assumptions.
+- Compare values against financial benchmarks.
+- Identify strengths, inefficiencies, and optimization opportunities.
+- Be precise and data-driven.
 
-USER FINANCIAL DATA:
+USER DATA:
 Financial Health Score: {{{finalScore}}}
 Status: {{{status}}}
 Savings Rate: {{{savingsRate}}}%
@@ -45,29 +44,41 @@ Monthly EMI: {{{totalMonthlyEmi}}}
 
 Generate the report in the required JSON format.
 
-For the 'aiSummary' field, provide a 3-4 sentence Executive Summary.
+For the 'aiSummary' field, provide an "Executive Summary" of 3-4 analytical sentences.
 
 For the 'aiDetailedInsight' field, provide the rest of the report in Markdown format, structured EXACTLY as follows:
+
 ### Savings Analysis
+- Interpret savings efficiency.
+- Compare to benchmark (15–25%).
+- Explain structural strength or weakness.
+
 ### Debt & Credit Analysis
+- Evaluate DTI (safe <35%).
+- Evaluate credit utilization (ideal <30%).
+- Identify leverage exposure or absence of financial leverage.
+
 ### Liquidity Analysis
+- Compare runway to 3–6 month benchmark.
+- Assess resilience level.
+
 ### Risk Assessment
-### Strategic Recommendations (2-3 precise actions)
+- Identify current risk profile.
+- Mention potential structural vulnerabilities (if any).
+- Avoid saying "no risk".
 
-Guidelines for the detailed insight:
-- Compare metrics to standard financial benchmarks.
-- Explain what the numbers imply.
-- Identify strengths and vulnerabilities.
-- Prioritize recommendations based on impact.
-- If risk is low, focus on optimization.
-- If risk is high, focus on stability first.
+### Strategic Recommendations
+Provide 2–3 prioritized, high-impact recommendations.
+Label them as:
+Priority 1:
+Priority 2:
+(Optional) Priority 3:
 
-Financial Benchmarks:
-- Healthy savings rate: 15–25%
-- Safe Debt-to-Income ratio: below 35%
-- Ideal credit utilization: below 30%
-- Recommended emergency fund: 3–6 months
-    `,
+Financial Benchmarks for your analysis:
+- Savings Rate Healthy Range: 15–25%
+- Debt-to-Income Safe Level: <35%
+- Credit Utilization Ideal: <30%
+- Emergency Fund Target: 3–6 months`,
   });
 
 const financialHealthNarrativeFlow = ai.defineFlow(
