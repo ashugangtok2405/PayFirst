@@ -73,7 +73,7 @@ export function CustomCalendar({ selectedDate, onSelectDate, disabled }: CustomC
       </div>
       <div className="grid grid-cols-7 gap-1 text-center text-xs text-muted-foreground">
         {weekdays.map((day) => (
-          <div key={day} className="font-medium h-10 flex items-center justify-center">
+          <div key={day} className="font-medium h-8 flex items-center justify-center">
             {day}
           </div>
         ))}
@@ -97,7 +97,7 @@ export function CustomCalendar({ selectedDate, onSelectDate, disabled }: CustomC
               disabled={isDateDisabled}
               onClick={() => handleDateClick(day)}
               className={cn(
-                'h-10 w-10 flex items-center justify-center rounded-full text-sm transition-colors duration-150',
+                'h-8 w-8 flex items-center justify-center rounded-full text-sm transition-colors duration-150',
                 'focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
                 isDateDisabled
                   ? 'text-muted-foreground/50 cursor-not-allowed'

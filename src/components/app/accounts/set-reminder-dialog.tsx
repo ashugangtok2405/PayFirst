@@ -108,17 +108,18 @@ export function SetReminderDialog({
           disabled={(date) => date < startOfToday()}
         />
 
-        <DialogFooter className="mt-4 border-t pt-4">
-          <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            onClick={handleSetReminder}
-            disabled={!selectedDate || isSubmitting}
-          >
-            {isSubmitting ? 'Setting...' : 'Set Reminder'}
-          </Button>
+        <DialogFooter className="mt-4 pt-4 border-t flex flex-col items-center gap-2">
+            <Button
+                type="submit"
+                onClick={handleSetReminder}
+                disabled={!selectedDate || isSubmitting}
+                className="w-full max-w-[200px]"
+            >
+                {isSubmitting ? 'Setting...' : 'Set Reminder'}
+            </Button>
+            <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+                Cancel
+            </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
