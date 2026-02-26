@@ -83,7 +83,7 @@ export function CreditCardManagement() {
             </div>
           )}
         </div>
-        <AddAccountDialog defaultType="credit">
+        <AddAccountDialog accountType="credit">
             <Button variant="outline" size="sm" className="w-full md:w-auto">
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Add Card
@@ -122,10 +122,12 @@ export function CreditCardManagement() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
-                          <Edit className="mr-2 h-4 w-4" />
-                          <span>Edit</span>
-                        </DropdownMenuItem>
+                        <AddAccountDialog mode="edit" account={card} accountType="credit">
+                           <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              <span>Edit</span>
+                            </DropdownMenuItem>
+                        </AddAccountDialog>
                         <DropdownMenuSeparator />
                         <AlertDialogTrigger asChild>
                           <DropdownMenuItem className="text-red-500 focus:text-red-500">
@@ -216,3 +218,5 @@ export function CreditCardManagement() {
     </Card>
   )
 }
+
+    

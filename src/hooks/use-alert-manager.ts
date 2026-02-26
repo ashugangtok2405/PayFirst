@@ -31,8 +31,9 @@ const CRITICAL_SPENDING_RATIO = 1.0 // 100%
 export function useAlertManager() {
   const { user } = useUser()
   const firestore = useFirestore()
-  const now = new Date()
-  const startOfMonthISO = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+  
+  // This is recalculated on every render, ensuring it's always for the current month
+  const startOfMonthISO = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
 
   // --- Data Fetching ---
   const creditCardsQuery = useMemoFirebase(() => (user ? collection(firestore, 'users', user.uid, 'creditCards') : null), [firestore, user])
@@ -193,3 +194,5 @@ export function useAlertManager() {
     processAlerts()
   }, [creditCards, bankAccounts, loans, personalDebts, transactions, activeAlerts, user, firestore])
 }
+
+    

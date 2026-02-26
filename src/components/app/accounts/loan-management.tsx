@@ -81,7 +81,7 @@ export function LoanManagement() {
             </div>
           )}
         </div>
-        <AddAccountDialog defaultType="loan">
+        <AddAccountDialog accountType="loan">
             <Button variant="outline" size="sm" className="w-full md:w-auto">
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Add Loan
@@ -114,10 +114,12 @@ export function LoanManagement() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
-                          <Edit className="mr-2 h-4 w-4" />
-                          <span>Edit</span>
-                        </DropdownMenuItem>
+                        <AddAccountDialog mode="edit" account={loan} accountType="loan">
+                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              <span>Edit</span>
+                            </DropdownMenuItem>
+                        </AddAccountDialog>
                         <DropdownMenuSeparator />
                         <AlertDialogTrigger asChild>
                           <DropdownMenuItem className="text-red-500 focus:text-red-500">
@@ -195,7 +197,7 @@ export function LoanManagement() {
               <p className="text-muted-foreground">No loans found.</p>
               <p className="text-sm text-muted-foreground">Add a new loan to get started.</p>
             </div>
-            <AddAccountDialog defaultType="loan">
+            <AddAccountDialog accountType="loan">
               <Button><PlusCircle className="mr-2 h-4 w-4"/>Add Your First Loan</Button>
             </AddAccountDialog>
           </div>
@@ -204,3 +206,5 @@ export function LoanManagement() {
     </Card>
   )
 }
+
+    

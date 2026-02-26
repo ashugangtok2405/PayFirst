@@ -58,7 +58,11 @@ export function PersonalDebtManagement() {
             <DropdownMenu>
                 <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                <DropdownMenuItem><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>
+                <AddAccountDialog mode="edit" account={debt} accountType="personal_debt">
+                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} disabled>
+                        <Edit className="mr-2 h-4 w-4" /><span>Edit</span>
+                    </DropdownMenuItem>
+                </AddAccountDialog>
                 <DropdownMenuSeparator />
                 <AlertDialogTrigger asChild><DropdownMenuItem className="text-red-500 focus:text-red-500"><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem></AlertDialogTrigger>
                 </DropdownMenuContent>
@@ -96,7 +100,7 @@ export function PersonalDebtManagement() {
             <CardTitle>Personal Lending & Borrowing</CardTitle>
             <CardDescription>Track money you've lent to or borrowed from others.</CardDescription>
         </div>
-        <AddAccountDialog defaultType="personal_debt">
+        <AddAccountDialog accountType="personal_debt">
             <Button variant="outline" size="sm">
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Add Entry
@@ -142,3 +146,5 @@ export function PersonalDebtManagement() {
     </Card>
   )
 }
+
+    
