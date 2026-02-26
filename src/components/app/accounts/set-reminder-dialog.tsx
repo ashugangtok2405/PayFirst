@@ -102,13 +102,15 @@ export function SetReminderDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <CustomCalendar
-          selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
-          disabled={(date) => date < startOfToday()}
-        />
+        <div className="p-1 inline-block">
+          <CustomCalendar
+            selectedDate={selectedDate}
+            onSelectDate={setSelectedDate}
+            disabled={(date) => date < startOfToday()}
+          />
+        </div>
 
-        <DialogFooter className="mt-4 pt-4 border-t flex-col sm:flex-row sm:justify-end gap-2">
+        <DialogFooter className="mt-4 pt-4 border-t flex flex-row items-center justify-center gap-2">
             <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
                 Cancel
             </Button>
