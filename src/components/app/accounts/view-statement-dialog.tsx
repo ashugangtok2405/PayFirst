@@ -18,12 +18,14 @@ export function ViewStatementDialog({ children, card }: { children: React.ReactN
     const firestore = useFirestore()
     const { user } = useUser()
 
-    const now = new Date()
-    const monthStart = startOfMonth(now)
-    const monthEnd = endOfMonth(now)
+    const { monthStart, monthEnd } = useMemo(() => {
+        const now = new Date()
+        return {
+            monthStart: startOfMonth(now),
+            monthEnd: endOfMonth(now),
+        }
+    }, [])
 
-    // This is not ideal as it fetches all transactions, but it's the only way with the current structure
-    // A more optimized query would be better if performance becomes an issue
     const transactionsQuery = useMemoFirebase(() => user ? query(
         collection(firestore, 'users', user.uid, 'transactions'), 
         where('transactionDate', '>=', monthStart.toISOString()),

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import {
   useUser,
   useFirestore,
@@ -32,8 +32,7 @@ export function useAlertManager() {
   const { user } = useUser()
   const firestore = useFirestore()
   
-  // This is recalculated on every render, ensuring it's always for the current month
-  const startOfMonthISO = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
+  const startOfMonthISO = useMemo(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString(), [])
 
   // --- Data Fetching ---
   const creditCardsQuery = useMemoFirebase(() => (user ? collection(firestore, 'users', user.uid, 'creditCards') : null), [firestore, user?.uid])
@@ -192,5 +191,5 @@ export function useAlertManager() {
     }
 
     processAlerts()
-  }, [creditCards, bankAccounts, loans, personalDebts, transactions, activeAlerts, user, firestore])
+  }, [creditCards, bankAccounts, loans, personalDebts, transactions, activeAlerts, user, firestore, startOfMonthISO])
 }

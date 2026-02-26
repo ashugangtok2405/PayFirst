@@ -51,8 +51,7 @@ export function BankAccounts() {
   const { toast } = useToast()
   const firestore = useFirestore()
   const { user } = useUser()
-  const now = new Date()
-  const monthStart = startOfMonth(now).toISOString()
+  const monthStart = useMemo(() => startOfMonth(new Date()).toISOString(), [])
 
   const bankAccountsQuery = useMemoFirebase(
     () => user ? collection(firestore, 'users', user.uid, 'bankAccounts') : null,
