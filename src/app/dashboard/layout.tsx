@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useMemo } from 'react'
+import { useRouter, usePathname } from 'next/navigation'
 import { useUser } from '@/firebase'
 import { MainNav } from '@/components/app/main-nav'
 import { UserNav } from '@/components/app/user-nav'
@@ -32,6 +32,19 @@ export default function DashboardLayout({
 }) {
   const { user, isUserLoading } = useUser()
   const router = useRouter()
+  const pathname = usePathname()
+
+  const pageTitle = useMemo(() => {
+    if (pathname === '/dashboard') {
+      return 'Dashboard'
+    }
+    const path = pathname.split('/').pop()
+    if (!path) {
+      return 'Dashboard'
+    }
+    // Capitalize first letter
+    return path.charAt(0).toUpperCase() + path.slice(1)
+  }, [pathname])
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -106,7 +119,7 @@ export default function DashboardLayout({
       <SidebarInset>
         <header className="flex h-16 items-center gap-4 border-b bg-card px-4 sm:px-6 lg:px-8">
           <SidebarTrigger className="md:hidden" />
-          <h1 className="text-xl font-bold">Dashboard</h1>
+          <h1 className="text-xl font-bold">{pageTitle}</h1>
           <div className="ml-auto flex items-center gap-4">
             <AddTransactionDialog>
               <Button size="sm">
