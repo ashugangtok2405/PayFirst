@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -26,6 +26,14 @@ export function PayCreditCardBillDialog({ children, card }: { children: React.Re
 
   const bankAccountsQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'bankAccounts') : null, [firestore, user?.uid])
   const { data: bankAccounts, isLoading: loadingBankAccounts } = useCollection<BankAccount>(bankAccountsQuery)
+
+  useEffect(() => {
+    if (open) {
+      setAmount('')
+      setFromAccountId('')
+      setIsSubmitting(false)
+    }
+  }, [open])
 
   const handlePayment = async () => {
     if (!user || !fromAccountId || !amount) {
@@ -85,8 +93,6 @@ export function PayCreditCardBillDialog({ children, card }: { children: React.Re
 
       toast({ title: 'Payment Successful', description: `${formatCurrency(paymentAmount)} paid for ${card.name}.` })
       setOpen(false)
-      setAmount('')
-      setFromAccountId('')
     } catch (error: any) {
       console.error("Payment failed:", error)
       toast({ variant: 'destructive', title: 'Payment Failed', description: error.message || 'An unexpected error occurred.' })
@@ -127,7 +133,7 @@ export function PayCreditCardBillDialog({ children, card }: { children: React.Re
         </div>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button type="submit" onClick={handlePayment} disabled={isSubmitting || loadingBankAccounts}>
+          <Button type="button" onClick={handlePayment} disabled={isSubmitting || loadingBankAccounts}>
             {isSubmitting ? "Processing..." : "Confirm Payment"}
           </Button>
         </DialogFooter>
