@@ -52,13 +52,13 @@ export function CashFlowChart() {
         collection(firestore, 'users', user.uid, 'transactions'), 
         where('transactionDate', '>=', startOfTwelveMonths.toISOString()),
         orderBy('transactionDate', 'desc')
-    ) : null, [firestore, user, startOfTwelveMonths]);
+    ) : null, [firestore, user?.uid, startOfTwelveMonths]);
     const { data: transactions, isLoading: loadingTransactions } = useCollection<Transaction>(transactionsQuery)
     
-    const categoriesQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'categories') : null, [firestore, user])
+    const categoriesQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'categories') : null, [firestore, user?.uid])
     const { data: categories, isLoading: loadingCategories } = useCollection<Category>(categoriesQuery)
 
-    const creditCardsQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'creditCards') : null, [firestore, user])
+    const creditCardsQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'creditCards') : null, [firestore, user?.uid])
     const { data: creditCards, isLoading: loadingCreditCards } = useCollection<CreditCard>(creditCardsQuery)
 
     const isLoading = loadingTransactions || loadingCategories || loadingCreditCards;

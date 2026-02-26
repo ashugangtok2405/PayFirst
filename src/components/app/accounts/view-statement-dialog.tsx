@@ -29,7 +29,7 @@ export function ViewStatementDialog({ children, card }: { children: React.ReactN
         where('transactionDate', '>=', monthStart.toISOString()),
         where('transactionDate', '<=', monthEnd.toISOString()),
         orderBy('transactionDate', 'desc')
-        ) : null, [user, firestore, monthStart, monthEnd]
+        ) : null, [user?.uid, firestore, monthStart, monthEnd]
     )
     const { data: transactions, isLoading } = useCollection<Transaction>(transactionsQuery)
 

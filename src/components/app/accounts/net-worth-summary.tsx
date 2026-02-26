@@ -20,16 +20,16 @@ export function NetWorthSummary() {
   const firestore = useFirestore()
   const { user } = useUser()
 
-  const bankAccountsQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'bankAccounts') : null, [firestore, user])
+  const bankAccountsQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'bankAccounts') : null, [firestore, user?.uid])
   const { data: bankAccounts, isLoading: loadingBankAccounts } = useCollection<BankAccount>(bankAccountsQuery)
 
-  const creditCardsQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'creditCards') : null, [firestore, user])
+  const creditCardsQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'creditCards') : null, [firestore, user?.uid])
   const { data: creditCards, isLoading: loadingCreditCards } = useCollection<CreditCardType>(creditCardsQuery)
 
-  const loansQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'loans') : null, [firestore, user])
+  const loansQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'loans') : null, [firestore, user?.uid])
   const { data: loans, isLoading: loadingLoans } = useCollection<Loan>(loansQuery)
 
-  const personalDebtsQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'personalDebts') : null, [firestore, user])
+  const personalDebtsQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'personalDebts') : null, [firestore, user?.uid])
   const { data: personalDebts, isLoading: loadingPersonalDebts } = useCollection<PersonalDebt>(personalDebtsQuery)
 
   const totalAssets = (bankAccounts?.reduce((acc, account) => acc + account.currentBalance, 0) ?? 0)

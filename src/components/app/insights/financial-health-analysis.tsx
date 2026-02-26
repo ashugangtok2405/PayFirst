@@ -40,16 +40,16 @@ export function FinancialHealthAnalysis() {
       collection(firestore, 'users', user.uid, 'transactions'),
       where('transactionDate', '>=', threeMonthsAgo.toISOString()),
       orderBy('transactionDate', 'desc')
-  ) : null, [user, firestore, threeMonthsAgo])
+  ) : null, [user?.uid, firestore, threeMonthsAgo])
   const { data: recentTransactions, isLoading: loadingTransactions } = useCollection<Transaction>(transactionsQuery)
 
-  const bankAccountsQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'bankAccounts') : null, [user, firestore])
+  const bankAccountsQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'bankAccounts') : null, [user?.uid, firestore])
   const { data: bankAccounts, isLoading: loadingBankAccounts } = useCollection<BankAccount>(bankAccountsQuery)
   
-  const creditCardsQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'creditCards') : null, [user, firestore])
+  const creditCardsQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'creditCards') : null, [user?.uid, firestore])
   const { data: creditCards, isLoading: loadingCreditCards } = useCollection<CreditCard>(creditCardsQuery)
 
-  const loansQuery = useMemoFirebase(() => user ? query(collection(firestore, 'users', user.uid, 'loans'), where('active', '==', true)) : null, [user, firestore])
+  const loansQuery = useMemoFirebase(() => user ? query(collection(firestore, 'users', user.uid, 'loans'), where('active', '==', true)) : null, [user?.uid, firestore])
   const { data: loans, isLoading: loadingLoans } = useCollection<Loan>(loansQuery)
   
   const isLoading = loadingTransactions || loadingBankAccounts || loadingCreditCards || loadingLoans;

@@ -22,7 +22,7 @@ export function PersonalDebtManagement() {
   const firestore = useFirestore()
   const { user } = useUser()
 
-  const personalDebtsQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'personalDebts') : null, [firestore, user])
+  const personalDebtsQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'personalDebts') : null, [firestore, user?.uid])
   const { data: allDebts, isLoading } = useCollection<PersonalDebt>(personalDebtsQuery)
 
   const debts = useMemo(() => allDebts?.filter(d => d.status === 'active') ?? [], [allDebts])

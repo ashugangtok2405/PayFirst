@@ -32,10 +32,10 @@ export function PayEmiDialog({ children, loan }: { children: React.ReactNode, lo
   const firestore = useFirestore()
   const { user } = useUser()
 
-  const bankAccountsQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'bankAccounts') : null, [firestore, user])
+  const bankAccountsQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'bankAccounts') : null, [firestore, user?.uid])
   const { data: bankAccounts, isLoading: loadingBankAccounts } = useCollection<BankAccount>(bankAccountsQuery)
   
-  const categoriesQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'categories') : null, [firestore, user])
+  const categoriesQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'categories') : null, [firestore, user?.uid])
   const { data: categories, isLoading: loadingCategories } = useCollection<Category>(categoriesQuery)
 
   const isLoading = loadingBankAccounts || loadingCategories

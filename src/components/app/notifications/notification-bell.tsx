@@ -53,7 +53,7 @@ export function NotificationBell() {
             orderBy('createdAt', 'desc')
           )
         : null,
-    [user, firestore]
+    [user?.uid, firestore]
   )
 
   const { data: allAlerts, isLoading } = useCollection<Alert>(alertsQuery)

@@ -25,7 +25,7 @@ export function UpcomingBills() {
 
     const creditCardsQuery = useMemoFirebase(
         () => user ? collection(firestore, 'users', user.uid, 'creditCards') : null,
-        [firestore, user]
+        [firestore, user?.uid]
     )
     const { data: creditCards, isLoading: loadingCreditCards } = useCollection<CreditCard>(creditCardsQuery)
     
@@ -34,7 +34,7 @@ export function UpcomingBills() {
             collection(firestore, 'users', user.uid, 'recurringTransactions'),
             where('active', '==', true)
         ) : null,
-        [firestore, user]
+        [firestore, user?.uid]
     )
     const { data: activeRecurring, isLoading: loadingRecurring } = useCollection<RecurringTransaction>(recurringQuery)
 

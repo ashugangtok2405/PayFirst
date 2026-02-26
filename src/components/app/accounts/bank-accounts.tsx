@@ -56,13 +56,13 @@ export function BankAccounts() {
 
   const bankAccountsQuery = useMemoFirebase(
     () => user ? collection(firestore, 'users', user.uid, 'bankAccounts') : null,
-    [firestore, user]
+    [firestore, user?.uid]
   )
   const { data: bankAccounts, isLoading: loadingBankAccounts } = useCollection<BankAccount>(bankAccountsQuery)
 
   const transactionsQuery = useMemoFirebase(
     () => user ? query(collection(firestore, 'users', user.uid, 'transactions'), orderBy('transactionDate', 'desc')) : null,
-    [firestore, user]
+    [firestore, user?.uid]
   );
   const { data: transactions, isLoading: loadingTransactions } = useCollection<Transaction>(transactionsQuery);
 
@@ -116,7 +116,7 @@ export function BankAccounts() {
             </div>
           )}
         </div>
-        <AddAccountDialog defaultType="bank">
+        <AddAccountDialog accountType="bank">
             <Button variant="outline" size="sm" className="w-full md:w-auto">
                 <PlusCircle className="mr-2 h-4 w-4" /> Add Account
             </Button>
@@ -234,7 +234,7 @@ export function BankAccounts() {
                 <p className="text-muted-foreground">No bank accounts found.</p>
                 <p className="text-sm text-muted-foreground">Add a new account to get started.</p>
                 </div>
-                <AddAccountDialog defaultType="bank">
+                <AddAccountDialog accountType="bank">
                 <Button><PlusCircle className="mr-2 h-4 w-4"/>Add Your First Bank Account</Button>
                 </AddAccountDialog>
             </div>

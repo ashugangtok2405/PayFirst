@@ -50,7 +50,7 @@ export function CreditCardManagement() {
 
   const creditCardsQuery = useMemoFirebase(
     () => user ? collection(firestore, 'users', user.uid, 'creditCards') : null,
-    [firestore, user]
+    [firestore, user?.uid]
   )
   const { data: creditCards, isLoading } = useCollection<CreditCardType>(creditCardsQuery)
 

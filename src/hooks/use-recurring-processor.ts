@@ -19,7 +19,7 @@ export function useRecurringProcessor() {
       collection(firestore, 'users', user.uid, 'recurringTransactions'),
       where('nextGenerationDate', '<=', new Date().toISOString())
     );
-  }, [user, firestore]);
+  }, [user?.uid, firestore]);
 
   const { data: allDueRecurring } = useCollection<RecurringTransaction>(recurringQuery);
 

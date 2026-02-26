@@ -66,11 +66,11 @@ export function TopExpenses() {
             collection(firestore, 'users', user.uid, 'transactions'),
             where('transactionDate', '>=', startOfCurrentMonth.toISOString())
         ) : null,
-        [firestore, user, startOfCurrentMonth]
+        [firestore, user?.uid, startOfCurrentMonth]
     )
     const { data: transactions, isLoading: loadingTransactions } = useCollection<Transaction>(transactionsQuery)
     
-    const categoriesQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'categories') : null, [firestore, user])
+    const categoriesQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'categories') : null, [firestore, user?.uid])
     const { data: categories, isLoading: loadingCategories } = useCollection<Category>(categoriesQuery)
 
     const isLoading = loadingTransactions || loadingCategories

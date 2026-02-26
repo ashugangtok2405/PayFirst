@@ -22,7 +22,7 @@ export function SmartAlertsDashboard() {
             orderBy('createdAt', 'desc')
           )
         : null,
-    [user, firestore]
+    [user?.uid, firestore]
   )
   const { data: allAlerts, isLoading } = useCollection<Alert>(alertsQuery)
   const alerts = useMemo(() => allAlerts?.filter((a) => !a.resolved), [allAlerts])

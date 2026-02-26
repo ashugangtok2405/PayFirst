@@ -33,7 +33,7 @@ export function SmartAlerts() {
             where('resolved', '==', false)
           )
         : null,
-    [user, firestore]
+    [user?.uid, firestore]
   )
 
   const { data: alerts, isLoading } = useCollection<Alert>(alertsQuery)

@@ -36,22 +36,22 @@ export function useAlertManager() {
   const startOfMonthISO = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
 
   // --- Data Fetching ---
-  const creditCardsQuery = useMemoFirebase(() => (user ? collection(firestore, 'users', user.uid, 'creditCards') : null), [firestore, user])
+  const creditCardsQuery = useMemoFirebase(() => (user ? collection(firestore, 'users', user.uid, 'creditCards') : null), [firestore, user?.uid])
   const { data: creditCards } = useCollection<CreditCard>(creditCardsQuery)
 
-  const bankAccountsQuery = useMemoFirebase(() => (user ? collection(firestore, 'users', user.uid, 'bankAccounts') : null), [firestore, user])
+  const bankAccountsQuery = useMemoFirebase(() => (user ? collection(firestore, 'users', user.uid, 'bankAccounts') : null), [firestore, user?.uid])
   const { data: bankAccounts } = useCollection<BankAccount>(bankAccountsQuery)
   
-  const loansQuery = useMemoFirebase(() => (user ? collection(firestore, 'users', user.uid, 'loans') : null), [firestore, user])
+  const loansQuery = useMemoFirebase(() => (user ? collection(firestore, 'users', user.uid, 'loans') : null), [firestore, user?.uid])
   const { data: loans } = useCollection<Loan>(loansQuery)
   
-  const personalDebtsQuery = useMemoFirebase(() => user ? query(collection(firestore, 'users', user.uid, 'personalDebts'), where('status', '==', 'active')) : null, [firestore, user])
+  const personalDebtsQuery = useMemoFirebase(() => user ? query(collection(firestore, 'users', user.uid, 'personalDebts'), where('status', '==', 'active')) : null, [firestore, user?.uid])
   const { data: personalDebts } = useCollection<PersonalDebt>(personalDebtsQuery)
 
-  const transactionsQuery = useMemoFirebase(() => user ? query(collection(firestore, 'users', user.uid, 'transactions'), where('transactionDate', '>=', startOfMonthISO)) : null, [firestore, user, startOfMonthISO])
+  const transactionsQuery = useMemoFirebase(() => user ? query(collection(firestore, 'users', user.uid, 'transactions'), where('transactionDate', '>=', startOfMonthISO)) : null, [firestore, user?.uid, startOfMonthISO])
   const { data: transactions } = useCollection<Transaction>(transactionsQuery)
 
-  const alertsQuery = useMemoFirebase(() => user ? query(collection(firestore, 'users', user.uid, 'alerts'), where('resolved', '==', false), where('type', 'in', ['credit_utilization', 'credit_due', 'low_balance', 'overspending', 'loan_due', 'personal_debt_due'])) : null, [firestore, user])
+  const alertsQuery = useMemoFirebase(() => user ? query(collection(firestore, 'users', user.uid, 'alerts'), where('resolved', '==', false), where('type', 'in', ['credit_utilization', 'credit_due', 'low_balance', 'overspending', 'loan_due', 'personal_debt_due'])) : null, [firestore, user?.uid])
   const { data: activeAlerts } = useCollection<Alert>(alertsQuery)
 
   useEffect(() => {
@@ -194,5 +194,3 @@ export function useAlertManager() {
     processAlerts()
   }, [creditCards, bankAccounts, loans, personalDebts, transactions, activeAlerts, user, firestore])
 }
-
-    

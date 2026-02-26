@@ -50,14 +50,14 @@ export function KpiSummary() {
 
   const bankAccountsQuery = useMemoFirebase(
     () => (user ? collection(firestore, 'users', user.uid, 'bankAccounts') : null),
-    [firestore, user]
+    [firestore, user?.uid]
   )
   const { data: bankAccounts, isLoading: loadingBankAccounts } =
     useCollection<BankAccount>(bankAccountsQuery)
 
   const creditCardsQuery = useMemoFirebase(
     () => (user ? collection(firestore, 'users', user.uid, 'creditCards') : null),
-    [firestore, user]
+    [firestore, user?.uid]
   )
   const { data: creditCards, isLoading: loadingCreditCards } =
     useCollection<CreditCard>(creditCardsQuery)
@@ -71,7 +71,7 @@ export function KpiSummary() {
             where('transactionDate', '>=', startOfCurrentMonth.toISOString())
           )
         : null,
-    [firestore, user, startOfCurrentMonth]
+    [firestore, user?.uid, startOfCurrentMonth]
   )
   const { data: transactions, isLoading: loadingTransactions } =
     useCollection<Transaction>(transactionsQuery)

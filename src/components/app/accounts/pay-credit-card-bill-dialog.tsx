@@ -24,7 +24,7 @@ export function PayCreditCardBillDialog({ children, card }: { children: React.Re
   const firestore = useFirestore()
   const { user } = useUser()
 
-  const bankAccountsQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'bankAccounts') : null, [firestore, user])
+  const bankAccountsQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'bankAccounts') : null, [firestore, user?.uid])
   const { data: bankAccounts, isLoading: loadingBankAccounts } = useCollection<BankAccount>(bankAccountsQuery)
 
   const handlePayment = async () => {

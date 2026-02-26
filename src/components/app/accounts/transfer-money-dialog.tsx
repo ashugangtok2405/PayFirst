@@ -33,7 +33,7 @@ export function TransferMoneyDialog() {
   const firestore = useFirestore()
   const { user } = useUser()
 
-  const bankAccountsQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'bankAccounts') : null, [firestore, user])
+  const bankAccountsQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'bankAccounts') : null, [firestore, user?.uid])
   const { data: bankAccounts, isLoading } = useCollection<BankAccount>(bankAccountsQuery)
 
   const handleTransfer = () => {

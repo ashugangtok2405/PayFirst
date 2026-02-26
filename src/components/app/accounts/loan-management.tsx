@@ -47,7 +47,7 @@ export function LoanManagement() {
 
   const loansQuery = useMemoFirebase(
     () => user ? collection(firestore, 'users', user.uid, 'loans') : null,
-    [firestore, user]
+    [firestore, user?.uid]
   )
   const { data: loans, isLoading } = useCollection<Loan>(loansQuery)
 
