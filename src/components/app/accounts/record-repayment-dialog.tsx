@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { DatePicker } from '@/components/app/shared/date-picker'
 import { useToast } from '@/hooks/use-toast'
 import { useFirestore, useUser } from '@/firebase'
 import { collection, doc, runTransaction } from 'firebase/firestore'
@@ -16,7 +15,7 @@ const formatCurrency = (amount: number) => new Intl.NumberFormat('en-IN', { styl
 export function RecordRepaymentDialog({ children, debt }: { children: React.ReactNode, debt: PersonalDebt }) {
   const [open, setOpen] = useState(false)
   const [amount, setAmount] = useState('')
-  const [repaymentDate, setRepaymentDate] = useState<Date | undefined>(new Date())
+  const [repaymentDate, setRepaymentDate] = useState<string>(new Date().toISOString().substring(0, 10))
   const [notes, setNotes] = useState('')
   
   const { toast } = useToast()
@@ -34,6 +33,8 @@ export function RecordRepaymentDialog({ children, debt }: { children: React.Reac
         toast({ variant: 'destructive', title: 'Invalid Amount', description: 'Amount must be positive.' })
         return
     }
+
+    const parsedRepaymentDate = new Date(repaymentDate);
 
     try {
         await runTransaction(firestore, async (transaction) => {
@@ -61,7 +62,7 @@ export function RecordRepaymentDialog({ children, debt }: { children: React.Reac
                 newBankBalance = currentBank.currentBalance + repaymentAmount;
                 transactionData = {
                     userId: user.uid, type: 'debt_repayment_in', amount: repaymentAmount,
-                    description: `Repayment from ${debt.personName}`, transactionDate: repaymentDate.toISOString(),
+                    description: `Repayment from ${debt.personName}`, transactionDate: parsedRepaymentDate.toISOString(),
                     toBankAccountId: debt.linkedAccountId
                 };
             } else { // borrowed
@@ -69,7 +70,7 @@ export function RecordRepaymentDialog({ children, debt }: { children: React.Reac
                 if (newBankBalance < 0) throw new Error("Insufficient funds for repayment.");
                  transactionData = {
                     userId: user.uid, type: 'debt_repayment_out', amount: repaymentAmount,
-                    description: `Repayment to ${debt.personName}`, transactionDate: repaymentDate.toISOString(),
+                    description: `Repayment to ${debt.personName}`, transactionDate: parsedRepaymentDate.toISOString(),
                     fromBankAccountId: debt.linkedAccountId
                 };
             }
@@ -83,7 +84,7 @@ export function RecordRepaymentDialog({ children, debt }: { children: React.Reac
             // Create repayment record
             const newRepayment: Omit<Repayment, 'id'> = {
                 debtId: debt.id, userId: user.uid, amount: repaymentAmount,
-                repaymentDate: repaymentDate.toISOString(), notes: notes || ''
+                repaymentDate: parsedRepaymentDate.toISOString(), notes: notes || ''
             }
             transaction.set(repaymentRef, newRepayment);
 
@@ -105,11 +106,6 @@ export function RecordRepaymentDialog({ children, debt }: { children: React.Reac
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent 
         className="sm:max-w-md"
-        onPointerDownOutside={(e) => {
-          if (e.target instanceof HTMLElement && e.target.closest('[data-is-date-picker]')) {
-            e.preventDefault();
-          }
-        }}
       >
         <DialogHeader>
           <DialogTitle>Record Repayment</DialogTitle>
@@ -125,10 +121,7 @@ export function RecordRepaymentDialog({ children, debt }: { children: React.Reac
           </div>
            <div className="space-y-2">
               <Label htmlFor="repayment-date">Repayment Date</Label>
-              <DatePicker 
-                date={repaymentDate}
-                setDate={setRepaymentDate}
-              />
+              <Input id="repayment-date" type="date" value={repaymentDate} onChange={e => setRepaymentDate(e.target.value)} />
            </div>
           <div className="space-y-2">
             <Label htmlFor="notes">Notes (Optional)</Label>

@@ -24,7 +24,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Switch } from '@/components/ui/switch'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
-import { DatePicker } from '@/components/app/shared/date-picker'
 import {
   PlusCircle,
   ArrowDown,
@@ -54,7 +53,7 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
   
   // Common state
   const [amount, setAmount] = useState('')
-  const [date, setDate] = useState<Date | undefined>(new Date())
+  const [date, setDate] = useState<string>(new Date().toISOString().substring(0, 10))
   const [notes, setNotes] = useState('')
 
   // Tab-specific state
@@ -68,7 +67,7 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
   // Recurring state
   const [isRecurring, setIsRecurring] = useState(false)
   const [frequency, setFrequency] = useState<Frequency>('monthly')
-  const [endDate, setEndDate] = useState<Date | undefined>()
+  const [endDate, setEndDate] = useState<string>('')
   const [autoCreate, setAutoCreate] = useState(true)
 
 
@@ -98,10 +97,10 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
     setFromAccountId('')
     setToAccountId('')
     setToCreditCardId('')
-    setDate(new Date())
+    setDate(new Date().toISOString().substring(0, 10))
     setIsRecurring(false)
     setFrequency('monthly')
-    setEndDate(undefined)
+    setEndDate('')
     setAutoCreate(true)
   }, [])
   
@@ -134,8 +133,8 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
       return
     }
     
-    const parsedDate = date;
-    const parsedEndDate = endDate;
+    const parsedDate = new Date(date);
+    const parsedEndDate = endDate ? new Date(endDate) : undefined;
 
     const newTransactionRef = doc(collection(firestore, 'users', user.uid, 'transactions'));
     const numericAmount = parseFloat(amount);
@@ -386,7 +385,7 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
 
         <div className="space-y-2">
           <Label htmlFor="date">Date</Label>
-          <DatePicker date={date} setDate={setDate} />
+          <Input id="date" type="date" value={date} onChange={e => setDate(e.target.value)} />
         </div>
          <div className="space-y-2">
               <Label htmlFor="notes">Notes (Optional)</Label>
@@ -417,11 +416,12 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="end-date">End Date (Optional)</Label>
-                            <DatePicker 
-                              date={endDate}
-                              setDate={setEndDate}
-                              disabled={(d) => date ? d < date : false}
-                              placeholder="Pick an end date"
+                            <Input 
+                              id="end-date"
+                              type="date"
+                              value={endDate}
+                              onChange={(e) => setEndDate(e.target.value)}
+                              min={date}
                             />
                         </div>
                     </div>
@@ -446,11 +446,6 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
       </DialogTrigger>
       <DialogContent 
         className="sm:max-w-md"
-        onPointerDownOutside={(e) => {
-          if (e.target instanceof HTMLElement && e.target.closest('[data-is-date-picker]')) {
-            e.preventDefault();
-          }
-        }}
       >
         <DialogHeader>
           <DialogTitle>Add Transaction</DialogTitle>

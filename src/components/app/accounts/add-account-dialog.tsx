@@ -18,7 +18,6 @@ import { Switch } from '@/components/ui/switch'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Landmark, CreditCard, ChevronDown, FileText, Handshake } from 'lucide-react'
-import { DatePicker } from '@/components/app/shared/date-picker'
 import { useToast } from '@/hooks/use-toast'
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase'
 import { collection, addDoc, doc, runTransaction, updateDoc } from 'firebase/firestore'
@@ -48,7 +47,7 @@ export function AddAccountDialog({ children, mode = 'add', account, accountType:
     bankAccountName: '', bankName: '', openingBalance: '', isSavingsAccount: false,
     cardName: '', cardIssuer: '', creditLimit: '', cardCurrentBalance: '', apr: '', statementDay: '',
     loanName: '', loanOriginalAmount: '', loanOutstanding: '', loanInterestRate: '', loanEmiAmount: '', loanTenure: '', loanNextDueDay: '',
-    debtPersonName: '', debtType: 'lent', debtAmount: '', debtLinkedAccountId: '', debtDueDate: undefined as Date | undefined, debtInterestRate: '',
+    debtPersonName: '', debtType: 'lent', debtAmount: '', debtLinkedAccountId: '', debtDueDate: '', debtInterestRate: '',
   }
 
   const [formState, setFormState] = useState(emptyState)
@@ -88,7 +87,7 @@ export function AddAccountDialog({ children, mode = 'add', account, accountType:
             newState.debtType = data.type;
             newState.debtAmount = data.originalAmount.toString();
             newState.debtLinkedAccountId = data.linkedAccountId;
-            newState.debtDueDate = data.dueDate ? new Date(data.dueDate) : undefined;
+            newState.debtDueDate = data.dueDate ? new Date(data.dueDate).toISOString().substring(0, 10) : '';
             newState.debtInterestRate = data.interestRate?.toString() ?? '';
             break;
         }
@@ -181,7 +180,7 @@ export function AddAccountDialog({ children, mode = 'add', account, accountType:
                 const newDebt: Omit<PersonalDebt, 'id'> = {
                     userId: user.uid, personName: formState.debtPersonName, type: formState.debtType as 'lent' | 'borrowed',
                     originalAmount: debtAmountNum, remainingAmount: debtAmountNum, status: 'active',
-                    interestRate: parseFloat(formState.debtInterestRate) || 0, dueDate: formState.debtDueDate?.toISOString() || null,
+                    interestRate: parseFloat(formState.debtInterestRate) || 0, dueDate: formState.debtDueDate ? new Date(formState.debtDueDate).toISOString() : null,
                     linkedAccountId: formState.debtLinkedAccountId, createdAt: now, updatedAt: now,
                 }
                 transaction.set(newDebtRef, newDebt);
@@ -225,11 +224,6 @@ export function AddAccountDialog({ children, mode = 'add', account, accountType:
       </DialogTrigger>
       <DialogContent 
         className="sm:max-w-2xl max-h-[90vh] flex flex-col"
-        onPointerDownOutside={(e) => {
-          if (e.target instanceof HTMLElement && e.target.closest('[data-is-date-picker]')) {
-            e.preventDefault();
-          }
-        }}
       >
         <DialogHeader>
           <DialogTitle>{mode === 'add' ? 'Add New Account' : 'Edit Account'}</DialogTitle>
@@ -276,11 +270,7 @@ export function AddAccountDialog({ children, mode = 'add', account, accountType:
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="debt-due-date">Due Date (Optional)</Label>
-                          <DatePicker
-                            date={formState.debtDueDate}
-                            setDate={(date) => handleInputChange('debtDueDate', date)}
-                            placeholder="Pick a due date"
-                          />
+                          <Input id="debt-due-date" type="date" value={formState.debtDueDate} onChange={e => handleInputChange('debtDueDate', e.target.value)} />
                         </div>
                         <div className="space-y-2"><Label htmlFor="debt-interest">Interest Rate (p.a. %, optional)</Label><Input id="debt-interest" type="number" placeholder="e.g. 5" value={formState.debtInterestRate} onChange={e => handleInputChange('debtInterestRate', e.target.value)} /></div>
                     </div>

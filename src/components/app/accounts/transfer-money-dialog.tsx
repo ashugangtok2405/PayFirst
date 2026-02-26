@@ -14,7 +14,6 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { DatePicker } from '@/components/app/shared/date-picker'
 import { ArrowRightLeft } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { useFirestore, useUser, useCollection, useMemoFirebase, addDocumentNonBlocking } from '@/firebase'
@@ -26,7 +25,7 @@ export function TransferMoneyDialog() {
   const [fromAccountId, setFromAccountId] = useState('')
   const [toAccountId, setToAccountId] = useState('')
   const [amount, setAmount] = useState('')
-  const [date, setDate] = useState<Date | undefined>(new Date())
+  const [date, setDate] = useState<string>(new Date().toISOString().substring(0, 10))
   const [notes, setNotes] = useState('')
   
   const { toast } = useToast()
@@ -52,7 +51,7 @@ export function TransferMoneyDialog() {
         amount: parseFloat(amount),
         fromBankAccountId,
         toBankAccountId,
-        transactionDate: date.toISOString(),
+        transactionDate: new Date(date).toISOString(),
         description: notes || 'Fund Transfer',
     }
 
@@ -74,11 +73,6 @@ export function TransferMoneyDialog() {
       </DialogTrigger>
       <DialogContent
         className="sm:max-w-[480px]"
-        onPointerDownOutside={(e) => {
-          if (e.target instanceof HTMLElement && e.target.closest('[data-is-date-picker]')) {
-            e.preventDefault();
-          }
-        }}
       >
         <DialogHeader>
           <DialogTitle>Transfer Money</DialogTitle>
@@ -115,10 +109,7 @@ export function TransferMoneyDialog() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="date">Date</Label>
-            <DatePicker
-                date={date}
-                setDate={setDate}
-            />
+            <Input id="date" type="date" value={date} onChange={e => setDate(e.target.value)} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="notes">Notes (Optional)</Label>
