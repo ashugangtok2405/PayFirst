@@ -24,8 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Switch } from '@/components/ui/switch'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { CustomCalendar } from '@/components/app/shared/custom-calendar'
+import { DatePicker } from '@/components/app/shared/date-picker'
 import {
   PlusCircle,
   ArrowDown,
@@ -33,10 +32,8 @@ import {
   ArrowRightLeft,
   CreditCard as CreditCardIcon,
   ChevronDown,
-  CalendarIcon,
 } from 'lucide-react'
-import { format, addDays, addWeeks, addMonths, addYears } from 'date-fns'
-import { cn } from '@/lib/utils'
+import { addDays, addWeeks, addMonths, addYears, isAfter } from 'date-fns'
 import { useToast } from '@/hooks/use-toast'
 import {
   useFirestore,
@@ -59,7 +56,6 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
   const [amount, setAmount] = useState('')
   const [date, setDate] = useState<Date | undefined>(new Date())
   const [notes, setNotes] = useState('')
-  const [datePopoverOpen, setDatePopoverOpen] = useState(false);
 
   // Tab-specific state
   const [categoryId, setCategoryId] = useState('')
@@ -74,7 +70,6 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
   const [frequency, setFrequency] = useState<Frequency>('monthly')
   const [endDate, setEndDate] = useState<Date | undefined>()
   const [autoCreate, setAutoCreate] = useState(true)
-  const [endDatePopoverOpen, setEndDatePopoverOpen] = useState(false);
 
 
   const { toast } = useToast()
@@ -391,26 +386,7 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
 
         <div className="space-y-2">
           <Label htmlFor="date">Date</Label>
-            <Popover open={datePopoverOpen} onOpenChange={setDatePopoverOpen}>
-                <PopoverTrigger asChild>
-                    <Button
-                        variant={"outline"}
-                        className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}
-                    >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {date ? format(date, "PPP") : <span>Pick a date</span>}
-                    </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 z-[100]">
-                    <CustomCalendar
-                        selectedDate={date}
-                        onSelectDate={(newDate) => {
-                            setDate(newDate)
-                            setDatePopoverOpen(false)
-                        }}
-                    />
-                </PopoverContent>
-            </Popover>
+          <DatePicker date={date} setDate={setDate} />
         </div>
          <div className="space-y-2">
               <Label htmlFor="notes">Notes (Optional)</Label>
@@ -441,27 +417,12 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="end-date">End Date (Optional)</Label>
-                            <Popover open={endDatePopoverOpen} onOpenChange={setEndDatePopoverOpen}>
-                                <PopoverTrigger asChild>
-                                    <Button
-                                        variant={"outline"}
-                                        className={cn("w-full justify-start text-left font-normal", !endDate && "text-muted-foreground")}
-                                    >
-                                        <CalendarIcon className="mr-2 h-4 w-4" />
-                                        {endDate ? format(endDate, "PPP") : <span>Pick an end date</span>}
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0 z-[100]">
-                                    <CustomCalendar
-                                        selectedDate={endDate}
-                                        onSelectDate={(newEndDate) => {
-                                          setEndDate(newEndDate)
-                                          setEndDatePopoverOpen(false)
-                                        }}
-                                        disabled={(d) => date ? d < date : false}
-                                    />
-                                </PopoverContent>
-                            </Popover>
+                            <DatePicker 
+                              date={endDate}
+                              setDate={setEndDate}
+                              disabled={(d) => date ? d < date : false}
+                              placeholder="Pick an end date"
+                            />
                         </div>
                     </div>
                      <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
