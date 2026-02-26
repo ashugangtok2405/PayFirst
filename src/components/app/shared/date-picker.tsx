@@ -22,6 +22,7 @@ export function DatePicker({ date, setDate, disabled, placeholder = "Pick a date
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <Button
+          type="button"
           variant={"outline"}
           className={cn(
             "w-full justify-start text-left font-normal",
@@ -32,7 +33,7 @@ export function DatePicker({ date, setDate, disabled, placeholder = "Pick a date
           {date ? format(date, "PPP") : <span>{placeholder}</span>}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0">
+      <PopoverContent className="w-auto p-0" data-is-date-picker>
         <CustomCalendar
           selectedDate={date}
           onSelectDate={(newDate) => {

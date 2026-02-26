@@ -447,7 +447,7 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
       <DialogContent 
         className="sm:max-w-md"
         onPointerDownOutside={(e) => {
-          if (e.target instanceof HTMLElement && e.target.closest('[data-radix-popper-content-wrapper]')) {
+          if (e.target instanceof HTMLElement && e.target.closest('[data-is-date-picker]')) {
             e.preventDefault();
           }
         }}
@@ -468,7 +468,7 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={handleSubmit} disabled={isLoading}>
+            <Button type="button" onClick={handleSubmit} disabled={isLoading}>
               {isLoading ? 'Loading...' : 
                 activeTab === 'expense' ? 'Add Expense' :
                 activeTab === 'income' ? 'Add Income' :

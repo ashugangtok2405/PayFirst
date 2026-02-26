@@ -17,11 +17,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Landmark, CreditCard, ChevronDown, FileText, Handshake, CalendarIcon } from 'lucide-react'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { CustomCalendar } from '@/components/app/shared/custom-calendar'
-import { format } from 'date-fns'
-import { cn } from '@/lib/utils'
+import { Landmark, CreditCard, ChevronDown, FileText, Handshake } from 'lucide-react'
+import { DatePicker } from '@/components/app/shared/date-picker'
 import { useToast } from '@/hooks/use-toast'
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase'
 import { collection, addDoc, doc, runTransaction, updateDoc } from 'firebase/firestore'
@@ -43,8 +40,6 @@ export function AddAccountDialog({ children, mode = 'add', account, accountType:
   const { toast } = useToast()
   const firestore = useFirestore()
   const { user } = useUser()
-  const [debtDueDatePopoverOpen, setDebtDueDatePopoverOpen] = useState(false);
-
 
   const bankAccountsQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'bankAccounts') : null, [firestore, user?.uid])
   const { data: bankAccounts, isLoading: loadingBankAccounts } = useCollection<BankAccount>(bankAccountsQuery)
@@ -228,9 +223,14 @@ export function AddAccountDialog({ children, mode = 'add', account, accountType:
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col" onPointerDownOutside={(e) => {
-          if (e.target instanceof HTMLElement && e.target.closest('[data-radix-popper-content-wrapper]')) e.preventDefault();
-      }}>
+      <DialogContent 
+        className="sm:max-w-2xl max-h-[90vh] flex flex-col"
+        onPointerDownOutside={(e) => {
+          if (e.target instanceof HTMLElement && e.target.closest('[data-is-date-picker]')) {
+            e.preventDefault();
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle>{mode === 'add' ? 'Add New Account' : 'Edit Account'}</DialogTitle>
           <DialogDescription>{mode === 'add' ? 'Connect a new account to start tracking your finances.' : 'Update the details for your account.'}</DialogDescription>
@@ -276,26 +276,11 @@ export function AddAccountDialog({ children, mode = 'add', account, accountType:
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="debt-due-date">Due Date (Optional)</Label>
-                            <Popover open={debtDueDatePopoverOpen} onOpenChange={setDebtDueDatePopoverOpen}>
-                                <PopoverTrigger asChild>
-                                    <Button
-                                        variant={"outline"}
-                                        className={cn("w-full justify-start text-left font-normal", !formState.debtDueDate && "text-muted-foreground")}
-                                    >
-                                        <CalendarIcon className="mr-2 h-4 w-4" />
-                                        {formState.debtDueDate ? format(formState.debtDueDate, "PPP") : <span>Pick a due date</span>}
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0">
-                                    <CustomCalendar
-                                        selectedDate={formState.debtDueDate}
-                                        onSelectDate={(date) => {
-                                          handleInputChange('debtDueDate', date)
-                                          setDebtDueDatePopoverOpen(false)
-                                        }}
-                                    />
-                                </PopoverContent>
-                            </Popover>
+                          <DatePicker
+                            date={formState.debtDueDate}
+                            setDate={(date) => handleInputChange('debtDueDate', date)}
+                            placeholder="Pick a due date"
+                          />
                         </div>
                         <div className="space-y-2"><Label htmlFor="debt-interest">Interest Rate (p.a. %, optional)</Label><Input id="debt-interest" type="number" placeholder="e.g. 5" value={formState.debtInterestRate} onChange={e => handleInputChange('debtInterestRate', e.target.value)} /></div>
                     </div>
@@ -304,7 +289,7 @@ export function AddAccountDialog({ children, mode = 'add', account, accountType:
         </div>
         <DialogFooter className="pt-4 border-t">
           <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button type="submit" onClick={handleSaveAccount}>{mode === 'add' ? 'Add Account' : 'Save Changes'}</Button>
+          <Button type="button" onClick={handleSaveAccount}>{mode === 'add' ? 'Add Account' : 'Save Changes'}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

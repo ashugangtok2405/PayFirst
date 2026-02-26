@@ -5,11 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { CustomCalendar } from '@/components/app/shared/custom-calendar'
-import { format } from 'date-fns'
-import { CalendarIcon } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { DatePicker } from '@/components/app/shared/date-picker'
 import { useToast } from '@/hooks/use-toast'
 import { useFirestore, useUser } from '@/firebase'
 import { collection, doc, runTransaction } from 'firebase/firestore'
@@ -22,7 +18,6 @@ export function RecordRepaymentDialog({ children, debt }: { children: React.Reac
   const [amount, setAmount] = useState('')
   const [repaymentDate, setRepaymentDate] = useState<Date | undefined>(new Date())
   const [notes, setNotes] = useState('')
-  const [repaymentDatePopoverOpen, setRepaymentDatePopoverOpen] = useState(false)
   
   const { toast } = useToast()
   const firestore = useFirestore()
@@ -108,7 +103,14 @@ export function RecordRepaymentDialog({ children, debt }: { children: React.Reac
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent 
+        className="sm:max-w-md"
+        onPointerDownOutside={(e) => {
+          if (e.target instanceof HTMLElement && e.target.closest('[data-is-date-picker]')) {
+            e.preventDefault();
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Record Repayment</DialogTitle>
           <DialogDescription>
@@ -123,26 +125,10 @@ export function RecordRepaymentDialog({ children, debt }: { children: React.Reac
           </div>
            <div className="space-y-2">
               <Label htmlFor="repayment-date">Repayment Date</Label>
-              <Popover open={repaymentDatePopoverOpen} onOpenChange={setRepaymentDatePopoverOpen}>
-                <PopoverTrigger asChild>
-                    <Button
-                        variant={"outline"}
-                        className={cn("w-full justify-start text-left font-normal", !repaymentDate && "text-muted-foreground")}
-                    >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {repaymentDate ? format(repaymentDate, "PPP") : <span>Pick a date</span>}
-                    </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                    <CustomCalendar
-                        selectedDate={repaymentDate}
-                        onSelectDate={(date) => {
-                          setRepaymentDate(date)
-                          setRepaymentDatePopoverOpen(false)
-                        }}
-                    />
-                </PopoverContent>
-              </Popover>
+              <DatePicker 
+                date={repaymentDate}
+                setDate={setRepaymentDate}
+              />
            </div>
           <div className="space-y-2">
             <Label htmlFor="notes">Notes (Optional)</Label>
