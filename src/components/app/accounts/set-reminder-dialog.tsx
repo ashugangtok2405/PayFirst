@@ -1,18 +1,7 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import {
-  format,
-  addMonths,
-  subMonths,
-  startOfMonth,
-  getDaysInMonth,
-  getDay,
-  isToday,
-  isSameDay,
-  startOfToday,
-} from 'date-fns'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { useState } from 'react'
+import { format, startOfToday } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -27,7 +16,7 @@ import { useToast } from '@/hooks/use-toast'
 import { useFirestore, useUser, addDocumentNonBlocking } from '@/firebase'
 import { collection } from 'firebase/firestore'
 import type { CreditCard, Alert } from '@/lib/types'
-import { cn } from '@/lib/utils'
+import { CustomCalendar } from '@/components/app/shared/custom-calendar'
 
 export function SetReminderDialog({
   children,
@@ -37,7 +26,6 @@ export function SetReminderDialog({
   card: CreditCard
 }) {
   const [open, setOpen] = useState(false)
-  const [currentMonth, setCurrentMonth] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -92,7 +80,6 @@ export function SetReminderDialog({
       })
       setOpen(false)
       setSelectedDate(undefined)
-      setCurrentMonth(new Date())
     } catch (error: any) {
       toast({
         variant: 'destructive',
@@ -103,20 +90,6 @@ export function SetReminderDialog({
       setIsSubmitting(false)
     }
   }
-
-  const calendarDays = useMemo(() => {
-    const monthStart = startOfMonth(currentMonth)
-    const daysInMonth = getDaysInMonth(currentMonth)
-    const firstDayOfWeek = getDay(monthStart)
-
-    const days = Array.from({ length: daysInMonth }, (_, i) => i + 1)
-    const emptyDays = Array.from({ length: firstDayOfWeek })
-
-    return { days, emptyDays }
-  }, [currentMonth])
-
-  const weekdays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
-  const today = startOfToday()
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -129,72 +102,11 @@ export function SetReminderDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="p-1">
-          <div className="flex items-center justify-between mb-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
-              className="h-8 w-8"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </Button>
-            <div className="font-semibold text-center text-lg">
-              {format(currentMonth, 'MMMM yyyy')}
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
-              className="h-8 w-8"
-            >
-              <ChevronRight className="h-5 w-5" />
-            </Button>
-          </div>
-          <div className="grid grid-cols-7 gap-1 text-center text-xs text-muted-foreground">
-            {weekdays.map((day) => (
-              <div key={day} className="font-medium h-10 flex items-center justify-center">
-                {day}
-              </div>
-            ))}
-          </div>
-          <div className="grid grid-cols-7 gap-1 mt-1">
-            {calendarDays.emptyDays.map((_, i) => (
-              <div key={`empty-${i}`} />
-            ))}
-            {calendarDays.days.map((day) => {
-              const date = new Date(
-                currentMonth.getFullYear(),
-                currentMonth.getMonth(),
-                day
-              )
-              const isPastDate = date < today
-              const isSelected = selectedDate && isSameDay(date, selectedDate)
-
-              return (
-                <button
-                  key={day}
-                  disabled={isPastDate}
-                  onClick={() => setSelectedDate(date)}
-                  className={cn(
-                    'h-10 w-10 flex items-center justify-center rounded-full text-sm transition-colors duration-150',
-                    'focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
-                    isPastDate
-                      ? 'text-muted-foreground/50 cursor-not-allowed'
-                      : 'hover:bg-accent hover:text-accent-foreground',
-                    isToday(date) &&
-                      !isSelected &&
-                      'border border-primary/50',
-                    isSelected &&
-                      'bg-primary text-primary-foreground hover:bg-primary/90'
-                  )}
-                >
-                  {day}
-                </button>
-              )
-            })}
-          </div>
-        </div>
+        <CustomCalendar
+          selectedDate={selectedDate}
+          onSelectDate={setSelectedDate}
+          disabled={(date) => date < startOfToday()}
+        />
 
         <DialogFooter className="mt-4 border-t pt-4">
           <Button type="button" variant="ghost" onClick={() => setOpen(false)}>

@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Calendar } from '@/components/ui/calendar'
+import { CustomCalendar } from '@/components/app/shared/custom-calendar'
 import { format } from 'date-fns'
 import { CalendarIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -22,6 +22,7 @@ export function RecordRepaymentDialog({ children, debt }: { children: React.Reac
   const [amount, setAmount] = useState('')
   const [repaymentDate, setRepaymentDate] = useState<Date | undefined>(new Date())
   const [notes, setNotes] = useState('')
+  const [repaymentDatePopoverOpen, setRepaymentDatePopoverOpen] = useState(false)
   
   const { toast } = useToast()
   const firestore = useFirestore()
@@ -122,7 +123,7 @@ export function RecordRepaymentDialog({ children, debt }: { children: React.Reac
           </div>
            <div className="space-y-2">
               <Label htmlFor="repayment-date">Repayment Date</Label>
-              <Popover>
+              <Popover open={repaymentDatePopoverOpen} onOpenChange={setRepaymentDatePopoverOpen}>
                 <PopoverTrigger asChild>
                     <Button
                         variant={"outline"}
@@ -133,11 +134,12 @@ export function RecordRepaymentDialog({ children, debt }: { children: React.Reac
                     </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
-                    <Calendar
-                        mode="single"
-                        selected={repaymentDate}
-                        onSelect={setRepaymentDate}
-                        initialFocus
+                    <CustomCalendar
+                        selectedDate={repaymentDate}
+                        onSelectDate={(date) => {
+                          setRepaymentDate(date)
+                          setRepaymentDatePopoverOpen(false)
+                        }}
                     />
                 </PopoverContent>
               </Popover>

@@ -25,7 +25,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Switch } from '@/components/ui/switch'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Calendar } from '@/components/ui/calendar'
+import { CustomCalendar } from '@/components/app/shared/custom-calendar'
 import {
   PlusCircle,
   ArrowDown,
@@ -59,6 +59,7 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
   const [amount, setAmount] = useState('')
   const [date, setDate] = useState<Date | undefined>(new Date())
   const [notes, setNotes] = useState('')
+  const [datePopoverOpen, setDatePopoverOpen] = useState(false);
 
   // Tab-specific state
   const [categoryId, setCategoryId] = useState('')
@@ -73,6 +74,8 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
   const [frequency, setFrequency] = useState<Frequency>('monthly')
   const [endDate, setEndDate] = useState<Date | undefined>()
   const [autoCreate, setAutoCreate] = useState(true)
+  const [endDatePopoverOpen, setEndDatePopoverOpen] = useState(false);
+
 
   const { toast } = useToast()
   const firestore = useFirestore()
@@ -388,7 +391,7 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
 
         <div className="space-y-2">
           <Label htmlFor="date">Date</Label>
-            <Popover>
+            <Popover open={datePopoverOpen} onOpenChange={setDatePopoverOpen}>
                 <PopoverTrigger asChild>
                     <Button
                         variant={"outline"}
@@ -399,11 +402,12 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
                     </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
-                    <Calendar
-                        mode="single"
-                        selected={date}
-                        onSelect={setDate}
-                        initialFocus
+                    <CustomCalendar
+                        selectedDate={date}
+                        onSelectDate={(newDate) => {
+                            setDate(newDate)
+                            setDatePopoverOpen(false)
+                        }}
                     />
                 </PopoverContent>
             </Popover>
@@ -437,7 +441,7 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="end-date">End Date (Optional)</Label>
-                            <Popover>
+                            <Popover open={endDatePopoverOpen} onOpenChange={setEndDatePopoverOpen}>
                                 <PopoverTrigger asChild>
                                     <Button
                                         variant={"outline"}
@@ -448,10 +452,13 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
                                     </Button>
                                 </PopoverTrigger>
                                 <PopoverContent className="w-auto p-0">
-                                    <Calendar
-                                        mode="single"
-                                        selected={endDate}
-                                        onSelect={setEndDate}
+                                    <CustomCalendar
+                                        selectedDate={endDate}
+                                        onSelectDate={(newEndDate) => {
+                                          setEndDate(newEndDate)
+                                          setEndDatePopoverOpen(false)
+                                        }}
+                                        disabled={(d) => date ? d < date : false}
                                     />
                                 </PopoverContent>
                             </Popover>

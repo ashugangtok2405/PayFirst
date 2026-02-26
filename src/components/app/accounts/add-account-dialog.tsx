@@ -19,7 +19,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Landmark, CreditCard, ChevronDown, FileText, Handshake, CalendarIcon } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Calendar } from '@/components/ui/calendar'
+import { CustomCalendar } from '@/components/app/shared/custom-calendar'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/hooks/use-toast'
@@ -43,6 +43,8 @@ export function AddAccountDialog({ children, mode = 'add', account, accountType:
   const { toast } = useToast()
   const firestore = useFirestore()
   const { user } = useUser()
+  const [debtDueDatePopoverOpen, setDebtDueDatePopoverOpen] = useState(false);
+
 
   const bankAccountsQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'bankAccounts') : null, [firestore, user?.uid])
   const { data: bankAccounts, isLoading: loadingBankAccounts } = useCollection<BankAccount>(bankAccountsQuery)
@@ -274,7 +276,7 @@ export function AddAccountDialog({ children, mode = 'add', account, accountType:
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="debt-due-date">Due Date (Optional)</Label>
-                            <Popover>
+                            <Popover open={debtDueDatePopoverOpen} onOpenChange={setDebtDueDatePopoverOpen}>
                                 <PopoverTrigger asChild>
                                     <Button
                                         variant={"outline"}
@@ -285,11 +287,12 @@ export function AddAccountDialog({ children, mode = 'add', account, accountType:
                                     </Button>
                                 </PopoverTrigger>
                                 <PopoverContent className="w-auto p-0">
-                                    <Calendar
-                                        mode="single"
-                                        selected={formState.debtDueDate}
-                                        onSelect={(date) => handleInputChange('debtDueDate', date)}
-                                        initialFocus
+                                    <CustomCalendar
+                                        selectedDate={formState.debtDueDate}
+                                        onSelectDate={(date) => {
+                                          handleInputChange('debtDueDate', date)
+                                          setDebtDueDatePopoverOpen(false)
+                                        }}
                                     />
                                 </PopoverContent>
                             </Popover>
