@@ -94,7 +94,7 @@ export function SetReminderDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-md rounded-2xl shadow-lg">
+      <DialogContent className="w-auto rounded-2xl shadow-lg" data-is-date-picker-dialog>
         <DialogHeader>
           <DialogTitle>Set Reminder for {card.name}</DialogTitle>
           <DialogDescription>
@@ -102,25 +102,22 @@ export function SetReminderDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex justify-center">
-          <CustomCalendar
-            selectedDate={selectedDate}
-            onSelectDate={setSelectedDate}
-            disabled={(date) => date < startOfToday()}
-          />
-        </div>
+        <CustomCalendar
+          selectedDate={selectedDate}
+          onSelectDate={setSelectedDate}
+          disabled={(date) => date < startOfToday()}
+        />
 
-        <DialogFooter className="mt-4 pt-4 border-t flex flex-col items-center gap-2">
+        <DialogFooter className="mt-4 pt-4 border-t flex-col sm:flex-row sm:justify-end gap-2">
+            <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+                Cancel
+            </Button>
             <Button
                 type="submit"
                 onClick={handleSetReminder}
                 disabled={!selectedDate || isSubmitting}
-                className="w-full max-w-[200px]"
             >
                 {isSubmitting ? 'Setting...' : 'Set Reminder'}
-            </Button>
-            <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
-                Cancel
             </Button>
         </DialogFooter>
       </DialogContent>
