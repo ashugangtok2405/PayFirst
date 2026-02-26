@@ -44,7 +44,7 @@ export function PersonalDebtManagement() {
   }
   
   const DebtCard = ({ debt }: { debt: PersonalDebt }) => {
-    const paidPercentage = ((debt.originalAmount - debt.remainingAmount) / debt.originalAmount) * 100
+    const paidPercentage = debt.originalAmount > 0 ? ((debt.originalAmount - debt.remainingAmount) / debt.originalAmount) * 100 : 0
     const isLent = debt.type === 'lent';
 
     return (
@@ -146,5 +146,3 @@ export function PersonalDebtManagement() {
     </Card>
   )
 }
-
-    
