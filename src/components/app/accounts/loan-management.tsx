@@ -95,7 +95,7 @@ export function LoanManagement() {
             </div>
         ) : loans && loans.length > 0 ? (
           loans.map((loan) => {
-            const paidPercentage = ((loan.originalAmount - loan.outstanding) / loan.originalAmount) * 100
+            const paidPercentage = loan.originalAmount > 0 ? ((loan.originalAmount - loan.outstanding) / loan.originalAmount) * 100 : 0
 
             return (
               <Card key={loan.id} className="p-6 rounded-xl">
