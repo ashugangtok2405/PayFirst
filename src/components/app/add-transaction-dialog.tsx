@@ -485,7 +485,7 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
       </DialogTrigger>
       <DialogContent 
         className="sm:max-w-md"
-        onInteractOutside={(e) => {
+        onPointerDownOutside={(e) => {
           if (e.target instanceof HTMLElement && e.target.closest('[data-radix-popper-content-wrapper]')) {
             e.preventDefault();
           }

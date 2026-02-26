@@ -14,8 +14,11 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ArrowRightLeft } from 'lucide-react'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { CustomCalendar } from '@/components/app/shared/custom-calendar'
+import { ArrowRightLeft, CalendarIcon } from 'lucide-react'
 import { format } from 'date-fns'
+import { cn } from '@/lib/utils'
 import { useToast } from '@/hooks/use-toast'
 import { useFirestore, useUser, useCollection, useMemoFirebase, addDocumentNonBlocking } from '@/firebase'
 import { collection } from 'firebase/firestore'
@@ -26,7 +29,8 @@ export function TransferMoneyDialog() {
   const [fromAccountId, setFromAccountId] = useState('')
   const [toAccountId, setToAccountId] = useState('')
   const [amount, setAmount] = useState('')
-  const [date, setDate] = useState(format(new Date(), 'dd/MM/yy'))
+  const [date, setDate] = useState<Date | undefined>(new Date())
+  const [datePopoverOpen, setDatePopoverOpen] = useState(false)
   const [notes, setNotes] = useState('')
   
   const { toast } = useToast()
@@ -37,7 +41,7 @@ export function TransferMoneyDialog() {
   const { data: bankAccounts, isLoading } = useCollection<BankAccount>(bankAccountsQuery)
 
   const handleTransfer = () => {
-    if (!user || !fromAccountId || !toAccountId || !amount) {
+    if (!user || !fromAccountId || !toAccountId || !amount || !date) {
         toast({ variant: 'destructive', title: 'Missing Fields', description: 'Please fill out all fields.' })
         return
     }
@@ -46,27 +50,13 @@ export function TransferMoneyDialog() {
         return
     }
 
-    let parsedDate: Date;
-    try {
-        const dateParts = date.split('/');
-        if (dateParts.length !== 3 || dateParts[2].length !== 2) throw new Error();
-        const day = parseInt(dateParts[0], 10);
-        const month = parseInt(dateParts[1], 10) - 1;
-        const year = parseInt(dateParts[2], 10) + 2000;
-        parsedDate = new Date(year, month, day);
-        if (isNaN(parsedDate.getTime())) throw new Error();
-    } catch {
-        toast({ variant: 'destructive', title: 'Invalid Date', description: 'Please use DD/MM/YY format.' });
-        return;
-    }
-
     const transactionData: Partial<Transaction> = {
         userId: user.uid,
         type: 'transfer',
         amount: parseFloat(amount),
         fromBankAccountId,
         toBankAccountId,
-        transactionDate: parsedDate.toISOString(),
+        transactionDate: date.toISOString(),
         description: notes || 'Fund Transfer',
     }
 
@@ -88,7 +78,7 @@ export function TransferMoneyDialog() {
       </DialogTrigger>
       <DialogContent
         className="sm:max-w-[480px]"
-        onInteractOutside={(e) => {
+        onPointerDownOutside={(e) => {
           if (e.target instanceof HTMLElement && e.target.closest('[data-radix-popper-content-wrapper]')) {
             e.preventDefault();
           }
@@ -129,12 +119,26 @@ export function TransferMoneyDialog() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="date">Date</Label>
-            <Input 
-              id="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              placeholder="DD/MM/YY"
-            />
+            <Popover open={datePopoverOpen} onOpenChange={setDatePopoverOpen}>
+              <PopoverTrigger asChild>
+                  <Button
+                      variant={"outline"}
+                      className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}
+                  >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {date ? format(date, "PPP") : <span>Pick a date</span>}
+                  </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                  <CustomCalendar
+                      selectedDate={date}
+                      onSelectDate={(newDate) => {
+                        setDate(newDate)
+                        setDatePopoverOpen(false)
+                      }}
+                  />
+              </PopoverContent>
+            </Popover>
           </div>
           <div className="space-y-2">
             <Label htmlFor="notes">Notes (Optional)</Label>
