@@ -68,12 +68,12 @@ export default function DashboardLayout({
           </div>
           <SidebarFooter className="space-y-4 p-4">
             <div className="space-y-2">
-              <AddAccountDialog defaultType="bank">
+              <AddAccountDialog accountType="bank">
                 <Button className="w-full justify-start bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-md transition hover:scale-[1.02]">
                   <Landmark className="mr-2" /> Add Bank Account
                 </Button>
               </AddAccountDialog>
-              <AddAccountDialog defaultType="credit">
+              <AddAccountDialog accountType="credit">
                 <Button
                   variant="outline"
                   className="w-full justify-start border-gray-300 text-gray-700 hover:bg-gray-100"
@@ -81,7 +81,7 @@ export default function DashboardLayout({
                   <CreditCard className="mr-2" /> Add Credit Card
                 </Button>
               </AddAccountDialog>
-              <AddAccountDialog defaultType="loan">
+              <AddAccountDialog accountType="loan">
                 <Button
                   variant="outline"
                   className="w-full justify-start border-gray-300 text-gray-700 hover:bg-gray-100"
@@ -89,7 +89,7 @@ export default function DashboardLayout({
                   <FileText className="mr-2" /> Add Loan / EMI
                 </Button>
               </AddAccountDialog>
-              <AddAccountDialog defaultType="personal_debt">
+              <AddAccountDialog accountType="personal_debt">
                 <Button
                   variant="outline"
                   className="w-full justify-start border-gray-300 text-gray-700 hover:bg-gray-100"
@@ -104,7 +104,7 @@ export default function DashboardLayout({
         </div>
       </Sidebar>
       <SidebarInset>
-        <header className="flex h-16 items-center gap-4 border-b bg-card px-4 md:px-6">
+        <header className="flex h-16 items-center gap-4 border-b bg-card px-4 sm:px-6 lg:px-8">
           <SidebarTrigger className="md:hidden" />
           <h1 className="text-xl font-bold">Dashboard</h1>
           <div className="ml-auto flex items-center gap-4">
@@ -120,7 +120,7 @@ export default function DashboardLayout({
             </Avatar>
           </div>
         </header>
-        <main className="flex-1 space-y-8 p-4 md:p-8 lg:p-10">
+        <main className="flex-1 space-y-8 px-4 py-8 sm:px-6 lg:px-8">
           {children}
         </main>
       </SidebarInset>

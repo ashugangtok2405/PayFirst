@@ -120,13 +120,13 @@ export function CashFlowChart() {
         <>
             <Card className="shadow-sm hover:shadow-md transition-shadow rounded-2xl">
                 <CardHeader>
-                    <div className="flex justify-between items-start">
+                    <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                         <div>
                             <CardTitle className="text-xl">Cash Flow</CardTitle>
                             <CardDescription>Income vs. Expense</CardDescription>
                         </div>
                         <Select defaultValue={period.toString()} onValueChange={(v) => setPeriod(parseInt(v))}>
-                            <SelectTrigger className="w-[180px]">
+                            <SelectTrigger className="w-full sm:w-[180px]">
                                 <SelectValue placeholder="Select period" />
                             </SelectTrigger>
                             <SelectContent>
@@ -137,11 +137,11 @@ export function CashFlowChart() {
                         </Select>
                     </div>
                     {isLoading ? (
-                        <div className="mt-6 grid grid-cols-3 gap-4 text-center">
+                        <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
                             {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
                         </div>
                     ) : (
-                        <div className="mt-6 grid grid-cols-3 gap-4 text-center">
+                        <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
                             <div>
                                 <p className="text-sm text-muted-foreground">Total Income</p>
                                 <p className="text-2xl font-bold text-green-600">{formatCurrencyTooltip(totalIncome)}</p>

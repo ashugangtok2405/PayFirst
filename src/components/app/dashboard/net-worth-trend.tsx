@@ -10,7 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase'
 import { collection, query, where, orderBy } from 'firebase/firestore'
-import type { BankAccount, CreditCard, Transaction } from '@/lib/types'
+import type { BankAccount, CreditCard, Transaction, Loan, PersonalDebt } from '@/lib/types'
 
 const formatCurrency = (value: number) => `₹${(value / 100000).toFixed(1)}L`
 const formatCurrencyTooltip = (value: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(value)
@@ -39,6 +39,12 @@ export function NetWorthTrend() {
   const creditCardsQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'creditCards') : null, [firestore, user?.uid])
   const { data: creditCards, isLoading: loadingCreditCards } = useCollection<CreditCard>(creditCardsQuery)
   
+  const loansQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'loans') : null, [firestore, user?.uid])
+  const { data: loans, isLoading: loadingLoans } = useCollection<Loan>(loansQuery)
+  
+  const personalDebtsQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'personalDebts') : null, [firestore, user?.uid])
+  const { data: personalDebts, isLoading: loadingPersonalDebts } = useCollection<PersonalDebt>(personalDebtsQuery)
+
   const twelveMonthsAgo = useMemo(() => startOfMonth(subMonths(new Date(), 11)), []);
 
   const transactionsQuery = useMemoFirebase(() => user ? query(
@@ -48,22 +54,19 @@ export function NetWorthTrend() {
   ) : null, [firestore, user?.uid, twelveMonthsAgo]);
   const { data: transactions, isLoading: loadingTransactions } = useCollection<Transaction>(transactionsQuery)
 
-  const isLoading = loadingBankAccounts || loadingCreditCards || loadingTransactions
+  const isLoading = loadingBankAccounts || loadingCreditCards || loadingTransactions || loadingLoans || loadingPersonalDebts;
 
   const allNetWorthData = useMemo(() => {
-    if (isLoading || !bankAccounts || !creditCards || !transactions) return null;
+    if (isLoading || !bankAccounts || !creditCards || !loans || !personalDebts || !transactions) return null;
 
-    const currentTotalAssets = bankAccounts.reduce((sum, acc) => sum + acc.currentBalance, 0);
-    const currentTotalLiabilities = creditCards.reduce((sum, card) => sum + card.currentBalance, 0);
-    let runningNetWorth = currentTotalAssets - currentTotalLiabilities;
+    const currentAssets = (bankAccounts.reduce((sum, acc) => sum + acc.currentBalance, 0)) + (personalDebts.filter(d=>d.type === 'lent').reduce((s,d)=>s+d.remainingAmount,0));
+    const currentLiabilities = (creditCards.reduce((sum, card) => sum + card.currentBalance, 0)) + (loans.reduce((sum, l) => sum + l.outstanding, 0)) + (personalDebts.filter(d=>d.type === 'borrowed').reduce((s,d)=>s+d.remainingAmount,0));
+    let runningNetWorth = currentAssets - currentLiabilities;
 
     const monthlyData: {month: string; value: number}[] = [];
 
-    // Loop backwards from the current month for 12 months
     for (let i = 0; i < 12; i++) {
         const targetMonth = subMonths(new Date(), i);
-
-        // For all but the most recent month (i=0), we need to adjust the runningNetWorth
         if (i > 0) {
             const monthToSubtract = subMonths(new Date(), i - 1);
             const monthStart = startOfMonth(monthToSubtract);
@@ -82,15 +85,10 @@ export function NetWorthTrend() {
             
             runningNetWorth -= netFlow;
         }
-
-        monthlyData.push({
-            month: format(targetMonth, 'MMM'),
-            value: runningNetWorth
-        });
+        monthlyData.push({ month: format(targetMonth, 'MMM'), value: runningNetWorth });
     }
-
-    return monthlyData.reverse(); // Reverse to get chronological order for the chart
-  }, [isLoading, bankAccounts, creditCards, transactions]);
+    return monthlyData.reverse();
+  }, [isLoading, bankAccounts, creditCards, loans, personalDebts, transactions]);
 
 
   const chartData = useMemo(() => {
@@ -106,12 +104,12 @@ export function NetWorthTrend() {
     return (
         <Card className="shadow-sm hover:shadow-md transition-shadow rounded-2xl h-full">
             <CardHeader>
-                <div className="flex justify-between items-start">
+                <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                     <div>
                         <Skeleton className="h-6 w-24" />
                         <Skeleton className="h-4 w-32 mt-2" />
                     </div>
-                    <Skeleton className="h-10 w-[150px]" />
+                    <Skeleton className="h-10 w-full sm:w-[150px]" />
                 </div>
                 <div className="mt-4">
                     <Skeleton className="h-9 w-36" />
@@ -128,13 +126,13 @@ export function NetWorthTrend() {
   return (
     <Card className="shadow-sm hover:shadow-md transition-shadow rounded-2xl h-full">
       <CardHeader>
-        <div className="flex justify-between items-start">
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
             <div>
                 <CardTitle className="text-xl">Net Worth</CardTitle>
                 <CardDescription>Growth over time</CardDescription>
             </div>
              <Select value={period} onValueChange={setPeriod}>
-                <SelectTrigger className="w-[150px]">
+                <SelectTrigger className="w-full sm:w-[150px]">
                     <SelectValue placeholder="Last 6 Months" />
                 </SelectTrigger>
                 <SelectContent>

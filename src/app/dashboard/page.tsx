@@ -10,17 +10,17 @@ import { SmartAlertsDashboard } from '@/components/app/dashboard/smart-alerts-da
 
 export default function DashboardPage() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 max-w-7xl mx-auto">
       <KpiSummary />
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-        <div className="xl:col-span-2">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2">
           <CashFlowChart />
         </div>
-        <div className="xl:col-span-1">
+        <div className="lg:col-span-1">
           <NetWorthTrend />
         </div>
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
         <TopExpenses />
         <UpcomingBills />
         <SmartAlertsDashboard />

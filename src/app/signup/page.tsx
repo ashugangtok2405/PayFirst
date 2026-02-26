@@ -8,7 +8,6 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react'
 import Image from 'next/image'
-import loginBackground from '@/images/loginbackground.png'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -118,21 +117,9 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center lg:justify-end p-4 lg:pr-32 xl:pr-48 relative">
-      <Image
-        alt="Background"
-        src={loginBackground}
-        quality={100}
-        fill
-        sizes="100vw"
-        style={{
-          objectFit: 'cover',
-          zIndex: -1,
-        }}
-      />
-
+    <div className="min-h-screen flex items-center justify-center p-4 relative bg-gradient-to-br from-slate-900 via-blue-900/50 to-slate-900">
       <Card className="relative w-full max-w-lg rounded-3xl bg-white/10 backdrop-blur-xl border-2 border-white/20 shadow-[0_0_60px_rgba(59,130,246,0.6)]">
-        <CardContent className="p-12 space-y-8">
+        <CardContent className="p-8 sm:p-12 space-y-8">
           <div className="flex justify-center">
             <Logo />
           </div>

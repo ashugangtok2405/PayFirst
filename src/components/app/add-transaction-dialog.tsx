@@ -487,7 +487,7 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
           <DialogDescription>Log a new income, expense, or transfer.</DialogDescription>
         </DialogHeader>
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TransactionType)} className="pt-4">
-          <TabsList className="grid w-full grid-cols-4 h-auto p-1">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto p-1">
             <TabsTrigger value="expense" className="flex-col h-16 gap-1"><ArrowDown className="h-5 w-5 text-red-500"/>Expense</TabsTrigger>
             <TabsTrigger value="income" className="flex-col h-16 gap-1"><ArrowUp className="h-5 w-5 text-green-500"/>Income</TabsTrigger>
             <TabsTrigger value="transfer" className="flex-col h-16 gap-1"><ArrowRightLeft className="h-5 w-5 text-blue-500"/>Transfer</TabsTrigger>

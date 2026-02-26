@@ -247,7 +247,7 @@ export function AddAccountDialog({ children, mode = 'add', account, accountType:
         </DialogHeader>
         <div className="flex-grow overflow-y-auto pr-4 -mr-4">
             <Tabs value={accountType} onValueChange={setAccountType} className="w-full">
-                <TabsList className="grid w-full grid-cols-4 h-auto p-1">
+                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto p-1">
                     <TabsTrigger value="bank" disabled={mode === 'edit'} className="h-20 flex flex-col gap-2 rounded-lg data-[state=active]:shadow-lg"><Landmark className="h-6 w-6"/>Bank Account</TabsTrigger>
                     <TabsTrigger value="credit" disabled={mode === 'edit'} className="h-20 flex flex-col gap-2 rounded-lg data-[state=active]:shadow-lg"><CreditCard className="h-6 w-6"/>Credit Card</TabsTrigger>
                     <TabsTrigger value="loan" disabled={mode === 'edit'} className="h-20 flex flex-col gap-2 rounded-lg data-[state=active]:shadow-lg"><FileText className="h-6 w-6"/>Loan / EMI</TabsTrigger>
@@ -301,5 +301,3 @@ export function AddAccountDialog({ children, mode = 'add', account, accountType:
     </Dialog>
   )
 }
-
-    

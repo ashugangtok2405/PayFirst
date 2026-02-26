@@ -13,12 +13,12 @@ import { PlusCircle } from 'lucide-react'
 
 export default function AccountsPage() {
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
+    <div className="space-y-8 max-w-7xl mx-auto">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold">Accounts</h1>
-        <div className="flex items-center gap-4">
-            <AddAccountDialog>
-                <Button variant="outline">
+        <div className="flex w-full sm:w-auto items-center gap-4">
+            <AddAccountDialog accountType='bank'>
+                <Button variant="outline" className="w-full sm:w-auto">
                     <PlusCircle className="mr-2 h-4 w-4" /> Add Account
                 </Button>
             </AddAccountDialog>

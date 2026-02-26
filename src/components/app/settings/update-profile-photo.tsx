@@ -63,7 +63,7 @@ export function UpdateProfilePhoto() {
   }
 
   return (
-    <div className="flex items-center gap-6">
+    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
       <div className="relative group">
         <Avatar className="h-24 w-24 cursor-pointer" onClick={handleAvatarClick}>
           <AvatarImage src={user?.photoURL ?? undefined} alt={user?.displayName ?? "User"} />
