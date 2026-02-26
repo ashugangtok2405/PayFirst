@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { useToast } from '@/hooks/use-toast'
 import { useUser, useFirestore } from '@/firebase'
-import { doc, runTransaction as runFirestoreTransaction } from 'firebase/firestore'
+import { doc, runTransaction as runFirestoreTransaction, DocumentReference } from 'firebase/firestore'
 import { AddTransactionDialog } from '@/components/app/add-transaction-dialog'
 
 import type { Transaction, Category } from '@/lib/types'
@@ -89,48 +89,53 @@ export function TransactionList({ transactions, categories, accounts, totalIncom
 
     const handleDelete = async (transaction: Transaction) => {
         if (!user || !firestore) return;
-        
+
         try {
             await runFirestoreTransaction(firestore, async (tx) => {
                 const txRef = doc(firestore, 'users', user.uid, 'transactions', transaction.id);
                 const amount = transaction.amount;
-                
-                // This logic is complex because it has to reverse any kind of transaction.
+
                 if (transaction.type === 'loan_payment') {
-                    toast({ variant: 'destructive', title: 'Action Not Supported', description: 'Deleting EMI payments is not yet supported.' });
-                    throw new Error("EMI payment deletion not supported.");
+                    throw new Error("Deleting EMI payments is not yet supported to maintain loan integrity.");
                 }
 
-                if(transaction.fromBankAccountId) {
-                    const ref = doc(firestore, 'users', user.uid, 'bankAccounts', transaction.fromBankAccountId);
-                    const accDoc = await tx.get(ref);
-                    if(accDoc.exists()) tx.update(ref, { currentBalance: accDoc.data().currentBalance + amount });
+                // --- READ PHASE ---
+                const refsToRead: { key: string; ref: DocumentReference }[] = [];
+                if (transaction.fromBankAccountId) refsToRead.push({ key: 'fromBank', ref: doc(firestore, 'users', user.uid, 'bankAccounts', transaction.fromBankAccountId) });
+                if (transaction.toBankAccountId) refsToRead.push({ key: 'toBank', ref: doc(firestore, 'users', user.uid, 'bankAccounts', transaction.toBankAccountId) });
+                if (transaction.fromCreditCardId) refsToRead.push({ key: 'fromCard', ref: doc(firestore, 'users', user.uid, 'creditCards', transaction.fromCreditCardId) });
+                if (transaction.toCreditCardId) refsToRead.push({ key: 'toCard', ref: doc(firestore, 'users', user.uid, 'creditCards', transaction.toCreditCardId) });
+
+                const docs = await Promise.all(refsToRead.map(item => tx.get(item.ref)));
+                const docMap = refsToRead.reduce((acc, item, index) => {
+                    acc[item.key] = { ref: item.ref, doc: docs[index] };
+                    return acc;
+                }, {} as Record<string, { ref: DocumentReference; doc: any }>);
+
+                // --- WRITE PHASE ---
+                if (docMap.fromBank && docMap.fromBank.doc.exists()) {
+                    tx.update(docMap.fromBank.ref, { currentBalance: docMap.fromBank.doc.data().currentBalance + amount });
                 }
-                if(transaction.toBankAccountId) {
-                    const ref = doc(firestore, 'users', user.uid, 'bankAccounts', transaction.toBankAccountId);
-                    const accDoc = await tx.get(ref);
-                    if(accDoc.exists()) tx.update(ref, { currentBalance: accDoc.data().currentBalance - amount });
+                if (docMap.toBank && docMap.toBank.doc.exists()) {
+                    tx.update(docMap.toBank.ref, { currentBalance: docMap.toBank.doc.data().currentBalance - amount });
                 }
-                if(transaction.fromCreditCardId) {
-                    const ref = doc(firestore, 'users', user.uid, 'creditCards', transaction.fromCreditCardId);
-                    const cardDoc = await tx.get(ref);
-                    if(cardDoc.exists()) tx.update(ref, { currentBalance: cardDoc.data().currentBalance - amount });
+                if (docMap.fromCard && docMap.fromCard.doc.exists()) {
+                    tx.update(docMap.fromCard.ref, { currentBalance: docMap.fromCard.doc.data().currentBalance - amount });
                 }
-                if(transaction.toCreditCardId) {
-                    const ref = doc(firestore, 'users', user.uid, 'creditCards', transaction.toCreditCardId);
-                    const cardDoc = await tx.get(ref);
-                    if(cardDoc.exists()) tx.update(ref, { currentBalance: cardDoc.data().currentBalance + amount });
+                if (docMap.toCard && docMap.toCard.doc.exists()) {
+                    tx.update(docMap.toCard.ref, { currentBalance: docMap.toCard.doc.data().currentBalance + amount });
                 }
+
                 tx.delete(txRef);
             });
+
             toast({ title: "Transaction Deleted", description: "The transaction has been removed and account balances updated." });
         } catch(error: any) {
             console.error("Failed to delete transaction:", error);
-            if (error.message !== "EMI payment deletion not supported.") {
-              toast({ variant: 'destructive', title: 'Delete Failed', description: error.message });
-            }
+            toast({ variant: 'destructive', title: 'Delete Failed', description: error.message || 'Could not delete transaction.' });
         }
     }
+
 
     if (transactions.length === 0) {
         return (
