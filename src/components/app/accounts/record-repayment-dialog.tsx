@@ -5,7 +5,11 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Calendar } from '@/components/ui/calendar'
 import { format } from 'date-fns'
+import { CalendarIcon } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { useToast } from '@/hooks/use-toast'
 import { useFirestore, useUser } from '@/firebase'
 import { collection, doc, runTransaction } from 'firebase/firestore'
@@ -16,7 +20,7 @@ const formatCurrency = (amount: number) => new Intl.NumberFormat('en-IN', { styl
 export function RecordRepaymentDialog({ children, debt }: { children: React.ReactNode, debt: PersonalDebt }) {
   const [open, setOpen] = useState(false)
   const [amount, setAmount] = useState('')
-  const [repaymentDate, setRepaymentDate] = useState(format(new Date(), 'dd/MM/yyyy'))
+  const [repaymentDate, setRepaymentDate] = useState<Date | undefined>(new Date())
   const [notes, setNotes] = useState('')
   
   const { toast } = useToast()
@@ -27,20 +31,6 @@ export function RecordRepaymentDialog({ children, debt }: { children: React.Reac
     if (!user || !amount || !repaymentDate) {
         toast({ variant: 'destructive', title: 'Missing Fields', description: 'Please fill out all fields.' })
         return
-    }
-
-    let parsedDate: Date;
-    try {
-        const dateParts = repaymentDate.split('/');
-        if (dateParts.length !== 3) throw new Error();
-        const day = parseInt(dateParts[0], 10);
-        const month = parseInt(dateParts[1], 10) - 1;
-        const year = parseInt(dateParts[2].length === 2 ? `20${dateParts[2]}` : dateParts[2], 10);
-        parsedDate = new Date(year, month, day);
-        if (isNaN(parsedDate.getTime())) throw new Error();
-    } catch {
-        toast({ variant: 'destructive', title: 'Invalid Date', description: 'Please use DD/MM/YYYY format.' });
-        return;
     }
 
     const repaymentAmount = parseFloat(amount);
@@ -75,7 +65,7 @@ export function RecordRepaymentDialog({ children, debt }: { children: React.Reac
                 newBankBalance = currentBank.currentBalance + repaymentAmount;
                 transactionData = {
                     userId: user.uid, type: 'debt_repayment_in', amount: repaymentAmount,
-                    description: `Repayment from ${debt.personName}`, transactionDate: parsedDate.toISOString(),
+                    description: `Repayment from ${debt.personName}`, transactionDate: repaymentDate.toISOString(),
                     toBankAccountId: debt.linkedAccountId
                 };
             } else { // borrowed
@@ -83,7 +73,7 @@ export function RecordRepaymentDialog({ children, debt }: { children: React.Reac
                 if (newBankBalance < 0) throw new Error("Insufficient funds for repayment.");
                  transactionData = {
                     userId: user.uid, type: 'debt_repayment_out', amount: repaymentAmount,
-                    description: `Repayment to ${debt.personName}`, transactionDate: parsedDate.toISOString(),
+                    description: `Repayment to ${debt.personName}`, transactionDate: repaymentDate.toISOString(),
                     fromBankAccountId: debt.linkedAccountId
                 };
             }
@@ -97,7 +87,7 @@ export function RecordRepaymentDialog({ children, debt }: { children: React.Reac
             // Create repayment record
             const newRepayment: Omit<Repayment, 'id'> = {
                 debtId: debt.id, userId: user.uid, amount: repaymentAmount,
-                repaymentDate: parsedDate.toISOString(), notes: notes || ''
+                repaymentDate: repaymentDate.toISOString(), notes: notes || ''
             }
             transaction.set(repaymentRef, newRepayment);
 
@@ -132,12 +122,25 @@ export function RecordRepaymentDialog({ children, debt }: { children: React.Reac
           </div>
            <div className="space-y-2">
               <Label htmlFor="repayment-date">Repayment Date</Label>
-              <Input
-                id="repayment-date"
-                value={repaymentDate}
-                onChange={(e) => setRepaymentDate(e.target.value)}
-                placeholder="DD/MM/YYYY"
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                    <Button
+                        variant={"outline"}
+                        className={cn("w-full justify-start text-left font-normal", !repaymentDate && "text-muted-foreground")}
+                    >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {repaymentDate ? format(repaymentDate, "PPP") : <span>Pick a date</span>}
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                    <Calendar
+                        mode="single"
+                        selected={repaymentDate}
+                        onSelect={setRepaymentDate}
+                        initialFocus
+                    />
+                </PopoverContent>
+              </Popover>
            </div>
           <div className="space-y-2">
             <Label htmlFor="notes">Notes (Optional)</Label>

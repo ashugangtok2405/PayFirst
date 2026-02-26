@@ -24,6 +24,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Switch } from '@/components/ui/switch'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Calendar } from '@/components/ui/calendar'
 import {
   PlusCircle,
   ArrowDown,
@@ -31,8 +33,10 @@ import {
   ArrowRightLeft,
   CreditCard as CreditCardIcon,
   ChevronDown,
+  CalendarIcon,
 } from 'lucide-react'
 import { format, addDays, addWeeks, addMonths, addYears } from 'date-fns'
+import { cn } from '@/lib/utils'
 import { useToast } from '@/hooks/use-toast'
 import {
   useFirestore,
@@ -53,7 +57,7 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
   
   // Common state
   const [amount, setAmount] = useState('')
-  const [date, setDate] = useState(format(new Date(), 'dd/MM/yyyy'))
+  const [date, setDate] = useState<Date | undefined>(new Date())
   const [notes, setNotes] = useState('')
 
   // Tab-specific state
@@ -67,7 +71,7 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
   // Recurring state
   const [isRecurring, setIsRecurring] = useState(false)
   const [frequency, setFrequency] = useState<Frequency>('monthly')
-  const [endDate, setEndDate] = useState('')
+  const [endDate, setEndDate] = useState<Date | undefined>()
   const [autoCreate, setAutoCreate] = useState(true)
 
   const { toast } = useToast()
@@ -96,10 +100,10 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
     setFromAccountId('')
     setToAccountId('')
     setToCreditCardId('')
-    setDate(format(new Date(), 'dd/MM/yyyy'))
+    setDate(new Date())
     setIsRecurring(false)
     setFrequency('monthly')
-    setEndDate('')
+    setEndDate(undefined)
     setAutoCreate(true)
   }, [])
   
@@ -132,35 +136,8 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
       return
     }
     
-    let parsedDate: Date;
-    try {
-        const dateParts = date.split('/');
-        if (dateParts.length !== 3) throw new Error();
-        const day = parseInt(dateParts[0], 10);
-        const month = parseInt(dateParts[1], 10) - 1;
-        const year = parseInt(dateParts[2].length === 2 ? `20${dateParts[2]}` : dateParts[2], 10);
-        parsedDate = new Date(year, month, day);
-        if (isNaN(parsedDate.getTime())) throw new Error();
-    } catch {
-        toast({ variant: 'destructive', title: 'Invalid Date', description: 'Please use DD/MM/YYYY format.' });
-        return;
-    }
-
-    let parsedEndDate: Date | undefined = undefined;
-    if (isRecurring && endDate) {
-        try {
-            const dateParts = endDate.split('/');
-            if (dateParts.length !== 3) throw new Error();
-            const day = parseInt(dateParts[0], 10);
-            const month = parseInt(dateParts[1], 10) - 1;
-            const year = parseInt(dateParts[2].length === 2 ? `20${dateParts[2]}` : dateParts[2], 10);
-            parsedEndDate = new Date(year, month, day);
-            if (isNaN(parsedEndDate.getTime())) throw new Error();
-        } catch {
-            toast({ variant: 'destructive', title: 'Invalid End Date', description: 'Please use DD/MM/YYYY format for end date.' });
-            return;
-        }
-    }
+    const parsedDate = date;
+    const parsedEndDate = endDate;
 
     const newTransactionRef = doc(collection(firestore, 'users', user.uid, 'transactions'));
     const numericAmount = parseFloat(amount);
@@ -411,12 +388,25 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
 
         <div className="space-y-2">
           <Label htmlFor="date">Date</Label>
-            <Input
-                id="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                placeholder="DD/MM/YYYY"
-            />
+            <Popover>
+                <PopoverTrigger asChild>
+                    <Button
+                        variant={"outline"}
+                        className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}
+                    >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {date ? format(date, "PPP") : <span>Pick a date</span>}
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                    <Calendar
+                        mode="single"
+                        selected={date}
+                        onSelect={setDate}
+                        initialFocus
+                    />
+                </PopoverContent>
+            </Popover>
         </div>
          <div className="space-y-2">
               <Label htmlFor="notes">Notes (Optional)</Label>
@@ -447,12 +437,24 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="end-date">End Date (Optional)</Label>
-                            <Input
-                                id="end-date"
-                                value={endDate}
-                                onChange={(e) => setEndDate(e.target.value)}
-                                placeholder="DD/MM/YYYY"
-                            />
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        variant={"outline"}
+                                        className={cn("w-full justify-start text-left font-normal", !endDate && "text-muted-foreground")}
+                                    >
+                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                        {endDate ? format(endDate, "PPP") : <span>Pick an end date</span>}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0">
+                                    <Calendar
+                                        mode="single"
+                                        selected={endDate}
+                                        onSelect={setEndDate}
+                                    />
+                                </PopoverContent>
+                            </Popover>
                         </div>
                     </div>
                      <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
