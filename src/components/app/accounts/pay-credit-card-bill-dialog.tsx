@@ -78,7 +78,7 @@ export function PayCreditCardBillDialog({ children, card }: { children: React.Re
             amount: paymentAmount,
             description: `Payment for ${card.name}`,
             transactionDate: new Date().toISOString(),
-            fromBankAccountId,
+            fromBankAccountId: fromAccountId,
             toCreditCardId: card.id,
         })
       })
