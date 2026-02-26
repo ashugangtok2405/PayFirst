@@ -32,6 +32,7 @@ import { AddAccountDialog } from './add-account-dialog'
 import { PayCreditCardBillDialog } from './pay-credit-card-bill-dialog'
 import { ViewStatementDialog } from './view-statement-dialog'
 import { SetReminderDialog } from './set-reminder-dialog'
+import { AddTransactionDialog } from '../add-transaction-dialog'
 
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('en-IN', {
