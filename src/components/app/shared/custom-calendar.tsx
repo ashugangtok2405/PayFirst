@@ -49,7 +49,7 @@ export function CustomCalendar({ selectedDate, onSelectDate, disabled }: CustomC
   }
 
   return (
-    <div className="p-1">
+    <div className="p-1 inline-block">
       <div className="flex items-center justify-between mb-4">
         <Button
           variant="ghost"
