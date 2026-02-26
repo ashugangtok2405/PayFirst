@@ -30,8 +30,8 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { useToast } from '@/hooks/use-toast'
-import { useFirestore, useUser, useCollection, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase'
-import { collection, doc, query, orderBy } from 'firebase/firestore'
+import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase'
+import { collection, doc, query, orderBy, deleteDoc } from 'firebase/firestore'
 import type { BankAccount, Transaction } from '@/lib/types'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AddTransactionDialog } from '../add-transaction-dialog'
@@ -71,7 +71,7 @@ export function BankAccounts() {
   }, [bankAccounts]);
 
 
-  const handleDelete = (accountId: string, accountName: string) => {
+  const handleDelete = async (accountId: string, accountName: string) => {
     if (!user) return;
     
     const hasTransactions = transactions?.some(t => t.fromBankAccountId === accountId || t.toBankAccountId === accountId);
@@ -84,12 +84,21 @@ export function BankAccounts() {
       return;
     }
     
-    const docRef = doc(firestore, 'users', user.uid, 'bankAccounts', accountId)
-    deleteDocumentNonBlocking(docRef);
-    toast({
-      title: 'Bank Account Deleted',
-      description: `${accountName} has been removed from your accounts.`,
-    })
+    try {
+      const docRef = doc(firestore, 'users', user.uid, 'bankAccounts', accountId)
+      await deleteDoc(docRef);
+      toast({
+        title: 'Bank Account Deleted',
+        description: `${accountName} has been removed from your accounts.`,
+      })
+    } catch (error: any) {
+      console.error("Failed to delete bank account:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Deletion Failed',
+        description: error.message || 'Could not delete bank account.',
+      })
+    }
   }
   
   const isLoading = loadingBankAccounts || loadingTransactions;

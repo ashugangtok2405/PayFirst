@@ -24,8 +24,8 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { useToast } from '@/hooks/use-toast'
-import { useFirestore, useUser, useCollection, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase'
-import { collection, doc } from 'firebase/firestore'
+import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase'
+import { collection, doc, deleteDoc } from 'firebase/firestore'
 import type { CreditCard as CreditCardType } from '@/lib/types'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AddAccountDialog } from './add-account-dialog'
@@ -64,14 +64,23 @@ export function CreditCardManagement() {
     return { totalLimit, totalOutstanding, overallUtilization };
   }, [creditCards]);
 
-  const handleDelete = (cardId: string, cardName: string) => {
+  const handleDelete = async (cardId: string, cardName: string) => {
     if (!user) return;
-    const docRef = doc(firestore, 'users', user.uid, 'creditCards', cardId)
-    deleteDocumentNonBlocking(docRef);
-    toast({
-      title: 'Credit Card Deleted',
-      description: `${cardName} has been removed from your accounts.`,
-    })
+    try {
+      const docRef = doc(firestore, 'users', user.uid, 'creditCards', cardId)
+      await deleteDoc(docRef);
+      toast({
+        title: 'Credit Card Deleted',
+        description: `${cardName} has been removed from your accounts.`,
+      })
+    } catch (error: any) {
+      console.error("Failed to delete credit card:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Deletion Failed',
+        description: error.message || 'Could not delete credit card.',
+      })
+    }
   }
 
   return (

@@ -8,8 +8,8 @@ import { MoreHorizontal, Edit, Trash2, ArrowUpRight, ArrowDownLeft, HandCoins, P
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { useToast } from '@/hooks/use-toast'
-import { useFirestore, useUser, useCollection, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase'
-import { collection, doc } from 'firebase/firestore'
+import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase'
+import { collection, doc, deleteDoc } from 'firebase/firestore'
 import type { PersonalDebt } from '@/lib/types'
 import { Skeleton } from '@/components/ui/skeleton'
 import { RecordRepaymentDialog } from './record-repayment-dialog'
@@ -23,7 +23,7 @@ export function PersonalDebtManagement() {
   const { user } = useUser()
 
   const personalDebtsQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'personalDebts') : null, [firestore, user?.uid])
-  const { data: allDebts, isLoading } = useCollection<PersonalDebt>(personalDebtsQuery)
+  const { data: allDebts, isLoading } = useCollection<PersonalDebt>(allDebtsQuery)
 
   const debts = useMemo(() => allDebts?.filter(d => d.status === 'active') ?? [], [allDebts])
   const debtsLent = useMemo(() => debts.filter(d => d.type === 'lent'), [debts])
@@ -32,15 +32,25 @@ export function PersonalDebtManagement() {
   const totalLent = useMemo(() => debtsLent.reduce((sum, debt) => sum + debt.remainingAmount, 0), [debtsLent])
   const totalBorrowed = useMemo(() => debtsBorrowed.reduce((sum, debt) => sum + debt.remainingAmount, 0), [debtsBorrowed])
 
-  const handleDelete = (debt: PersonalDebt) => {
+  const handleDelete = async (debt: PersonalDebt) => {
     if (!user) return;
     if (debt.remainingAmount < debt.originalAmount) {
       toast({ variant: 'destructive', title: 'Deletion Failed', description: 'Cannot delete a debt with existing repayments.' });
       return;
     }
-    const docRef = doc(firestore, 'users', user.uid, 'personalDebts', debt.id)
-    deleteDocumentNonBlocking(docRef);
-    toast({ title: 'Debt Record Deleted', description: `Record with ${debt.personName} has been removed.` })
+    
+    try {
+      const docRef = doc(firestore, 'users', user.uid, 'personalDebts', debt.id)
+      await deleteDoc(docRef);
+      toast({ title: 'Debt Record Deleted', description: `Record with ${debt.personName} has been removed.` })
+    } catch (error: any) {
+      console.error("Failed to delete debt record:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Deletion Failed',
+        description: error.message || 'Could not delete debt record.',
+      })
+    }
   }
   
   const DebtCard = ({ debt }: { debt: PersonalDebt }) => {

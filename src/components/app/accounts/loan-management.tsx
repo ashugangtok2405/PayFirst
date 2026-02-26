@@ -24,8 +24,8 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { useToast } from '@/hooks/use-toast'
-import { useFirestore, useUser, useCollection, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase'
-import { collection, doc } from 'firebase/firestore'
+import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase'
+import { collection, doc, deleteDoc } from 'firebase/firestore'
 import type { Loan } from '@/lib/types'
 import { Skeleton } from '@/components/ui/skeleton'
 import { PayEmiDialog } from './pay-emi-dialog'
@@ -59,14 +59,23 @@ export function LoanManagement() {
     return { totalLoanOutstanding, totalMonthlyEMI }
   }, [loans])
 
-  const handleDelete = (loanId: string, loanName: string) => {
+  const handleDelete = async (loanId: string, loanName: string) => {
     if (!user) return;
-    const docRef = doc(firestore, 'users', user.uid, 'loans', loanId)
-    deleteDocumentNonBlocking(docRef);
-    toast({
-      title: 'Loan Deleted',
-      description: `${loanName} has been removed from your accounts.`,
-    })
+    try {
+      const docRef = doc(firestore, 'users', user.uid, 'loans', loanId)
+      await deleteDoc(docRef);
+      toast({
+        title: 'Loan Deleted',
+        description: `${loanName} has been removed from your accounts.`,
+      })
+    } catch (error: any) {
+      console.error("Failed to delete loan:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Deletion Failed',
+        description: error.message || 'Could not delete loan.',
+      })
+    }
   }
 
   return (
