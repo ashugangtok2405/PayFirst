@@ -28,8 +28,10 @@ import { useFirestore, useUser, useCollection, useMemoFirebase, deleteDocumentNo
 import { collection, doc } from 'firebase/firestore'
 import type { CreditCard as CreditCardType } from '@/lib/types'
 import { Skeleton } from '@/components/ui/skeleton'
-import { AddTransactionDialog } from '../add-transaction-dialog'
 import { AddAccountDialog } from './add-account-dialog'
+import { PayCreditCardBillDialog } from './pay-credit-card-bill-dialog'
+import { ViewStatementDialog } from './view-statement-dialog'
+import { SetReminderDialog } from './set-reminder-dialog'
 
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('en-IN', {
@@ -97,7 +99,7 @@ export function CreditCardManagement() {
             </div>
         ) : creditCards && creditCards.length > 0 ? (
           creditCards.map((card) => {
-            const utilization = (card.currentBalance / card.creditLimit) * 100
+            const utilization = card.creditLimit > 0 ? (card.currentBalance / card.creditLimit) * 100 : 0
             const utilizationColor =
               utilization > 75
                 ? 'bg-red-500'
@@ -190,20 +192,26 @@ export function CreditCardManagement() {
                 </div>
 
                 <div className="mt-6 flex flex-wrap items-center gap-2">
-                  <Button size="sm">
-                    <CreditCardIcon className="mr-2 h-4 w-4" /> Pay Bill
-                  </Button>
+                  <PayCreditCardBillDialog card={card}>
+                    <Button size="sm" disabled={card.currentBalance <= 0}>
+                      <CreditCardIcon className="mr-2 h-4 w-4" /> Pay Bill
+                    </Button>
+                  </PayCreditCardBillDialog>
                   <AddTransactionDialog>
                     <Button size="sm" variant="outline">
                       <PlusCircle className="mr-2 h-4 w-4" /> Add Expense
                     </Button>
                   </AddTransactionDialog>
-                  <Button size="sm" variant="ghost">
-                    <FileText className="mr-2 h-4 w-4" /> View Statement
-                  </Button>
-                  <Button size="sm" variant="ghost">
-                    <Bell className="mr-2 h-4 w-4" /> Set Reminder
-                  </Button>
+                   <ViewStatementDialog card={card}>
+                    <Button size="sm" variant="ghost">
+                      <FileText className="mr-2 h-4 w-4" /> View Statement
+                    </Button>
+                  </ViewStatementDialog>
+                  <SetReminderDialog card={card}>
+                    <Button size="sm" variant="ghost">
+                      <Bell className="mr-2 h-4 w-4" /> Set Reminder
+                    </Button>
+                  </SetReminderDialog>
                 </div>
               </Card>
             )
@@ -218,5 +226,3 @@ export function CreditCardManagement() {
     </Card>
   )
 }
-
-    
