@@ -401,7 +401,7 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
                         {date ? format(date, "PPP") : <span>Pick a date</span>}
                     </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
+                <PopoverContent className="w-auto p-0 z-[100]">
                     <CustomCalendar
                         selectedDate={date}
                         onSelectDate={(newDate) => {
@@ -451,7 +451,7 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
                                         {endDate ? format(endDate, "PPP") : <span>Pick an end date</span>}
                                     </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0">
+                                <PopoverContent className="w-auto p-0 z-[100]">
                                     <CustomCalendar
                                         selectedDate={endDate}
                                         onSelectDate={(newEndDate) => {
