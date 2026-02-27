@@ -15,6 +15,7 @@ import { Logo } from '@/components/app/logo'
 import { useAuth, initiatePasswordReset } from '@/firebase'
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form'
 import { useToast } from '@/hooks/use-toast'
+import { PlaceHolderImages } from '@/lib/placeholder-images'
 
 const forgotPasswordSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address.' }),
@@ -27,6 +28,8 @@ export default function ForgotPasswordPage() {
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [emailSent, setEmailSent] = useState(false)
+
+  const authBg = PlaceHolderImages.find(p => p.id === 'auth-background');
 
   const form = useForm<ForgotPasswordFormValues>({
     resolver: zodResolver(forgotPasswordSchema),
@@ -60,7 +63,16 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative auth-bg-gradient">
+    <div className="min-h-screen flex items-center justify-center p-4 relative">
+      {authBg && (
+        <Image
+          src={authBg.imageUrl}
+          alt={authBg.description}
+          data-ai-hint={authBg.imageHint}
+          fill
+          className="object-cover z-0"
+        />
+      )}
       <Card className="relative w-full max-w-lg rounded-3xl bg-white/10 backdrop-blur-xl border-2 border-white/20 shadow-[0_0_60px_rgba(59,130,246,0.6)]">
         <CardContent className="p-8 sm:p-12 space-y-8">
             <div className="flex justify-center">
