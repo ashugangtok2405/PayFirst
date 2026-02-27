@@ -16,7 +16,7 @@ import { Logo } from '@/components/app/logo'
 import { useAuth, useUser, initiateEmailSignUp, initiateGoogleSignIn } from '@/firebase'
 import { Form, FormControl, FormField, FormMessage, FormItem } from '@/components/ui/form'
 import { useToast } from '@/hooks/use-toast'
-import { PlaceHolderImages } from '@/lib/placeholder-images'
+import loginBackground from '@/images/loginbackground.png'
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="24px" height="24px" {...props}>
@@ -48,8 +48,6 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const authBg = PlaceHolderImages.find(p => p.id === 'auth-background');
 
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
@@ -121,15 +119,13 @@ export default function SignupPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative">
-      {authBg && (
-        <Image
-          src={authBg.imageUrl}
-          alt={authBg.description}
-          data-ai-hint={authBg.imageHint}
-          fill
-          className="object-cover z-0"
-        />
-      )}
+      <Image
+        src={loginBackground}
+        alt="Background"
+        fill
+        className="object-cover z-0"
+        priority
+      />
       <Card className="relative w-full max-w-lg rounded-3xl bg-white/10 backdrop-blur-xl border-2 border-white/20 shadow-[0_0_60px_rgba(59,130,246,0.6)]">
         <CardContent className="p-8 sm:p-12 space-y-8">
           <div className="flex justify-center">
