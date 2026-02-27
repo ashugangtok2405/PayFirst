@@ -61,7 +61,7 @@ export function TransactionFilters({
                                     <Button variant="ghost" size="sm" onClick={() => handleDatePreset('last-month')}>Last Month</Button>
                                     <Button variant="ghost" size="sm" onClick={() => handleDatePreset('this-week')}>This Week</Button>
                                 </div>
-                                <Calendar mode="range" selected={{ from: dateRange.from, to: dateRange.to }} onSelect={(range) => range?.from && range.to && setDateRange({ from: range.from, to: range.to })} numberOfMonths={2} />
+                                <Calendar mode="range" selected={{ from: dateRange.from, to: dateRange.to }} onSelect={(range) => range?.from && range.to && setDateRange({ from: range.from, to: range.to })} />
                             </PopoverContent>
                         </Popover>
                         <Select value={typeFilter} onValueChange={setTypeFilter}>
