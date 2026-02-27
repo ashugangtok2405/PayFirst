@@ -13,6 +13,7 @@ import { TransactionFilters } from '@/components/app/transactions/transaction-fi
 import { TransactionList } from '@/components/app/transactions/transaction-list'
 import { SmartInsights } from '@/components/app/transactions/smart-insights'
 import { Skeleton } from '@/components/ui/skeleton'
+import { FilteredSummary } from '@/components/app/transactions/filtered-summary'
 
 export default function TransactionsPage() {
   const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
@@ -23,6 +24,11 @@ export default function TransactionsPage() {
   const [accountFilter, setAccountFilter] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
   const searchParams = useSearchParams()
+
+  const isFiltered = useMemo(() => {
+    return typeFilter !== 'all' || accountFilter !== 'all' || searchTerm !== ''
+  }, [typeFilter, accountFilter, searchTerm]);
+
 
   useEffect(() => {
     const startDateParam = searchParams.get('startDate')
@@ -174,6 +180,13 @@ export default function TransactionsPage() {
             dateRange={dateRange}
             setDateRange={setDateRange}
           />
+          {isFiltered && (
+            <FilteredSummary
+              transactions={filteredTransactions.filter(t => t.type === 'expense')}
+              searchTerm={searchTerm}
+              dateRange={dateRange}
+            />
+          )}
           <TransactionList 
             transactions={filteredTransactions}
             categories={categories ?? []}
