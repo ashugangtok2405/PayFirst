@@ -87,3 +87,9 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+@layer components {
+  .auth-bg-gradient {
+    @apply bg-gradient-to-br from-slate-900 via-blue-900/50 to-slate-900;
+  }
+}

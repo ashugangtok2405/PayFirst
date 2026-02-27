@@ -60,7 +60,7 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative bg-gradient-to-br from-slate-900 via-blue-900/50 to-slate-900">
+    <div className="min-h-screen flex items-center justify-center p-4 relative auth-bg-gradient">
       <Card className="relative w-full max-w-lg rounded-3xl bg-white/10 backdrop-blur-xl border-2 border-white/20 shadow-[0_0_60px_rgba(59,130,246,0.6)]">
         <CardContent className="p-8 sm:p-12 space-y-8">
             <div className="flex justify-center">
