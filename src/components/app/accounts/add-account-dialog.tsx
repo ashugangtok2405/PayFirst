@@ -23,7 +23,6 @@ import { useToast } from '@/hooks/use-toast'
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase'
 import { collection, addDoc, doc, runTransaction, updateDoc } from 'firebase/firestore'
 import type { BankAccount, CreditCard as CreditCardType, Loan, PersonalDebt, Transaction } from '@/lib/types'
-import { DatePicker } from '@/components/app/shared/date-picker'
 import { startOfToday } from 'date-fns'
 
 type AccountData = BankAccount | CreditCardType | Loan | PersonalDebt;
@@ -37,7 +36,7 @@ interface AddAccountDialogProps {
 
 const emptyState = {
   bankAccountName: '', bankName: '', openingBalance: '', bankAccountType: 'current' as BankAccount['type'], bankAccountNotes: '',
-  cardName: '', cardIssuer: '', creditLimit: '', cardCurrentBalance: '', apr: '', cardDueDate: undefined as Date | undefined,
+  cardName: '', cardIssuer: '', creditLimit: '', cardCurrentBalance: '', apr: '', cardDueDate: '',
   loanName: '', loanOriginalAmount: '', loanOutstanding: '', loanInterestRate: '', loanEmiAmount: '', loanTenure: '', loanNextDueDay: '',
   debtPersonName: '', debtType: 'lent', debtAmount: '', debtLinkedAccountId: '', debtDueDate: '', debtInterestRate: '',
 }
@@ -76,7 +75,7 @@ export function AddAccountDialog({ children, mode = 'add', account, accountType:
               newState.creditLimit = data.creditLimit.toString();
               newState.cardCurrentBalance = data.currentBalance.toString();
               newState.apr = data.apr.toString();
-              newState.cardDueDate = data.statementDueDate ? new Date(data.statementDueDate) : undefined;
+              newState.cardDueDate = data.statementDueDate ? new Date(data.statementDueDate).toISOString().substring(0, 10) : '';
               break;
             case 'loan':
               newState.loanName = data.name;
@@ -141,7 +140,7 @@ export function AddAccountDialog({ children, mode = 'add', account, accountType:
             if (!formState.cardDueDate) {
               throw new Error('Payment due date is required.');
             }
-            const dueDate = new Date(formState.cardDueDate);
+            const dueDate = new Date(formState.cardDueDate + 'T00:00:00');
             if (dueDate < startOfToday()) {
                 throw new Error("Due date cannot be in the past.");
             }
@@ -285,10 +284,12 @@ export function AddAccountDialog({ children, mode = 'add', account, accountType:
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="cc-due-date">Payment Due Date</Label>
-                        <DatePicker
-                          date={formState.cardDueDate}
-                          setDate={(date) => handleInputChange('cardDueDate', date)}
-                          disabled={(date) => date < startOfToday()}
+                        <Input
+                          id="cc-due-date"
+                          type="date"
+                          value={formState.cardDueDate}
+                          onChange={e => handleInputChange('cardDueDate', e.target.value)}
+                          min={startOfToday().toISOString().substring(0, 10)}
                         />
                       </div>
                       <div className="space-y-2"><Label htmlFor="cc-apr">Interest Rate (APR %)</Label><Input id="cc-apr" type="number" placeholder="e.g. 14.99" value={formState.apr} onChange={e => handleInputChange('apr', e.target.value)} /></div>
