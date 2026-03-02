@@ -33,6 +33,9 @@ import { PayCreditCardBillDialog } from './pay-credit-card-bill-dialog'
 import { ViewStatementDialog } from './view-statement-dialog'
 import { SetReminderDialog } from './set-reminder-dialog'
 import { AddTransactionDialog } from '../add-transaction-dialog'
+import { format, differenceInDays, parseISO, startOfToday } from 'date-fns'
+import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
 
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('en-IN', {
@@ -117,6 +120,11 @@ export function CreditCardManagement() {
                 ? 'bg-yellow-500'
                 : 'bg-green-500'
 
+            const dueDate = parseISO(card.statementDueDate)
+            const daysUntilDue = differenceInDays(dueDate, startOfToday())
+            const isOverdue = daysUntilDue < 0 && card.currentBalance > 0
+            const isDueSoon = daysUntilDue >= 0 && daysUntilDue <= 3
+
             return (
               <Card key={card.id} className="p-6 rounded-xl">
                 <div className="flex justify-between items-start">
@@ -186,18 +194,22 @@ export function CreditCardManagement() {
                   />
                 </div>
 
-                <div className="mt-6 grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Billing Date</p>
-                    <p className="font-medium">N/A</p> 
-                  </div>
+                <div className="mt-6 grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="text-xs text-muted-foreground">Due Date</p>
-                    <p className="font-medium">{new Date(card.statementDueDate).toLocaleDateString()}</p>
+                    <p className="font-medium">{format(dueDate, 'MMM dd, yyyy')}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Minimum Due</p>
-                    <p className="font-medium">{formatCurrency(card.currentBalance * 0.05)}</p>
+                    <p className="text-xs text-muted-foreground">Status</p>
+                    <div className="flex items-center">
+                      {isOverdue ? (
+                        <Badge variant="destructive">Overdue</Badge>
+                      ) : (
+                        <Badge variant="outline" className={cn('font-normal', isDueSoon && 'text-orange-600 border-orange-500')}>
+                          {daysUntilDue} day{daysUntilDue !== 1 ? 's' : ''} left
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 </div>
 

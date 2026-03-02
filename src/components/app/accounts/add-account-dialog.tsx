@@ -23,6 +23,8 @@ import { useToast } from '@/hooks/use-toast'
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase'
 import { collection, addDoc, doc, runTransaction, updateDoc } from 'firebase/firestore'
 import type { BankAccount, CreditCard as CreditCardType, Loan, PersonalDebt, Transaction } from '@/lib/types'
+import { DatePicker } from '@/components/app/shared/date-picker'
+import { startOfToday } from 'date-fns'
 
 type AccountData = BankAccount | CreditCardType | Loan | PersonalDebt;
 
@@ -46,7 +48,7 @@ export function AddAccountDialog({ children, mode = 'add', account, accountType:
 
   const emptyState = {
     bankAccountName: '', bankName: '', openingBalance: '', bankAccountType: 'current' as BankAccount['type'], bankAccountNotes: '',
-    cardName: '', cardIssuer: '', creditLimit: '', cardCurrentBalance: '', apr: '', statementDay: '',
+    cardName: '', cardIssuer: '', creditLimit: '', cardCurrentBalance: '', apr: '', cardDueDate: undefined as Date | undefined,
     loanName: '', loanOriginalAmount: '', loanOutstanding: '', loanInterestRate: '', loanEmiAmount: '', loanTenure: '', loanNextDueDay: '',
     debtPersonName: '', debtType: 'lent', debtAmount: '', debtLinkedAccountId: '', debtDueDate: '', debtInterestRate: '',
   }
@@ -73,7 +75,7 @@ export function AddAccountDialog({ children, mode = 'add', account, accountType:
             newState.creditLimit = data.creditLimit.toString();
             newState.cardCurrentBalance = data.currentBalance.toString();
             newState.apr = data.apr.toString();
-            newState.statementDay = new Date(data.statementDueDate).getDate().toString();
+            newState.cardDueDate = data.statementDueDate ? new Date(data.statementDueDate) : undefined;
             break;
           case 'loan':
             newState.loanName = data.name;
@@ -131,12 +133,19 @@ export function AddAccountDialog({ children, mode = 'add', account, accountType:
                 await updateDoc(docRef, bankAccountData);
             }
         } else if (accountType === 'credit') {
-            const dueDate = new Date();
-            if (formState.statementDay) dueDate.setDate(parseInt(formState.statementDay, 10));
+            if (!formState.cardDueDate) {
+              throw new Error('Payment due date is required.');
+            }
+            const dueDate = new Date(formState.cardDueDate);
+            if (dueDate < startOfToday()) {
+                throw new Error("Due date cannot be in the past.");
+            }
+
             const creditCardData: Partial<CreditCardType> = {
                 userId: user.uid, name: formState.cardName, issuer: formState.cardIssuer,
                 creditLimit: parseFloat(formState.creditLimit) || 0, currentBalance: parseFloat(formState.cardCurrentBalance) || 0,
-                apr: parseFloat(formState.apr) || 0, statementDueDate: dueDate.toISOString(),
+                apr: parseFloat(formState.apr) || 0, 
+                statementDueDate: dueDate.toISOString(),
                 updatedAt: now,
             }
             if(mode === 'add') {
@@ -219,8 +228,6 @@ export function AddAccountDialog({ children, mode = 'add', account, accountType:
     }
   }
 
-  const days = Array.from({ length: 31 }, (_, i) => i + 1)
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -270,13 +277,23 @@ export function AddAccountDialog({ children, mode = 'add', account, accountType:
                 <TabsContent value="credit" className="py-4 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div className="space-y-2"><Label htmlFor="cc-name">Card Name</Label><Input id="cc-name" placeholder="e.g. Amazon Pay ICICI" value={formState.cardName} onChange={e => handleInputChange('cardName', e.target.value)} /></div><div className="space-y-2"><Label htmlFor="cc-bank-name">Bank Name</Label><Input id="cc-bank-name" placeholder="e.g. ICICI Bank" value={formState.cardIssuer} onChange={e => handleInputChange('cardIssuer', e.target.value)} /></div></div>
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div className="space-y-2"><Label htmlFor="cc-limit">Credit Limit</Label><div className="relative"><span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">₹</span><Input id="cc-limit" type="number" placeholder="1,00,000" className="pl-7" value={formState.creditLimit} onChange={e => handleInputChange('creditLimit', e.target.value)} /></div></div><div className="space-y-2"><Label htmlFor="cc-outstanding">Current Outstanding</Label><div className="relative"><span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">₹</span><Input id="cc-outstanding" type="number" placeholder="0.00" className="pl-7" value={formState.cardCurrentBalance} onChange={e => handleInputChange('cardCurrentBalance', e.target.value)} /></div></div></div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div className="space-y-2"><Label htmlFor="cc-billing-date">Statement Date</Label><Select value={formState.statementDay} onValueChange={(v) => handleInputChange('statementDay', v)}><SelectTrigger id="cc-billing-date"><SelectValue placeholder="Select day of month" /></SelectTrigger><SelectContent>{days.map(day => <SelectItem key={day} value={day.toString()}>{day}</SelectItem>)}</SelectContent></Select></div><div className="space-y-2"><Label htmlFor="cc-apr">Interest Rate (APR %)</Label><Input id="cc-apr" type="number" placeholder="e.g. 14.99" value={formState.apr} onChange={e => handleInputChange('apr', e.target.value)} /></div></div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="cc-due-date">Payment Due Date</Label>
+                        <DatePicker
+                          date={formState.cardDueDate}
+                          setDate={(date) => handleInputChange('cardDueDate', date)}
+                          disabled={(date) => date < startOfToday()}
+                        />
+                      </div>
+                      <div className="space-y-2"><Label htmlFor="cc-apr">Interest Rate (APR %)</Label><Input id="cc-apr" type="number" placeholder="e.g. 14.99" value={formState.apr} onChange={e => handleInputChange('apr', e.target.value)} /></div>
+                    </div>
                      <Collapsible><CollapsibleTrigger className="flex items-center gap-2 text-sm font-semibold text-primary"><ChevronDown className="h-4 w-4" /> Advanced Settings</CollapsibleTrigger><CollapsibleContent className="mt-4 space-y-4 animate-in fade-in-0 slide-in-from-top-2"><div className="p-4 border rounded-lg space-y-4"><div className="flex items-center justify-between"><Label htmlFor="cc-net-worth" className="flex flex-col gap-0.5"><span>Include in Net Worth</span><span className="font-normal text-xs text-muted-foreground">This card's balance will be counted as a liability.</span></Label><Switch id="cc-net-worth" defaultChecked /></div></div></CollapsibleContent></Collapsible>
                 </TabsContent>
                 <TabsContent value="loan" className="py-4 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div className="space-y-2"><Label htmlFor="loan-name">Loan Name</Label><Input id="loan-name" placeholder="e.g. Home Loan" value={formState.loanName} onChange={e => handleInputChange('loanName', e.target.value)} /></div><div className="space-y-2"><Label htmlFor="loan-amount">Original Loan Amount</Label><div className="relative"><span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">₹</span><Input id="loan-amount" type="number" placeholder="e.g. 50,00,000" className="pl-7" value={formState.loanOriginalAmount} onChange={e => handleInputChange('loanOriginalAmount', e.target.value)} disabled={mode === 'edit'} /></div></div></div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div className="space-y-2"><Label htmlFor="loan-outstanding">Current Outstanding Principal</Label><div className="relative"><span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">₹</span><Input id="loan-outstanding" type="number" placeholder="If different from original amount" className="pl-7" value={formState.loanOutstanding} onChange={e => handleInputChange('loanOutstanding', e.target.value)} /></div></div><div className="space-y-2"><Label htmlFor="loan-emi">EMI Amount</Label><div className="relative"><span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">₹</span><Input id="loan-emi" type="number" placeholder="e.g. 45,000" className="pl-7" value={formState.loanEmiAmount} onChange={e => handleInputChange('loanEmiAmount', e.target.value)} /></div></div></div>
-                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4"><div className="space-y-2"><Label htmlFor="loan-interest-rate">Interest Rate (p.a. %)</Label><Input id="loan-interest-rate" type="number" placeholder="e.g. 8.5" value={formState.loanInterestRate} onChange={e => handleInputChange('loanInterestRate', e.target.value)} /></div><div className="space-y-2"><Label htmlFor="loan-tenure">Tenure (in months)</Label><Input id="loan-tenure" type="number" placeholder="e.g. 240" value={formState.loanTenure} onChange={e => handleInputChange('loanTenure', e.target.value)} disabled={mode === 'edit'}/></div><div className="space-y-2"><Label htmlFor="loan-due-day">Next Due Day</Label><Select value={formState.loanNextDueDay} onValueChange={(v) => handleInputChange('loanNextDueDay', v)}><SelectTrigger id="loan-due-day"><SelectValue placeholder="Select day of month" /></SelectTrigger><SelectContent>{days.map(day => <SelectItem key={day} value={day.toString()}>{day}</SelectItem>)}</SelectContent></Select></div></div>
+                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4"><div className="space-y-2"><Label htmlFor="loan-interest-rate">Interest Rate (p.a. %)</Label><Input id="loan-interest-rate" type="number" placeholder="e.g. 8.5" value={formState.loanInterestRate} onChange={e => handleInputChange('loanInterestRate', e.target.value)} /></div><div className="space-y-2"><Label htmlFor="loan-tenure">Tenure (in months)</Label><Input id="loan-tenure" type="number" placeholder="e.g. 240" value={formState.loanTenure} onChange={e => handleInputChange('loanTenure', e.target.value)} disabled={mode === 'edit'}/></div><div className="space-y-2"><Label htmlFor="loan-due-day">Next Due Day</Label><Select value={formState.loanNextDueDay} onValueChange={(v) => handleInputChange('loanNextDueDay', v)}><SelectTrigger id="loan-due-day"><SelectValue placeholder="Select day of month" /></SelectTrigger><SelectContent>{Array.from({ length: 31 }, (_, i) => i + 1).map(day => <SelectItem key={day} value={day.toString()}>{day}</SelectItem>)}</SelectContent></Select></div></div>
                 </TabsContent>
                 <TabsContent value="personal_debt" className="py-4 space-y-6">
                     <div className="space-y-2"><Label htmlFor="debt-person">Person's Name</Label><Input id="debt-person" placeholder="e.g. John Doe" value={formState.debtPersonName} onChange={e => handleInputChange('debtPersonName', e.target.value)} /></div>
