@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -35,6 +35,12 @@ interface AddAccountDialogProps {
   accountType: 'bank' | 'credit' | 'loan' | 'personal_debt';
 }
 
+const emptyState = {
+  bankAccountName: '', bankName: '', openingBalance: '', bankAccountType: 'current' as BankAccount['type'], bankAccountNotes: '',
+  cardName: '', cardIssuer: '', creditLimit: '', cardCurrentBalance: '', apr: '', cardDueDate: undefined as Date | undefined,
+  loanName: '', loanOriginalAmount: '', loanOutstanding: '', loanInterestRate: '', loanEmiAmount: '', loanTenure: '', loanNextDueDay: '',
+  debtPersonName: '', debtType: 'lent', debtAmount: '', debtLinkedAccountId: '', debtDueDate: '', debtInterestRate: '',
+}
 
 export function AddAccountDialog({ children, mode = 'add', account, accountType: initialAccountType }: AddAccountDialogProps) {
   const [open, setOpen] = useState(false)
@@ -46,62 +52,61 @@ export function AddAccountDialog({ children, mode = 'add', account, accountType:
   const bankAccountsQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'bankAccounts') : null, [firestore, user?.uid])
   const { data: bankAccounts, isLoading: loadingBankAccounts } = useCollection<BankAccount>(bankAccountsQuery)
 
-  const emptyState = {
-    bankAccountName: '', bankName: '', openingBalance: '', bankAccountType: 'current' as BankAccount['type'], bankAccountNotes: '',
-    cardName: '', cardIssuer: '', creditLimit: '', cardCurrentBalance: '', apr: '', cardDueDate: undefined as Date | undefined,
-    loanName: '', loanOriginalAmount: '', loanOutstanding: '', loanInterestRate: '', loanEmiAmount: '', loanTenure: '', loanNextDueDay: '',
-    debtPersonName: '', debtType: 'lent', debtAmount: '', debtLinkedAccountId: '', debtDueDate: '', debtInterestRate: '',
-  }
-
   const [formState, setFormState] = useState(emptyState)
+  const isInitialized = useRef(false);
 
   useEffect(() => {
     if (open) {
-      if (mode === 'edit' && account) {
-        setAccountType(initialAccountType)
-        const data = account as any;
-        const newState: any = {};
-        switch (initialAccountType) {
-          case 'bank':
-            newState.bankAccountName = data.name;
-            newState.bankName = data.bankName;
-            newState.openingBalance = data.currentBalance.toString();
-            newState.bankAccountType = data.type || (data.isSavingsAccount ? 'savings' : 'current');
-            newState.bankAccountNotes = data.notes || '';
-            break;
-          case 'credit':
-            newState.cardName = data.name;
-            newState.cardIssuer = data.issuer;
-            newState.creditLimit = data.creditLimit.toString();
-            newState.cardCurrentBalance = data.currentBalance.toString();
-            newState.apr = data.apr.toString();
-            newState.cardDueDate = data.statementDueDate ? new Date(data.statementDueDate) : undefined;
-            break;
-          case 'loan':
-            newState.loanName = data.name;
-            newState.loanOriginalAmount = data.originalAmount.toString();
-            newState.loanOutstanding = data.outstanding.toString();
-            newState.loanInterestRate = data.interestRate.toString();
-            newState.loanEmiAmount = data.emiAmount.toString();
-            newState.loanTenure = data.tenureMonths.toString();
-            newState.loanNextDueDay = new Date(data.nextDueDate).getDate().toString();
-            break;
-          case 'personal_debt':
-            newState.debtPersonName = data.personName;
-            newState.debtType = data.type;
-            newState.debtAmount = data.originalAmount.toString();
-            newState.debtLinkedAccountId = data.linkedAccountId;
-            newState.debtDueDate = data.dueDate ? new Date(data.dueDate).toISOString().substring(0, 10) : '';
-            newState.debtInterestRate = data.interestRate?.toString() ?? '';
-            break;
+      if (!isInitialized.current) {
+        if (mode === 'edit' && account) {
+          setAccountType(initialAccountType);
+          const data = account as any;
+          const newState: any = {};
+          switch (initialAccountType) {
+            case 'bank':
+              newState.bankAccountName = data.name;
+              newState.bankName = data.bankName;
+              newState.openingBalance = data.currentBalance.toString();
+              newState.bankAccountType = data.type || (data.isSavingsAccount ? 'savings' : 'current');
+              newState.bankAccountNotes = data.notes || '';
+              break;
+            case 'credit':
+              newState.cardName = data.name;
+              newState.cardIssuer = data.issuer;
+              newState.creditLimit = data.creditLimit.toString();
+              newState.cardCurrentBalance = data.currentBalance.toString();
+              newState.apr = data.apr.toString();
+              newState.cardDueDate = data.statementDueDate ? new Date(data.statementDueDate) : undefined;
+              break;
+            case 'loan':
+              newState.loanName = data.name;
+              newState.loanOriginalAmount = data.originalAmount.toString();
+              newState.loanOutstanding = data.outstanding.toString();
+              newState.loanInterestRate = data.interestRate.toString();
+              newState.loanEmiAmount = data.emiAmount.toString();
+              newState.loanTenure = data.tenureMonths.toString();
+              newState.loanNextDueDay = new Date(data.nextDueDate).getDate().toString();
+              break;
+            case 'personal_debt':
+              newState.debtPersonName = data.personName;
+              newState.debtType = data.type;
+              newState.debtAmount = data.originalAmount.toString();
+              newState.debtLinkedAccountId = data.linkedAccountId;
+              newState.debtDueDate = data.dueDate ? new Date(data.dueDate).toISOString().substring(0, 10) : '';
+              newState.debtInterestRate = data.interestRate?.toString() ?? '';
+              break;
+          }
+          setFormState(s => ({...s, ...newState}));
+        } else {
+          setFormState(emptyState);
+          setAccountType(initialAccountType);
         }
-        setFormState(s => ({...s, ...newState}));
-      } else {
-        setFormState(emptyState);
-        setAccountType(initialAccountType);
+        isInitialized.current = true;
       }
+    } else {
+      isInitialized.current = false;
     }
-  }, [open, mode, account, initialAccountType])
+  }, [open, mode, account, initialAccountType]);
 
 
   const handleInputChange = (field: keyof typeof formState, value: any) => {
