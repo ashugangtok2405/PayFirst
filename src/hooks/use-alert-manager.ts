@@ -127,7 +127,7 @@ export function useAlertManager() {
 
       // 4. Low Balance Alerts
       for (const account of bankAccounts) {
-        if (account.isSavingsAccount) continue
+        if (account.type === 'savings') continue
         const existingAlert = activeAlertsMap.get(`low_balance-${account.id}`)
 
         if (account.currentBalance < LOW_BALANCE_THRESHOLD) {

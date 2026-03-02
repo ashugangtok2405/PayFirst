@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/accordion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { PlusCircle, ArrowRightLeft, History, Trash2 } from 'lucide-react'
+import { PlusCircle, ArrowRightLeft, History, Trash2, Edit } from 'lucide-react'
 import {
   Table,
   TableBody,
@@ -183,6 +183,11 @@ export function BankAccounts() {
                                         <History className="mr-2 h-4 w-4" /> View History
                                     </Link>
                                 </Button>
+                                <AddAccountDialog mode="edit" account={account} accountType="bank">
+                                  <Button size="sm" variant="ghost">
+                                    <Edit className="mr-2 h-4 w-4" /> Edit
+                                  </Button>
+                                </AddAccountDialog>
                                 <AlertDialog>
                                 <AlertDialogTrigger asChild>
                                     <Button size="sm" variant="ghost" className="text-red-500 hover:text-red-500 hover:bg-red-50">

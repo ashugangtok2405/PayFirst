@@ -24,7 +24,7 @@ export function SavingsProgress() {
 
     const monthlyIncome = transactions?.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0) ?? 0;
     
-    const savingsAccountsIds = bankAccounts?.filter(acc => acc.isSavingsAccount).map(acc => acc.id) ?? [];
+    const savingsAccountsIds = bankAccounts?.filter(acc => acc.type === 'savings').map(acc => acc.id) ?? [];
     
     const savedThisMonth = transactions?.filter(t => t.type === 'transfer' && t.toBankAccountId && savingsAccountsIds.includes(t.toBankAccountId)).reduce((sum, t) => sum + t.amount, 0) ?? 0;
 

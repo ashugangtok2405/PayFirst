@@ -5,7 +5,8 @@ export interface BankAccount {
   bankName: string;
   currentBalance: number;
   currency: string;
-  isSavingsAccount: boolean;
+  type: 'savings' | 'current' | 'salary' | 'other';
+  notes?: string;
   createdAt?: string;
   updatedAt?: string;
 }

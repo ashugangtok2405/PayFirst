@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
+import { Textarea } from '@/components/ui/textarea'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Landmark, CreditCard, ChevronDown, FileText, Handshake } from 'lucide-react'
@@ -44,7 +45,7 @@ export function AddAccountDialog({ children, mode = 'add', account, accountType:
   const { data: bankAccounts, isLoading: loadingBankAccounts } = useCollection<BankAccount>(bankAccountsQuery)
 
   const emptyState = {
-    bankAccountName: '', bankName: '', openingBalance: '', isSavingsAccount: false,
+    bankAccountName: '', bankName: '', openingBalance: '', bankAccountType: 'current' as BankAccount['type'], bankAccountNotes: '',
     cardName: '', cardIssuer: '', creditLimit: '', cardCurrentBalance: '', apr: '', statementDay: '',
     loanName: '', loanOriginalAmount: '', loanOutstanding: '', loanInterestRate: '', loanEmiAmount: '', loanTenure: '', loanNextDueDay: '',
     debtPersonName: '', debtType: 'lent', debtAmount: '', debtLinkedAccountId: '', debtDueDate: '', debtInterestRate: '',
@@ -63,7 +64,8 @@ export function AddAccountDialog({ children, mode = 'add', account, accountType:
             newState.bankAccountName = data.name;
             newState.bankName = data.bankName;
             newState.openingBalance = data.currentBalance.toString();
-            newState.isSavingsAccount = data.isSavingsAccount;
+            newState.bankAccountType = data.type || (data.isSavingsAccount ? 'savings' : 'current');
+            newState.bankAccountNotes = data.notes || '';
             break;
           case 'credit':
             newState.cardName = data.name;
@@ -118,7 +120,9 @@ export function AddAccountDialog({ children, mode = 'add', account, accountType:
         if (accountType === 'bank') {
             const bankAccountData: Partial<BankAccount> = {
                 userId: user.uid, name: formState.bankAccountName, bankName: formState.bankName,
-                currentBalance: parseFloat(formState.openingBalance) || 0, isSavingsAccount: formState.isSavingsAccount,
+                currentBalance: parseFloat(formState.openingBalance) || 0,
+                type: formState.bankAccountType,
+                notes: formState.bankAccountNotes,
                 currency: 'INR', updatedAt: now,
             }
             if (mode === 'add') {
@@ -208,7 +212,7 @@ export function AddAccountDialog({ children, mode = 'add', account, accountType:
                 transaction.set(newTransactionRef, transactionData);
             });
         }
-        toast({ title: mode === 'add' ? 'Account Added' : 'Account Updated' })
+        toast({ title: mode === 'add' ? 'Account Added' : 'Account updated successfully' })
         setOpen(false)
     } catch (error: any) {
         toast({ variant: 'destructive', title: 'Error', description: error.message || 'Could not save account.' });
@@ -242,10 +246,24 @@ export function AddAccountDialog({ children, mode = 'add', account, accountType:
                         <div className="space-y-2"><Label htmlFor="bank-acc-name">Account Name</Label><Input id="bank-acc-name" placeholder="e.g. My Primary Savings" value={formState.bankAccountName} onChange={e => handleInputChange('bankAccountName', e.target.value)} /></div>
                         <div className="space-y-2"><Label htmlFor="bank-name">Bank Name</Label><Input id="bank-name" placeholder="e.g. HDFC Bank" value={formState.bankName} onChange={e => handleInputChange('bankName', e.target.value)} /></div>
                     </div>
-                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="space-y-2"><Label htmlFor="bank-acc-type">Account Type</Label><Select value={formState.isSavingsAccount ? 'savings' : 'current'} onValueChange={(v) => handleInputChange('isSavingsAccount', v === 'savings')}><SelectTrigger id="bank-acc-type"><SelectValue placeholder="Select type" /></SelectTrigger><SelectContent><SelectItem value="savings">Savings</SelectItem><SelectItem value="current">Current</SelectItem></SelectContent></Select></div>
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="bank-acc-type">Account Type</Label>
+                            <Select value={formState.bankAccountType} onValueChange={(v) => handleInputChange('bankAccountType', v)}>
+                                <SelectTrigger id="bank-acc-type"><SelectValue placeholder="Select type" /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="current">Current</SelectItem>
+                                    <SelectItem value="savings">Savings</SelectItem>
+                                    <SelectItem value="salary">Salary</SelectItem>
+                                    <SelectItem value="other">Other</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
                         <div className="space-y-2"><Label htmlFor="opening-balance">{mode === 'add' ? 'Opening Balance' : 'Current Balance'}</Label><div className="relative"><span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">₹</span><Input id="opening-balance" type="number" placeholder="0.00" className="pl-7" value={formState.openingBalance} onChange={e => handleInputChange('openingBalance', e.target.value)} /></div></div>
-                        <div className="space-y-2"><Label htmlFor="bank-currency">Currency</Label><Input id="bank-currency" value="INR (Indian Rupee)" disabled /></div>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="bank-notes">Notes (Optional)</Label>
+                        <Textarea id="bank-notes" placeholder="e.g. For emergency fund" value={formState.bankAccountNotes} onChange={e => handleInputChange('bankAccountNotes', e.target.value)} />
                     </div>
                      <Collapsible><CollapsibleTrigger className="flex items-center gap-2 text-sm font-semibold text-primary"><ChevronDown className="h-4 w-4" /> Advanced Settings</CollapsibleTrigger><CollapsibleContent className="mt-4 space-y-4 animate-in fade-in-0 slide-in-from-top-2"><div className="p-4 border rounded-lg space-y-4"><div className="flex items-center justify-between"><Label htmlFor="bank-net-worth" className="flex flex-col gap-0.5"><span>Include in Net Worth</span><span className="font-normal text-xs text-muted-foreground">This account balance will be added to your total assets.</span></Label><Switch id="bank-net-worth" defaultChecked /></div></div></CollapsibleContent></Collapsible>
                 </TabsContent>

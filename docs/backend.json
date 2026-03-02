@@ -110,9 +110,14 @@
           "type": "string",
           "description": "The currency in which the account balance is denominated (e.g., 'USD', 'EUR')."
         },
-        "isSavingsAccount": {
-          "type": "boolean",
-          "description": "Indicates if this account is designated as a savings account for 'Pay Yourself First' rules."
+        "type": {
+          "type": "string",
+          "description": "The type of the bank account.",
+          "enum": ["savings", "current", "salary", "other"]
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional user notes for the account."
         },
         "createdAt": {
           "type": "string",
@@ -132,7 +137,7 @@
         "bankName",
         "currentBalance",
         "currency",
-        "isSavingsAccount",
+        "type",
         "createdAt",
         "updatedAt"
       ]
