@@ -11,7 +11,7 @@ import type { Transaction, CreditCard } from '@/lib/types'
 import { startOfMonth, endOfMonth, format } from 'date-fns'
 import { Skeleton } from '@/components/ui/skeleton'
 
-const formatCurrency = (amount: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amount)
+const formatCurrency = (amount: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount)
 
 export function ViewStatementDialog({ children, card }: { children: React.ReactNode, card: CreditCard }) {
     const [open, setOpen] = useState(false)

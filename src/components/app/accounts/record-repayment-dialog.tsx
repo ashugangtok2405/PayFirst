@@ -10,7 +10,7 @@ import { useFirestore, useUser } from '@/firebase'
 import { collection, doc, runTransaction } from 'firebase/firestore'
 import type { BankAccount, PersonalDebt, Repayment, Transaction } from '@/lib/types'
 
-const formatCurrency = (amount: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amount)
+const formatCurrency = (amount: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount)
 
 export function RecordRepaymentDialog({ children, debt }: { children: React.ReactNode, debt: PersonalDebt }) {
   const [open, setOpen] = useState(false)

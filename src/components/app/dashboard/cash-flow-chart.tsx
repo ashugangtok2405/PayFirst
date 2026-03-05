@@ -12,7 +12,7 @@ import { collection, query, where, orderBy } from 'firebase/firestore'
 import type { Transaction, Category, CreditCard } from '@/lib/types'
 
 const formatCurrency = (value: number) => `₹${(value / 1000).toFixed(0)}k`
-const formatCurrencyTooltip = (value: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(value)
+const formatCurrencyTooltip = (value: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)
 
 const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {

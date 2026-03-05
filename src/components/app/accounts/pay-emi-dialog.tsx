@@ -21,7 +21,7 @@ import type { BankAccount, Loan, Category, Transaction } from '@/lib/types'
 import { addMonths } from 'date-fns'
 
 const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2 }).format(amount)
+    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount)
 }
 
 export function PayEmiDialog({ children, loan }: { children: React.ReactNode, loan: Loan }) {

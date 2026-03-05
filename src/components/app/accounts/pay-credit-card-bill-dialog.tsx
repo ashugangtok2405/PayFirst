@@ -12,7 +12,7 @@ import { collection, doc, runTransaction } from 'firebase/firestore'
 import type { BankAccount, CreditCard } from '@/lib/types'
 import { CreditCard as CreditCardIcon } from 'lucide-react'
 
-const formatCurrency = (amount: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amount)
+const formatCurrency = (amount: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount)
 
 export function PayCreditCardBillDialog({ children, card }: { children: React.ReactNode, card: CreditCard }) {
   const [open, setOpen] = useState(false)

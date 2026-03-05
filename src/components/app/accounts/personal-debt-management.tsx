@@ -15,7 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { RecordRepaymentDialog } from './record-repayment-dialog'
 import { AddAccountDialog } from './add-account-dialog'
 
-const formatCurrency = (amount: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount)
+const formatCurrency = (amount: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount)
 
 export function PersonalDebtManagement() {
   const { toast } = useToast()
