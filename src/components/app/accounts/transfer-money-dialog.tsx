@@ -49,8 +49,8 @@ export function TransferMoneyDialog() {
         userId: user.uid,
         type: 'transfer',
         amount: parseFloat(amount),
-        fromBankAccountId,
-        toBankAccountId,
+        fromBankAccountId: fromAccountId,
+        toBankAccountId: toAccountId,
         transactionDate: new Date(date).toISOString(),
         description: notes || 'Fund Transfer',
     }
