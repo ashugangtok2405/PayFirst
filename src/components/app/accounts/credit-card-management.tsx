@@ -57,14 +57,15 @@ export function CreditCardManagement() {
   )
   const { data: creditCards, isLoading } = useCollection<CreditCardType>(creditCardsQuery)
 
-  const { totalLimit, totalOutstanding, overallUtilization } = useMemo(() => {
-    if (!creditCards) return { totalLimit: 0, totalOutstanding: 0, overallUtilization: 0 };
+  const { totalLimit, totalOutstanding, totalAvailable, overallUtilization } = useMemo(() => {
+    if (!creditCards) return { totalLimit: 0, totalOutstanding: 0, totalAvailable: 0, overallUtilization: 0 };
     
     const totalLimit = creditCards.reduce((sum, card) => sum + card.creditLimit, 0);
     const totalOutstanding = creditCards.reduce((sum, card) => sum + card.currentBalance, 0);
+    const totalAvailable = totalLimit - totalOutstanding;
     const overallUtilization = totalLimit > 0 ? (totalOutstanding / totalLimit) * 100 : 0;
     
-    return { totalLimit, totalOutstanding, overallUtilization };
+    return { totalLimit, totalOutstanding, totalAvailable, overallUtilization };
   }, [creditCards]);
 
   const handleDelete = async (cardId: string, cardName: string) => {
@@ -95,6 +96,7 @@ export function CreditCardManagement() {
             <div className="text-sm text-muted-foreground flex items-center flex-wrap gap-x-4 gap-y-1 mt-2">
               <span>Total Limit: <span className="font-semibold text-foreground">{formatCurrency(totalLimit)}</span></span>
               <span>Total Used: <span className="font-semibold text-foreground">{formatCurrency(totalOutstanding)} ({overallUtilization.toFixed(0)}%)</span></span>
+              <span>Total Available: <span className="font-semibold text-foreground">{formatCurrency(totalAvailable)}</span></span>
             </div>
           )}
         </div>
