@@ -40,7 +40,7 @@ import {
   useCollection,
   useMemoFirebase,
 } from '@/firebase'
-import { collection, doc, runTransaction, DocumentReference, DocumentSnapshot } from 'firebase/firestore'
+import { collection, doc, runTransaction, DocumentReference, DocumentSnapshot, addDoc } from 'firebase/firestore'
 import type { BankAccount, CreditCard, Category, Transaction, RecurringTransaction } from '@/lib/types'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -69,6 +69,11 @@ export function AddTransactionDialog({ children, mode = 'add', transaction }: { 
   const [frequency, setFrequency] = useState<Frequency>('monthly')
   const [endDate, setEndDate] = useState<string>('')
   const [autoCreate, setAutoCreate] = useState(true)
+
+  // New Category State
+  const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
 
 
   const { toast } = useToast()
@@ -103,6 +108,8 @@ export function AddTransactionDialog({ children, mode = 'add', transaction }: { 
     setEndDate('')
     setAutoCreate(true)
     setActiveTab('expense');
+    setShowNewCategoryInput(false);
+    setNewCategoryName('');
   }, [])
   
   useEffect(() => {
@@ -160,9 +167,63 @@ export function AddTransactionDialog({ children, mode = 'add', transaction }: { 
     }
   }
 
+  const handleCategoryChange = (value: string) => {
+    if (value === 'add-new') {
+        setShowNewCategoryInput(true);
+        setCategoryId(''); // Unselect any category
+    } else {
+        setShowNewCategoryInput(false);
+        setNewCategoryName('');
+        setCategoryId(value);
+    }
+  };
+
+  const handleAddNewCategory = async () => {
+    if (!user || !firestore || !newCategoryName.trim()) {
+        toast({ title: "Category name cannot be empty.", variant: "destructive" });
+        return;
+    }
+
+    setIsAddingCategory(true);
+    const categoryType = activeTab === 'income' ? 'income' : 'expense';
+
+    const existingCategory = categories?.find(c => c.name.toLowerCase() === newCategoryName.trim().toLowerCase() && c.type === categoryType);
+    if (existingCategory) {
+        toast({ title: "Category already exists.", description: `"${existingCategory.name}" is already in your list.`, variant: "destructive" });
+        setIsAddingCategory(false);
+        return;
+    }
+
+    try {
+        const newCategoryData = {
+            userId: user.uid,
+            name: newCategoryName.trim(),
+            type: categoryType,
+            isDefault: false
+        };
+        const newDocRef = await addDoc(collection(firestore, 'users', user.uid, 'categories'), newCategoryData);
+        
+        toast({ title: "Category Added", description: `"${newCategoryName.trim()}" has been added.` });
+
+        setCategoryId(newDocRef.id);
+        setShowNewCategoryInput(false);
+        setNewCategoryName('');
+
+    } catch (error: any) {
+        toast({ title: "Error adding category", description: error.message, variant: "destructive" });
+    } finally {
+        setIsAddingCategory(false);
+    }
+  }
+
   const handleSubmit = async () => {
     if (!user || !firestore || !date || !amount) {
         toast({ variant: 'destructive', title: 'Error', description: 'Please fill out all required fields.' });
+        return;
+    }
+    
+    if (showNewCategoryInput) {
+        toast({ variant: 'destructive', title: 'Unsaved Category', description: 'Please add your new category before saving the transaction.' });
         return;
     }
 
@@ -177,9 +238,6 @@ export function AddTransactionDialog({ children, mode = 'add', transaction }: { 
         await runTransaction(firestore, async (tx) => {
             const refsToRead = new Map<string, DocumentReference>();
 
-            // --- 1. GATHER ALL DOCUMENT REFERENCES TO READ ---
-
-            // Refs for reverting original transaction (if in edit mode)
             let originalTxRef: DocumentReference | null = null;
             if (mode === 'edit' && transaction) {
                 originalTxRef = doc(firestore, 'users', user.uid, 'transactions', transaction.id);
@@ -190,7 +248,6 @@ export function AddTransactionDialog({ children, mode = 'add', transaction }: { 
                 if (transaction.toCreditCardId) refsToRead.set(`card-${transaction.toCreditCardId}`, doc(firestore, 'users', user.uid, 'creditCards', transaction.toCreditCardId));
             }
 
-            // Refs for applying new/edited transaction
             switch (activeTab) {
                 case 'expense':
                     if (bankAccounts?.some(b => b.id === accountId)) refsToRead.set(`bank-${accountId}`, doc(firestore, 'users', user.uid, 'bankAccounts', accountId));
@@ -209,21 +266,18 @@ export function AddTransactionDialog({ children, mode = 'add', transaction }: { 
                     break;
             }
 
-            // --- 2. EXECUTE ALL READS ---
             const readDocs = await Promise.all(Array.from(refsToRead.values()).map(ref => tx.get(ref)));
             const docMap = new Map<string, DocumentSnapshot>();
             Array.from(refsToRead.keys()).forEach((key, index) => docMap.set(key, readDocs[index]));
 
-            // --- 3. PERFORM LOGIC & CALCULATIONS ---
             const balancesToWrite = new Map<DocumentReference, { currentBalance: number }>();
 
-            // Revert original transaction balances
             if (mode === 'edit' && transaction) {
                 const originalTxDoc = docMap.get('originalTx');
                 if (!originalTxDoc?.exists()) throw new Error("Original transaction not found for edit.");
                 const originalTx = originalTxDoc.data() as Transaction;
 
-                const updateBalance = (docKey: string, amountChange: number, type: 'bank' | 'card') => {
+                const updateBalance = (docKey: string, amountChange: number) => {
                     const docSnap = docMap.get(docKey);
                     if (docSnap?.exists()) {
                         const currentBalance = (balancesToWrite.get(docSnap.ref) || docSnap.data()).currentBalance;
@@ -231,13 +285,12 @@ export function AddTransactionDialog({ children, mode = 'add', transaction }: { 
                     }
                 };
 
-                if (originalTx.fromBankAccountId) updateBalance(`bank-${originalTx.fromBankAccountId}`, originalTx.amount, 'bank');
-                if (originalTx.toBankAccountId) updateBalance(`bank-${originalTx.toBankAccountId}`, -originalTx.amount, 'bank');
-                if (originalTx.fromCreditCardId) updateBalance(`card-${originalTx.fromCreditCardId}`, -originalTx.amount, 'card');
-                if (originalTx.toCreditCardId) updateBalance(`card-${originalTx.toCreditCardId}`, originalTx.amount, 'card');
+                if (originalTx.fromBankAccountId) updateBalance(`bank-${originalTx.fromBankAccountId}`, originalTx.amount);
+                if (originalTx.toBankAccountId) updateBalance(`bank-${originalTx.toBankAccountId}`, -originalTx.amount);
+                if (originalTx.fromCreditCardId) updateBalance(`card-${originalTx.fromCreditCardId}`, -originalTx.amount);
+                if (originalTx.toCreditCardId) updateBalance(`card-${originalTx.toCreditCardId}`, originalTx.amount);
             }
 
-            // Apply new transaction balances
             const transactionData: Partial<Transaction> = {
                 userId: user.uid, type: activeTab, amount: numericAmount,
                 transactionDate: new Date(date).toISOString(),
@@ -306,12 +359,10 @@ export function AddTransactionDialog({ children, mode = 'add', transaction }: { 
                   break;
             }
 
-            // --- 4. EXECUTE ALL WRITES ---
             for (const [ref, balanceData] of balancesToWrite.entries()) {
                 tx.update(ref, balanceData);
             }
 
-            // Recurring transaction logic
             if (isRecurring && mode === 'add') {
                 const newRecurringTransactionRef = doc(collection(firestore, 'users', user.uid, 'recurringTransactions'));
                 transactionData.recurringTransactionId = newRecurringTransactionRef.id;
@@ -327,7 +378,6 @@ export function AddTransactionDialog({ children, mode = 'add', transaction }: { 
                 tx.set(newRecurringTransactionRef, recurringData);
             }
 
-            // Finally, write the transaction doc itself
             if (mode === 'edit' && originalTxRef) {
                 tx.update(originalTxRef, transactionData);
             } else {
@@ -375,13 +425,30 @@ export function AddTransactionDialog({ children, mode = 'add', transaction }: { 
         <TabsContent value="expense" className="space-y-4 m-0">
             <div className="space-y-2">
                 <Label htmlFor="expense-category">Category</Label>
-                <Select value={categoryId} onValueChange={setCategoryId} disabled={mode==='edit' && !!transaction?.recurringTransactionId}>
+                <Select value={categoryId} onValueChange={handleCategoryChange} disabled={mode==='edit' && !!transaction?.recurringTransactionId}>
                     <SelectTrigger id="expense-category"><SelectValue placeholder="Select a category" /></SelectTrigger>
                     <SelectContent>
                         {expenseCategories.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>)}
+                        <SelectItem value="add-new">
+                            <span className="flex items-center gap-2">
+                                <PlusCircle className="h-4 w-4" /> Add New Category
+                            </span>
+                        </SelectItem>
                     </SelectContent>
                 </Select>
             </div>
+            {showNewCategoryInput && activeTab === 'expense' && (
+                <div className="flex animate-in fade-in-0 slide-in-from-top-2 items-center gap-2">
+                    <Input 
+                        placeholder="New expense category"
+                        value={newCategoryName}
+                        onChange={(e) => setNewCategoryName(e.target.value)}
+                    />
+                    <Button type="button" size="sm" onClick={handleAddNewCategory} disabled={isAddingCategory}>
+                        {isAddingCategory ? 'Adding...' : 'Add'}
+                    </Button>
+                </div>
+            )}
             <div className="space-y-2">
                 <Label htmlFor="expense-account">Paid From</Label>
                 <Select value={accountId} onValueChange={setAccountId} disabled={mode==='edit' && !!transaction?.recurringTransactionId}>
@@ -397,13 +464,30 @@ export function AddTransactionDialog({ children, mode = 'add', transaction }: { 
         <TabsContent value="income" className="space-y-4 m-0">
           <div className="space-y-2">
               <Label htmlFor="income-category">Source</Label>
-              <Select value={categoryId} onValueChange={setCategoryId} disabled={mode==='edit' && !!transaction?.recurringTransactionId}>
+              <Select value={categoryId} onValueChange={handleCategoryChange} disabled={mode==='edit' && !!transaction?.recurringTransactionId}>
                   <SelectTrigger id="income-category"><SelectValue placeholder="Select a source" /></SelectTrigger>
                   <SelectContent>
                       {incomeCategories.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>)}
+                      <SelectItem value="add-new">
+                          <span className="flex items-center gap-2">
+                            <PlusCircle className="h-4 w-4" /> Add New Source
+                          </span>
+                      </SelectItem>
                   </SelectContent>
               </Select>
           </div>
+          {showNewCategoryInput && activeTab === 'income' && (
+                <div className="flex animate-in fade-in-0 slide-in-from-top-2 items-center gap-2">
+                    <Input 
+                        placeholder="New income source"
+                        value={newCategoryName}
+                        onChange={(e) => setNewCategoryName(e.target.value)}
+                    />
+                    <Button type="button" size="sm" onClick={handleAddNewCategory} disabled={isAddingCategory}>
+                        {isAddingCategory ? 'Adding...' : 'Add'}
+                    </Button>
+                </div>
+            )}
           <div className="space-y-2">
               <Label htmlFor="income-account">Deposit To</Label>
               <Select value={accountId} onValueChange={setAccountId} disabled={mode==='edit' && !!transaction?.recurringTransactionId}>
@@ -537,8 +621,8 @@ export function AddTransactionDialog({ children, mode = 'add', transaction }: { 
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button type="button" onClick={handleSubmit} disabled={isLoading}>
-              {isLoading ? 'Loading...' : mode === 'edit' ? 'Save Changes' : 'Add Transaction'}
+            <Button type="button" onClick={handleSubmit} disabled={isLoading || isAddingCategory}>
+              {isLoading || isAddingCategory ? 'Loading...' : mode === 'edit' ? 'Save Changes' : 'Add Transaction'}
             </Button>
           </DialogFooter>
         </Tabs>
