@@ -41,6 +41,15 @@ const emptyState = {
   debtPersonName: '', debtType: 'lent', debtAmount: '', debtLinkedAccountId: '', debtDueDate: '', debtInterestRate: '',
 }
 
+const getCollectionNameForAccountType = (accountType: 'bank' | 'credit' | 'loan' | 'personal_debt') => {
+  switch (accountType) {
+    case 'bank': return 'bankAccounts';
+    case 'credit': return 'creditCards';
+    case 'loan': return 'loans';
+    case 'personal_debt': return 'personalDebts';
+  }
+};
+
 export function AddAccountDialog({ children, mode = 'add', account, accountType: initialAccountType }: AddAccountDialogProps) {
   const [open, setOpen] = useState(false)
   const [accountType, setAccountType] = useState(initialAccountType)
@@ -121,7 +130,7 @@ export function AddAccountDialog({ children, mode = 'add', account, accountType:
     const now = new Date().toISOString();
 
     try {
-        const docRef = mode === 'edit' && account ? doc(firestore, 'users', user.uid, `${initialAccountType}s`, account.id) : null;
+        const docRef = mode === 'edit' && account ? doc(firestore, 'users', user.uid, getCollectionNameForAccountType(initialAccountType), account.id) : null;
         
         if (accountType === 'bank') {
             const bankAccountData: Partial<BankAccount> = {
