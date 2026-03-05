@@ -40,7 +40,7 @@ import {
   useCollection,
   useMemoFirebase,
 } from '@/firebase'
-import { collection, doc, runTransaction } from 'firebase/firestore'
+import { collection, doc, runTransaction, DocumentReference, DocumentSnapshot } from 'firebase/firestore'
 import type { BankAccount, CreditCard, Category, Transaction, RecurringTransaction } from '@/lib/types'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -162,161 +162,189 @@ export function AddTransactionDialog({ children, mode = 'add', transaction }: { 
 
   const handleSubmit = async () => {
     if (!user || !firestore || !date || !amount) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Please fill out all required fields.' })
-      return
+        toast({ variant: 'destructive', title: 'Error', description: 'Please fill out all required fields.' });
+        return;
     }
-    
+
     if (isRecurring && mode === 'edit') {
-      toast({ variant: 'destructive', title: 'Not Supported', description: 'Editing recurring transactions is not supported yet.' });
-      return;
+        toast({ variant: 'destructive', title: 'Not Supported', description: 'Editing recurring transactions is not supported yet.' });
+        return;
     }
 
     const numericAmount = parseFloat(amount);
-    
+
     try {
-      await runTransaction(firestore, async (tx) => {
-        
-        // --- EDIT MODE: REVERT ORIGINAL TRANSACTION ---
-        if (mode === 'edit' && transaction) {
-            const originalTxRef = doc(firestore, 'users', user.uid, 'transactions', transaction.id);
-            const originalTxDoc = await tx.get(originalTxRef);
-            if (!originalTxDoc.exists()) throw new Error("Transaction to edit was not found.");
-            const originalTx = originalTxDoc.data() as Transaction;
+        await runTransaction(firestore, async (tx) => {
+            const refsToRead = new Map<string, DocumentReference>();
 
-            // Revert balances
-            if (originalTx.fromBankAccountId) {
-                const accRef = doc(firestore, 'users', user.uid, 'bankAccounts', originalTx.fromBankAccountId);
-                const accDoc = await tx.get(accRef);
-                if(accDoc.exists()) tx.update(accRef, { currentBalance: accDoc.data().currentBalance + originalTx.amount });
-            }
-            if (originalTx.toBankAccountId) {
-                const accRef = doc(firestore, 'users', user.uid, 'bankAccounts', originalTx.toBankAccountId);
-                const accDoc = await tx.get(accRef);
-                if(accDoc.exists()) tx.update(accRef, { currentBalance: accDoc.data().currentBalance - originalTx.amount });
-            }
-            if (originalTx.fromCreditCardId) {
-                const cardRef = doc(firestore, 'users', user.uid, 'creditCards', originalTx.fromCreditCardId);
-                const cardDoc = await tx.get(cardRef);
-                if(cardDoc.exists()) tx.update(cardRef, { currentBalance: cardDoc.data().currentBalance - originalTx.amount });
-            }
-            if (originalTx.toCreditCardId) {
-                const cardRef = doc(firestore, 'users', user.uid, 'creditCards', originalTx.toCreditCardId);
-                const cardDoc = await tx.get(cardRef);
-                if(cardDoc.exists()) tx.update(cardRef, { currentBalance: cardDoc.data().currentBalance + originalTx.amount });
-            }
-        }
-        
-        // --- APPLY NEW/UPDATED TRANSACTION ---
-        const parsedDate = new Date(date);
-        const parsedEndDate = endDate ? new Date(endDate) : undefined;
-        let transactionData: Partial<Transaction> = {
-          userId: user.uid, type: activeTab, amount: numericAmount,
-          transactionDate: parsedDate.toISOString(),
-          description: notes || `New ${activeTab.replace('_', ' ')}`,
-        };
+            // --- 1. GATHER ALL DOCUMENT REFERENCES TO READ ---
 
-        const newRecurringTransactionRef = (isRecurring && mode === 'add') ? doc(collection(firestore, 'users', user.uid, 'recurringTransactions')) : null;
-        if (newRecurringTransactionRef) {
-          transactionData.recurringTransactionId = newRecurringTransactionRef.id;
-        }
-
-        // Logic for applying balance changes for the new/edited transaction
-        switch (activeTab) {
-          case 'expense':
-            if (!accountId || !categoryId) throw new Error("Account and category are required.");
-            transactionData.categoryId = categoryId;
-            if (bankAccounts?.some(b => b.id === accountId)) {
-              transactionData.fromBankAccountId = accountId;
-              const accountRef = doc(firestore, 'users', user.uid, 'bankAccounts', accountId);
-              const accountDoc = await tx.get(accountRef);
-              if (!accountDoc.exists()) throw new Error("Bank account not found.");
-              tx.update(accountRef, { currentBalance: accountDoc.data().currentBalance - numericAmount });
-            } else if (creditCards?.some(c => c.id === accountId)) {
-              transactionData.fromCreditCardId = accountId;
-              const cardRef = doc(firestore, 'users', user.uid, 'creditCards', accountId);
-              const cardDoc = await tx.get(cardRef);
-              if (!cardDoc.exists()) throw new Error("Credit card not found.");
-              tx.update(cardRef, { currentBalance: cardDoc.data().currentBalance + numericAmount });
+            // Refs for reverting original transaction (if in edit mode)
+            let originalTxRef: DocumentReference | null = null;
+            if (mode === 'edit' && transaction) {
+                originalTxRef = doc(firestore, 'users', user.uid, 'transactions', transaction.id);
+                refsToRead.set('originalTx', originalTxRef);
+                if (transaction.fromBankAccountId) refsToRead.set(`bank-${transaction.fromBankAccountId}`, doc(firestore, 'users', user.uid, 'bankAccounts', transaction.fromBankAccountId));
+                if (transaction.toBankAccountId) refsToRead.set(`bank-${transaction.toBankAccountId}`, doc(firestore, 'users', user.uid, 'bankAccounts', transaction.toBankAccountId));
+                if (transaction.fromCreditCardId) refsToRead.set(`card-${transaction.fromCreditCardId}`, doc(firestore, 'users', user.uid, 'creditCards', transaction.fromCreditCardId));
+                if (transaction.toCreditCardId) refsToRead.set(`card-${transaction.toCreditCardId}`, doc(firestore, 'users', user.uid, 'creditCards', transaction.toCreditCardId));
             }
-            break;
-        
-          case 'income':
-            if (!accountId || !categoryId) throw new Error("Account and source are required.");
-            transactionData.toBankAccountId = accountId;
-            transactionData.categoryId = categoryId;
-            const accountRef = doc(firestore, 'users', user.uid, 'bankAccounts', accountId);
-            const accountDoc = await tx.get(accountRef);
-            if (!accountDoc.exists()) throw new Error("Bank account not found.");
-            tx.update(accountRef, { currentBalance: accountDoc.data().currentBalance + numericAmount });
-            break;
-        
-          case 'transfer':
-            if (!fromAccountId || !toAccountId) throw new Error("Both 'from' and 'to' accounts are required.");
-            if (fromAccountId === toAccountId) throw new Error("'From' and 'to' accounts cannot be the same.");
-            transactionData.fromBankAccountId = fromAccountId;
-            transactionData.toBankAccountId = toAccountId;
+
+            // Refs for applying new/edited transaction
+            switch (activeTab) {
+                case 'expense':
+                    if (bankAccounts?.some(b => b.id === accountId)) refsToRead.set(`bank-${accountId}`, doc(firestore, 'users', user.uid, 'bankAccounts', accountId));
+                    else if (creditCards?.some(c => c.id === accountId)) refsToRead.set(`card-${accountId}`, doc(firestore, 'users', user.uid, 'creditCards', accountId));
+                    break;
+                case 'income':
+                    refsToRead.set(`bank-${accountId}`, doc(firestore, 'users', user.uid, 'bankAccounts', accountId));
+                    break;
+                case 'transfer':
+                    refsToRead.set(`bank-${fromAccountId}`, doc(firestore, 'users', user.uid, 'bankAccounts', fromAccountId));
+                    refsToRead.set(`bank-${toAccountId}`, doc(firestore, 'users', user.uid, 'bankAccounts', toAccountId));
+                    break;
+                case 'credit_card_payment':
+                    refsToRead.set(`bank-${fromAccountId}`, doc(firestore, 'users', user.uid, 'bankAccounts', fromAccountId));
+                    refsToRead.set(`card-${toCreditCardId}`, doc(firestore, 'users', user.uid, 'creditCards', toCreditCardId));
+                    break;
+            }
+
+            // --- 2. EXECUTE ALL READS ---
+            const readDocs = await Promise.all(Array.from(refsToRead.values()).map(ref => tx.get(ref)));
+            const docMap = new Map<string, DocumentSnapshot>();
+            Array.from(refsToRead.keys()).forEach((key, index) => docMap.set(key, readDocs[index]));
+
+            // --- 3. PERFORM LOGIC & CALCULATIONS ---
+            const balancesToWrite = new Map<DocumentReference, { currentBalance: number }>();
+
+            // Revert original transaction balances
+            if (mode === 'edit' && transaction) {
+                const originalTxDoc = docMap.get('originalTx');
+                if (!originalTxDoc?.exists()) throw new Error("Original transaction not found for edit.");
+                const originalTx = originalTxDoc.data() as Transaction;
+
+                const updateBalance = (docKey: string, amountChange: number, type: 'bank' | 'card') => {
+                    const docSnap = docMap.get(docKey);
+                    if (docSnap?.exists()) {
+                        const currentBalance = (balancesToWrite.get(docSnap.ref) || docSnap.data()).currentBalance;
+                        balancesToWrite.set(docSnap.ref, { currentBalance: currentBalance + amountChange });
+                    }
+                };
+
+                if (originalTx.fromBankAccountId) updateBalance(`bank-${originalTx.fromBankAccountId}`, originalTx.amount, 'bank');
+                if (originalTx.toBankAccountId) updateBalance(`bank-${originalTx.toBankAccountId}`, -originalTx.amount, 'bank');
+                if (originalTx.fromCreditCardId) updateBalance(`card-${originalTx.fromCreditCardId}`, -originalTx.amount, 'card');
+                if (originalTx.toCreditCardId) updateBalance(`card-${originalTx.toCreditCardId}`, originalTx.amount, 'card');
+            }
+
+            // Apply new transaction balances
+            const transactionData: Partial<Transaction> = {
+                userId: user.uid, type: activeTab, amount: numericAmount,
+                transactionDate: new Date(date).toISOString(),
+                description: notes || `New ${activeTab.replace('_', ' ')}`,
+            };
             
-            const fromAccountRef = doc(firestore, 'users', user.uid, 'bankAccounts', fromAccountId);
-            const toAccountRef = doc(firestore, 'users', user.uid, 'bankAccounts', toAccountId);
-            const fromAccountDoc = await tx.get(fromAccountRef);
-            const toAccountDoc = await tx.get(toAccountRef);
-            if (!fromAccountDoc.exists() || !toAccountDoc.exists()) throw new Error("One or both transfer accounts not found.");
-            
-            tx.update(fromAccountRef, { currentBalance: fromAccountDoc.data().currentBalance - numericAmount });
-            tx.update(toAccountRef, { currentBalance: toAccountDoc.data().currentBalance + numericAmount });
-            break;
+            switch (activeTab) {
+              case 'expense':
+                  if (!accountId || !categoryId) throw new Error("Account and category are required.");
+                  transactionData.categoryId = categoryId;
+                  const bankDocSnap = docMap.get(`bank-${accountId}`);
+                  const cardDocSnap = docMap.get(`card-${accountId}`);
 
-          case 'credit_card_payment':
-            if (!fromAccountId || !toCreditCardId) throw new Error("A source bank account and a credit card are required.");
-            transactionData.fromBankAccountId = fromAccountId;
-            transactionData.toCreditCardId = toCreditCardId;
-            transactionData.description = notes || `Payment for ${creditCards?.find(c => c.id === toCreditCardId)?.name}`
+                  if (bankDocSnap?.exists()) {
+                      transactionData.fromBankAccountId = accountId;
+                      const currentBalance = (balancesToWrite.get(bankDocSnap.ref) || bankDocSnap.data()).currentBalance;
+                      balancesToWrite.set(bankDocSnap.ref, { currentBalance: currentBalance - numericAmount });
+                  } else if (cardDocSnap?.exists()) {
+                      transactionData.fromCreditCardId = accountId;
+                      const currentBalance = (balancesToWrite.get(cardDocSnap.ref) || cardDocSnap.data()).currentBalance;
+                      balancesToWrite.set(cardDocSnap.ref, { currentBalance: currentBalance + numericAmount });
+                  } else {
+                      throw new Error("Source account/card not found.");
+                  }
+                  break;
+              case 'income':
+                  if (!accountId || !categoryId) throw new Error("Account and category are required.");
+                  const toAccDoc = docMap.get(`bank-${accountId}`);
+                  if (!toAccDoc?.exists()) throw new Error("Destination account not found.");
+                  transactionData.toBankAccountId = accountId;
+                  transactionData.categoryId = categoryId;
+                  const currentBalance = (balancesToWrite.get(toAccDoc.ref) || toAccDoc.data()).currentBalance;
+                  balancesToWrite.set(toAccDoc.ref, { currentBalance: currentBalance + numericAmount });
+                  break;
+              case 'transfer':
+                   if (!fromAccountId || !toAccountId) throw new Error("Both 'from' and 'to' accounts are required.");
+                   if (fromAccountId === toAccountId) throw new Error("'From' and 'to' accounts cannot be the same.");
+                  const fromAccDoc = docMap.get(`bank-${fromAccountId}`);
+                  const toAccDocTransfer = docMap.get(`bank-${toAccountId}`);
+                  if (!fromAccDoc?.exists() || !toAccDocTransfer?.exists()) throw new Error("One or both transfer accounts not found.");
 
-            const bankAccountRef = doc(firestore, 'users', user.uid, 'bankAccounts', fromAccountId);
-            const cardRef = doc(firestore, 'users', user.uid, 'creditCards', toCreditCardId);
-            const bankAccountDoc = await tx.get(bankAccountRef);
-            const cardDoc = await tx.get(cardRef);
-            if (!bankAccountDoc.exists() || !cardDoc.exists()) throw new Error("Bank account or credit card not found.");
+                  transactionData.fromBankAccountId = fromAccountId;
+                  transactionData.toBankAccountId = toAccountId;
+                  
+                  const fromBalance = (balancesToWrite.get(fromAccDoc.ref) || fromAccDoc.data()).currentBalance;
+                  balancesToWrite.set(fromAccDoc.ref, { currentBalance: fromBalance - numericAmount });
+                  
+                  const toBalance = (balancesToWrite.get(toAccDocTransfer.ref) || toAccDocTransfer.data()).currentBalance;
+                  balancesToWrite.set(toAccDocTransfer.ref, { currentBalance: toBalance + numericAmount });
+                  break;
+              case 'credit_card_payment':
+                  if (!fromAccountId || !toCreditCardId) throw new Error("A source bank account and a credit card are required.");
+                  const bankPayDoc = docMap.get(`bank-${fromAccountId}`);
+                  const cardPayDoc = docMap.get(`card-${toCreditCardId}`);
+                  if (!bankPayDoc?.exists() || !cardPayDoc?.exists()) throw new Error("Bank account or credit card not found.");
 
-            tx.update(bankAccountRef, { currentBalance: bankAccountDoc.data().currentBalance - numericAmount });
-            tx.update(cardRef, { currentBalance: cardDoc.data().currentBalance - numericAmount });
-            break;
+                  transactionData.fromBankAccountId = fromAccountId;
+                  transactionData.toCreditCardId = toCreditCardId;
+                  transactionData.description = notes || `Payment for ${creditCards?.find(c => c.id === toCreditCardId)?.name}`;
 
-          default:
-            throw new Error("Invalid transaction type.")
-        }
-        
-        // --- WRITE TRANSACTION DOC ---
-        if (mode === 'edit' && transaction) {
-            const txRef = doc(firestore, 'users', user.uid, 'transactions', transaction.id);
-            tx.update(txRef, transactionData);
-        } else {
-            const newTransactionRef = doc(collection(firestore, 'users', user.uid, 'transactions'));
-            tx.set(newTransactionRef, transactionData);
-             if (newRecurringTransactionRef) {
+                  const bankPayBalance = (balancesToWrite.get(bankPayDoc.ref) || bankPayDoc.data()).currentBalance;
+                  balancesToWrite.set(bankPayDoc.ref, { currentBalance: bankPayBalance - numericAmount });
+
+                  const cardPayBalance = (balancesToWrite.get(cardPayDoc.ref) || cardPayDoc.data()).currentBalance;
+                  balancesToWrite.set(cardPayDoc.ref, { currentBalance: cardPayBalance - numericAmount });
+                  break;
+            }
+
+            // --- 4. EXECUTE ALL WRITES ---
+            for (const [ref, balanceData] of balancesToWrite.entries()) {
+                tx.update(ref, balanceData);
+            }
+
+            // Recurring transaction logic
+            if (isRecurring && mode === 'add') {
+                const newRecurringTransactionRef = doc(collection(firestore, 'users', user.uid, 'recurringTransactions'));
+                transactionData.recurringTransactionId = newRecurringTransactionRef.id;
                 const recurringData: Omit<RecurringTransaction, 'id'> = {
                     userId: user.uid, description: transactionData.description!, amount: transactionData.amount!,
-                    type: transactionData.type!, frequency, startDate: transactionData.transactionDate,
-                    endDate: parsedEndDate?.toISOString(), lastGeneratedDate: transactionData.transactionDate,
-                    nextGenerationDate: getNextGenerationDate(parsedDate, frequency).toISOString(),
+                    type: transactionData.type!, frequency, startDate: transactionData.transactionDate!,
+                    endDate: endDate ? new Date(endDate).toISOString() : undefined, lastGeneratedDate: transactionData.transactionDate!,
+                    nextGenerationDate: getNextGenerationDate(new Date(date), frequency).toISOString(),
                     autoCreate, active: true, createdAt: new Date().toISOString(), categoryId: transactionData.categoryId,
                     fromBankAccountId: transactionData.fromBankAccountId, toBankAccountId: transactionData.toBankAccountId,
                     fromCreditCardId: transactionData.fromCreditCardId, toCreditCardId: transactionData.toCreditCardId,
                 }
                 tx.set(newRecurringTransactionRef, recurringData);
             }
-        }
-      });
 
-      toast({
-        title: mode === 'edit' ? 'Transaction Updated' : (isRecurring ? 'Recurring Transaction Saved' : 'Transaction Added'),
-        description: `Your ${activeTab.replace('_', ' ')} has been successfully recorded.`,
-      })
-      setOpen(false)
+            // Finally, write the transaction doc itself
+            if (mode === 'edit' && originalTxRef) {
+                tx.update(originalTxRef, transactionData);
+            } else {
+                const newTransactionRef = doc(collection(firestore, 'users', user.uid, 'transactions'));
+                tx.set(newTransactionRef, transactionData);
+            }
+        });
 
-    } catch(error: any) {
-      console.error("Transaction failed: ", error);
-      toast({ variant: 'destructive', title: 'Transaction Failed', description: error.message })
+        toast({
+            title: mode === 'edit' ? 'Transaction Updated' : (isRecurring ? 'Recurring Transaction Saved' : 'Transaction Added'),
+            description: `Your ${activeTab.replace('_', ' ')} has been successfully recorded.`,
+        });
+        setOpen(false);
+
+    } catch (error: any) {
+        console.error("Transaction failed: ", error);
+        toast({ variant: 'destructive', title: 'Transaction Failed', description: error.message });
     }
   }
 
