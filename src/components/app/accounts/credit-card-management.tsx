@@ -113,6 +113,7 @@ export function CreditCardManagement() {
         ) : creditCards && creditCards.length > 0 ? (
           creditCards.map((card) => {
             const utilization = card.creditLimit > 0 ? (card.currentBalance / card.creditLimit) * 100 : 0
+            const availableLimit = card.creditLimit - card.currentBalance;
             const utilizationColor =
               utilization > 75
                 ? 'bg-red-500'
@@ -131,7 +132,10 @@ export function CreditCardManagement() {
                   <div>
                     <h4 className="font-semibold">{card.name}</h4>
                     <p className="text-sm text-muted-foreground">
-                      Limit: {formatCurrency(card.creditLimit)}
+                      Total Limit: {formatCurrency(card.creditLimit)}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Available Limit: {formatCurrency(availableLimit)}
                     </p>
                   </div>
                   <AlertDialog>
