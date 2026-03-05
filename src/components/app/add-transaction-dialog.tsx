@@ -32,7 +32,7 @@ import {
   CreditCard as CreditCardIcon,
   ChevronDown,
 } from 'lucide-react'
-import { addDays, addWeeks, addMonths, addYears, isAfter } from 'date-fns'
+import { addDays, addWeeks, addMonths, addYears, isAfter, format, parseISO } from 'date-fns'
 import { useToast } from '@/hooks/use-toast'
 import {
   useFirestore,
@@ -47,7 +47,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 type TransactionType = 'expense' | 'income' | 'transfer' | 'credit_card_payment'
 type Frequency = 'daily' | 'weekly' | 'monthly' | 'yearly'
 
-export function AddTransactionDialog({ children }: { children: React.ReactNode }) {
+export function AddTransactionDialog({ children, mode = 'add', transaction }: { children: React.ReactNode, mode?: 'add' | 'edit', transaction?: Transaction }) {
   const [open, setOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<TransactionType>('expense')
   
@@ -102,13 +102,46 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
     setFrequency('monthly')
     setEndDate('')
     setAutoCreate(true)
+    setActiveTab('expense');
   }, [])
   
   useEffect(() => {
     if (open) {
-        resetForm()
+      if(mode === 'edit' && transaction) {
+        setActiveTab(transaction.type as TransactionType);
+        setAmount(transaction.amount.toString());
+        setDate(format(parseISO(transaction.transactionDate), 'yyyy-MM-dd'));
+        setNotes(transaction.description || '');
+        setCategoryId(transaction.categoryId || '');
+        setIsRecurring(!!transaction.recurringTransactionId);
+        
+        switch (transaction.type) {
+            case 'expense':
+                setAccountId(transaction.fromBankAccountId || transaction.fromCreditCardId || '');
+                break;
+            case 'income':
+                setAccountId(transaction.toBankAccountId || '');
+                break;
+            case 'transfer':
+                setFromAccountId(transaction.fromBankAccountId || '');
+                setToAccountId(transaction.toBankAccountId || '');
+                break;
+            case 'credit_card_payment':
+                setFromAccountId(transaction.fromBankAccountId || '');
+                setToCreditCardId(transaction.toCreditCardId || '');
+                break;
+        }
+
+        if (transaction.recurringTransactionId) {
+          // For now, we don't allow editing the recurring aspects of a transaction from here.
+          // This can be a future enhancement.
+          setIsRecurring(false);
+        }
+      } else {
+        resetForm();
+      }
     }
-  }, [open, resetForm])
+  }, [open, mode, transaction, resetForm]);
 
   useEffect(() => {
     // Reset recurring fields if tab changes to one that doesn't support it
@@ -133,59 +166,89 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
       return
     }
     
-    const parsedDate = new Date(date);
-    const parsedEndDate = endDate ? new Date(endDate) : undefined;
+    if (isRecurring && mode === 'edit') {
+      toast({ variant: 'destructive', title: 'Not Supported', description: 'Editing recurring transactions is not supported yet.' });
+      return;
+    }
 
-    const newTransactionRef = doc(collection(firestore, 'users', user.uid, 'transactions'));
     const numericAmount = parseFloat(amount);
-    const newRecurringTransactionRef = isRecurring ? doc(collection(firestore, 'users', user.uid, 'recurringTransactions')) : null;
-
+    
     try {
-      await runTransaction(firestore, async (transaction) => {
+      await runTransaction(firestore, async (tx) => {
+        
+        // --- EDIT MODE: REVERT ORIGINAL TRANSACTION ---
+        if (mode === 'edit' && transaction) {
+            const originalTxRef = doc(firestore, 'users', user.uid, 'transactions', transaction.id);
+            const originalTxDoc = await tx.get(originalTxRef);
+            if (!originalTxDoc.exists()) throw new Error("Transaction to edit was not found.");
+            const originalTx = originalTxDoc.data() as Transaction;
+
+            // Revert balances
+            if (originalTx.fromBankAccountId) {
+                const accRef = doc(firestore, 'users', user.uid, 'bankAccounts', originalTx.fromBankAccountId);
+                const accDoc = await tx.get(accRef);
+                if(accDoc.exists()) tx.update(accRef, { currentBalance: accDoc.data().currentBalance + originalTx.amount });
+            }
+            if (originalTx.toBankAccountId) {
+                const accRef = doc(firestore, 'users', user.uid, 'bankAccounts', originalTx.toBankAccountId);
+                const accDoc = await tx.get(accRef);
+                if(accDoc.exists()) tx.update(accRef, { currentBalance: accDoc.data().currentBalance - originalTx.amount });
+            }
+            if (originalTx.fromCreditCardId) {
+                const cardRef = doc(firestore, 'users', user.uid, 'creditCards', originalTx.fromCreditCardId);
+                const cardDoc = await tx.get(cardRef);
+                if(cardDoc.exists()) tx.update(cardRef, { currentBalance: cardDoc.data().currentBalance - originalTx.amount });
+            }
+            if (originalTx.toCreditCardId) {
+                const cardRef = doc(firestore, 'users', user.uid, 'creditCards', originalTx.toCreditCardId);
+                const cardDoc = await tx.get(cardRef);
+                if(cardDoc.exists()) tx.update(cardRef, { currentBalance: cardDoc.data().currentBalance + originalTx.amount });
+            }
+        }
+        
+        // --- APPLY NEW/UPDATED TRANSACTION ---
+        const parsedDate = new Date(date);
+        const parsedEndDate = endDate ? new Date(endDate) : undefined;
         let transactionData: Partial<Transaction> = {
-          userId: user.uid,
-          type: activeTab,
-          amount: numericAmount,
+          userId: user.uid, type: activeTab, amount: numericAmount,
           transactionDate: parsedDate.toISOString(),
           description: notes || `New ${activeTab.replace('_', ' ')}`,
-        }
+        };
 
-        if (isRecurring && newRecurringTransactionRef) {
+        const newRecurringTransactionRef = (isRecurring && mode === 'add') ? doc(collection(firestore, 'users', user.uid, 'recurringTransactions')) : null;
+        if (newRecurringTransactionRef) {
           transactionData.recurringTransactionId = newRecurringTransactionRef.id;
         }
 
+        // Logic for applying balance changes for the new/edited transaction
         switch (activeTab) {
           case 'expense':
             if (!accountId || !categoryId) throw new Error("Account and category are required.");
-            
+            transactionData.categoryId = categoryId;
             if (bankAccounts?.some(b => b.id === accountId)) {
               transactionData.fromBankAccountId = accountId;
               const accountRef = doc(firestore, 'users', user.uid, 'bankAccounts', accountId);
-              const accountDoc = await transaction.get(accountRef);
+              const accountDoc = await tx.get(accountRef);
               if (!accountDoc.exists()) throw new Error("Bank account not found.");
-              const newBalance = accountDoc.data().currentBalance - numericAmount;
-              transaction.update(accountRef, { currentBalance: newBalance, updatedAt: parsedDate.toISOString() });
+              tx.update(accountRef, { currentBalance: accountDoc.data().currentBalance - numericAmount });
             } else if (creditCards?.some(c => c.id === accountId)) {
               transactionData.fromCreditCardId = accountId;
               const cardRef = doc(firestore, 'users', user.uid, 'creditCards', accountId);
-              const cardDoc = await transaction.get(cardRef);
+              const cardDoc = await tx.get(cardRef);
               if (!cardDoc.exists()) throw new Error("Credit card not found.");
-              const newBalance = cardDoc.data().currentBalance + numericAmount;
-              transaction.update(cardRef, { currentBalance: newBalance, updatedAt: parsedDate.toISOString() });
+              tx.update(cardRef, { currentBalance: cardDoc.data().currentBalance + numericAmount });
             }
-            transactionData.categoryId = categoryId
-            break
+            break;
         
           case 'income':
             if (!accountId || !categoryId) throw new Error("Account and source are required.");
             transactionData.toBankAccountId = accountId;
-            const accountRef = doc(firestore, 'users', user.uid, 'bankAccounts', accountId);
-            const accountDoc = await transaction.get(accountRef);
-            if (!accountDoc.exists()) throw new Error("Bank account not found.");
-            const newBalance = accountDoc.data().currentBalance + numericAmount;
-            transaction.update(accountRef, { currentBalance: newBalance, updatedAt: parsedDate.toISOString() });
             transactionData.categoryId = categoryId;
-            break
+            const accountRef = doc(firestore, 'users', user.uid, 'bankAccounts', accountId);
+            const accountDoc = await tx.get(accountRef);
+            if (!accountDoc.exists()) throw new Error("Bank account not found.");
+            tx.update(accountRef, { currentBalance: accountDoc.data().currentBalance + numericAmount });
+            break;
         
           case 'transfer':
             if (!fromAccountId || !toAccountId) throw new Error("Both 'from' and 'to' accounts are required.");
@@ -195,19 +258,13 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
             
             const fromAccountRef = doc(firestore, 'users', user.uid, 'bankAccounts', fromAccountId);
             const toAccountRef = doc(firestore, 'users', user.uid, 'bankAccounts', toAccountId);
+            const fromAccountDoc = await tx.get(fromAccountRef);
+            const toAccountDoc = await tx.get(toAccountRef);
+            if (!fromAccountDoc.exists() || !toAccountDoc.exists()) throw new Error("One or both transfer accounts not found.");
             
-            const fromAccountDoc = await transaction.get(fromAccountRef);
-            const toAccountDoc = await transaction.get(toAccountRef);
-
-            if (!fromAccountDoc.exists()) throw new Error("Source account not found.");
-            if (!toAccountDoc.exists()) throw new Error("Destination account not found.");
-
-            const newFromBalance = fromAccountDoc.data().currentBalance - numericAmount;
-            transaction.update(fromAccountRef, { currentBalance: newFromBalance, updatedAt: parsedDate.toISOString() });
-
-            const newToBalance = toAccountDoc.data().currentBalance + numericAmount;
-            transaction.update(toAccountRef, { currentBalance: newToBalance, updatedAt: parsedDate.toISOString() });
-            break
+            tx.update(fromAccountRef, { currentBalance: fromAccountDoc.data().currentBalance - numericAmount });
+            tx.update(toAccountRef, { currentBalance: toAccountDoc.data().currentBalance + numericAmount });
+            break;
 
           case 'credit_card_payment':
             if (!fromAccountId || !toCreditCardId) throw new Error("A source bank account and a credit card are required.");
@@ -217,56 +274,45 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
 
             const bankAccountRef = doc(firestore, 'users', user.uid, 'bankAccounts', fromAccountId);
             const cardRef = doc(firestore, 'users', user.uid, 'creditCards', toCreditCardId);
+            const bankAccountDoc = await tx.get(bankAccountRef);
+            const cardDoc = await tx.get(cardRef);
+            if (!bankAccountDoc.exists() || !cardDoc.exists()) throw new Error("Bank account or credit card not found.");
 
-            const bankAccountDoc = await transaction.get(bankAccountRef);
-            const cardDoc = await transaction.get(cardRef);
-
-            if (!bankAccountDoc.exists()) throw new Error("Bank account not found.");
-            if (!cardDoc.exists()) throw new Error("Credit card not found.");
-
-            const newBankBalance = bankAccountDoc.data().currentBalance - numericAmount;
-            transaction.update(bankAccountRef, { currentBalance: newBankBalance, updatedAt: parsedDate.toISOString() });
-
-            const newCardBalance = cardDoc.data().currentBalance - numericAmount;
-            transaction.update(cardRef, { currentBalance: newCardBalance, updatedAt: parsedDate.toISOString() });
-            break
+            tx.update(bankAccountRef, { currentBalance: bankAccountDoc.data().currentBalance - numericAmount });
+            tx.update(cardRef, { currentBalance: cardDoc.data().currentBalance - numericAmount });
+            break;
 
           default:
             throw new Error("Invalid transaction type.")
         }
         
-        transaction.set(newTransactionRef, transactionData);
-
-        if (isRecurring && newRecurringTransactionRef) {
-            const recurringData: Omit<RecurringTransaction, 'id'> = {
-                userId: user.uid,
-                description: transactionData.description!,
-                amount: transactionData.amount!,
-                type: transactionData.type!,
-                frequency,
-                startDate: transactionData.transactionDate,
-                endDate: parsedEndDate?.toISOString(),
-                lastGeneratedDate: transactionData.transactionDate,
-                nextGenerationDate: getNextGenerationDate(parsedDate, frequency).toISOString(),
-                autoCreate,
-                active: true,
-                createdAt: new Date().toISOString(),
-                categoryId: transactionData.categoryId,
-                fromBankAccountId: transactionData.fromBankAccountId,
-                toBankAccountId: transactionData.toBankAccountId,
-                fromCreditCardId: transactionData.fromCreditCardId,
-                toCreditCardId: transactionData.toCreditCardId,
+        // --- WRITE TRANSACTION DOC ---
+        if (mode === 'edit' && transaction) {
+            const txRef = doc(firestore, 'users', user.uid, 'transactions', transaction.id);
+            tx.update(txRef, transactionData);
+        } else {
+            const newTransactionRef = doc(collection(firestore, 'users', user.uid, 'transactions'));
+            tx.set(newTransactionRef, transactionData);
+             if (newRecurringTransactionRef) {
+                const recurringData: Omit<RecurringTransaction, 'id'> = {
+                    userId: user.uid, description: transactionData.description!, amount: transactionData.amount!,
+                    type: transactionData.type!, frequency, startDate: transactionData.transactionDate,
+                    endDate: parsedEndDate?.toISOString(), lastGeneratedDate: transactionData.transactionDate,
+                    nextGenerationDate: getNextGenerationDate(parsedDate, frequency).toISOString(),
+                    autoCreate, active: true, createdAt: new Date().toISOString(), categoryId: transactionData.categoryId,
+                    fromBankAccountId: transactionData.fromBankAccountId, toBankAccountId: transactionData.toBankAccountId,
+                    fromCreditCardId: transactionData.fromCreditCardId, toCreditCardId: transactionData.toCreditCardId,
+                }
+                tx.set(newRecurringTransactionRef, recurringData);
             }
-            transaction.set(newRecurringTransactionRef, recurringData);
         }
       });
 
       toast({
-        title: isRecurring ? 'Recurring Transaction Saved' : 'Transaction Added',
+        title: mode === 'edit' ? 'Transaction Updated' : (isRecurring ? 'Recurring Transaction Saved' : 'Transaction Added'),
         description: `Your ${activeTab.replace('_', ' ')} has been successfully recorded.`,
       })
       setOpen(false)
-      resetForm()
 
     } catch(error: any) {
       console.error("Transaction failed: ", error);
@@ -286,7 +332,7 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
       )
     }
 
-    const supportsRecurring = activeTab === 'expense' || activeTab === 'income';
+    const supportsRecurring = (activeTab === 'expense' || activeTab === 'income') && mode === 'add';
 
     return (
       <div className="py-4 space-y-4">
@@ -301,7 +347,7 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
         <TabsContent value="expense" className="space-y-4 m-0">
             <div className="space-y-2">
                 <Label htmlFor="expense-category">Category</Label>
-                <Select value={categoryId} onValueChange={setCategoryId}>
+                <Select value={categoryId} onValueChange={setCategoryId} disabled={mode==='edit' && !!transaction?.recurringTransactionId}>
                     <SelectTrigger id="expense-category"><SelectValue placeholder="Select a category" /></SelectTrigger>
                     <SelectContent>
                         {expenseCategories.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>)}
@@ -310,7 +356,7 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
             </div>
             <div className="space-y-2">
                 <Label htmlFor="expense-account">Paid From</Label>
-                <Select value={accountId} onValueChange={setAccountId}>
+                <Select value={accountId} onValueChange={setAccountId} disabled={mode==='edit' && !!transaction?.recurringTransactionId}>
                     <SelectTrigger id="expense-account"><SelectValue placeholder="Select an account or card" /></SelectTrigger>
                     <SelectContent>
                         {bankAccounts?.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name} (Bank)</SelectItem>)}
@@ -323,7 +369,7 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
         <TabsContent value="income" className="space-y-4 m-0">
           <div className="space-y-2">
               <Label htmlFor="income-category">Source</Label>
-              <Select value={categoryId} onValueChange={setCategoryId}>
+              <Select value={categoryId} onValueChange={setCategoryId} disabled={mode==='edit' && !!transaction?.recurringTransactionId}>
                   <SelectTrigger id="income-category"><SelectValue placeholder="Select a source" /></SelectTrigger>
                   <SelectContent>
                       {incomeCategories.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>)}
@@ -332,7 +378,7 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
           </div>
           <div className="space-y-2">
               <Label htmlFor="income-account">Deposit To</Label>
-              <Select value={accountId} onValueChange={setAccountId}>
+              <Select value={accountId} onValueChange={setAccountId} disabled={mode==='edit' && !!transaction?.recurringTransactionId}>
                   <SelectTrigger id="income-account"><SelectValue placeholder="Select an account" /></SelectTrigger>
                   <SelectContent>
                       {bankAccounts?.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
@@ -395,7 +441,7 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
         {supportsRecurring && (
             <Collapsible open={isRecurring} onOpenChange={setIsRecurring}>
                 <div className="flex items-center space-x-2">
-                    <Checkbox id="recurring" checked={isRecurring} onCheckedChange={setIsRecurring} />
+                    <Checkbox id="recurring" checked={isRecurring} onCheckedChange={(checked) => setIsRecurring(Boolean(checked))} />
                     <label htmlFor="recurring" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                         Make this recurring
                     </label>
@@ -448,15 +494,15 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
         className="sm:max-w-md"
       >
         <DialogHeader>
-          <DialogTitle>Add Transaction</DialogTitle>
-          <DialogDescription>Log a new income, expense, or transfer.</DialogDescription>
+          <DialogTitle>{mode === 'edit' ? 'Edit Transaction' : 'Add Transaction'}</DialogTitle>
+          <DialogDescription>{mode === 'edit' ? 'Modify your existing transaction.' : 'Log a new income, expense, or transfer.'}</DialogDescription>
         </DialogHeader>
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TransactionType)} className="pt-4">
           <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto p-1">
-            <TabsTrigger value="expense" className="flex-col h-16 gap-1"><ArrowDown className="h-5 w-5 text-red-500"/>Expense</TabsTrigger>
-            <TabsTrigger value="income" className="flex-col h-16 gap-1"><ArrowUp className="h-5 w-5 text-green-500"/>Income</TabsTrigger>
-            <TabsTrigger value="transfer" className="flex-col h-16 gap-1"><ArrowRightLeft className="h-5 w-5 text-blue-500"/>Transfer</TabsTrigger>
-            <TabsTrigger value="credit_card_payment" className="flex-col h-16 gap-1 text-center"><CreditCardIcon className="h-5 w-5 text-orange-500"/>CC Payment</TabsTrigger>
+            <TabsTrigger value="expense" className="flex-col h-16 gap-1" disabled={mode==='edit'}><ArrowDown className="h-5 w-5 text-red-500"/>Expense</TabsTrigger>
+            <TabsTrigger value="income" className="flex-col h-16 gap-1" disabled={mode==='edit'}><ArrowUp className="h-5 w-5 text-green-500"/>Income</TabsTrigger>
+            <TabsTrigger value="transfer" className="flex-col h-16 gap-1" disabled={mode==='edit'}><ArrowRightLeft className="h-5 w-5 text-blue-500"/>Transfer</TabsTrigger>
+            <TabsTrigger value="credit_card_payment" className="flex-col h-16 gap-1 text-center" disabled={mode==='edit'}><CreditCardIcon className="h-5 w-5 text-orange-500"/>CC Payment</TabsTrigger>
           </TabsList>
           
           {renderContent()}
@@ -464,12 +510,7 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
             <Button type="button" onClick={handleSubmit} disabled={isLoading}>
-              {isLoading ? 'Loading...' : 
-                activeTab === 'expense' ? 'Add Expense' :
-                activeTab === 'income' ? 'Add Income' :
-                activeTab === 'transfer' ? 'Confirm Transfer' :
-                'Make Payment'
-              }
+              {isLoading ? 'Loading...' : mode === 'edit' ? 'Save Changes' : 'Add Transaction'}
             </Button>
           </DialogFooter>
         </Tabs>

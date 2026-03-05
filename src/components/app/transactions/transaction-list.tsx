@@ -69,11 +69,15 @@ export function TransactionList({ transactions, categories, accounts, totalIncom
     
     const groupedTransactions = useMemo(() => {
         return transactions.reduce((acc, transaction) => {
-            const date = parseISO(transaction.transactionDate);
-            const group = format(date, 'yyyy-MM-dd');
+            try {
+                const date = parseISO(transaction.transactionDate);
+                const group = format(date, 'yyyy-MM-dd');
 
-            if (!acc[group]) acc[group] = [];
-            acc[group].push(transaction);
+                if (!acc[group]) acc[group] = [];
+                acc[group].push(transaction);
+            } catch (e) {
+                // Ignore invalid dates
+            }
             return acc;
         }, {} as Record<string, Transaction[]>);
     }, [transactions]);
@@ -224,7 +228,9 @@ export function TransactionList({ transactions, categories, accounts, totalIncom
                                                         )}
                                                     </div>
                                                     <div className="flex justify-end gap-2 mt-4">
-                                                        <Button variant="ghost" size="sm"><Edit className="mr-2 h-4 w-4"/> Edit</Button>
+                                                        <AddTransactionDialog mode="edit" transaction={tx}>
+                                                            <Button variant="ghost" size="sm"><Edit className="mr-2 h-4 w-4"/> Edit</Button>
+                                                        </AddTransactionDialog>
                                                         <AlertDialog>
                                                             <AlertDialogTrigger asChild><Button variant="ghost" size="sm" className="text-red-500 hover:bg-red-50 hover:text-red-600"><Trash2 className="mr-2 h-4 w-4"/> Delete</Button></AlertDialogTrigger>
                                                             <AlertDialogContent>
