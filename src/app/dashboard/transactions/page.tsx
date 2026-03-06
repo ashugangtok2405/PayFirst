@@ -110,11 +110,15 @@ export default function TransactionsPage() {
   }, [transactions, dateRange])
 
   const { currentSummary, previousSummary, daysInPeriod, previousDaysInPeriod } = useMemo(() => {
-    const calculateSummary = (txs: Transaction[]) => ({
-      income: txs.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0),
-      expense: txs.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0),
-      net: txs.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0) - txs.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0),
-    });
+    const calculateSummary = (txs: Transaction[]) => {
+        const income = txs.filter(t => ['income', 'debt_borrowed', 'debt_repayment_in'].includes(t.type)).reduce((sum, t) => sum + t.amount, 0);
+        const expense = txs.filter(t => ['expense', 'loan_payment', 'debt_lent', 'debt_repayment_out'].includes(t.type)).reduce((sum, t) => sum + t.amount, 0);
+        return {
+            income,
+            expense,
+            net: income - expense,
+        };
+    };
 
     const current = calculateSummary(filteredTransactions)
     const previous = calculateSummary(previousPeriodTransactions)

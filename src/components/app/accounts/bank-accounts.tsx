@@ -37,6 +37,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { AddTransactionDialog } from '../add-transaction-dialog'
 import { TransferMoneyDialog } from './transfer-money-dialog'
 import { AddAccountDialog } from './add-account-dialog'
+import { cn } from '@/lib/utils'
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -140,8 +141,9 @@ export function BankAccounts() {
             {bankAccounts.map((account) => {
                 const accountTransactions = transactions?.filter(t => t.fromBankAccountId === account.id || t.toBankAccountId === account.id).slice(0, 5) ?? [];
                 
-                const monthlyInflow = monthlyTxs.filter(t => t.toBankAccountId === account.id && ['income', 'debt_borrowed', 'debt_repayment_in'].includes(t.type)).reduce((sum, t) => sum + t.amount, 0);
-                const monthlyOutflow = monthlyTxs.filter(t => t.fromBankAccountId === account.id && ['expense', 'credit_card_payment', 'loan_payment', 'debt_lent', 'debt_repayment_out'].includes(t.type)).reduce((sum, t) => sum + t.amount, 0);
+                const monthlyInflow = monthlyTxs.filter(t => t.toBankAccountId === account.id && ['income', 'transfer', 'debt_borrowed', 'debt_repayment_in'].includes(t.type)).reduce((sum, t) => sum + t.amount, 0);
+                const monthlyOutflow = monthlyTxs.filter(t => t.fromBankAccountId === account.id && ['expense', 'transfer', 'credit_card_payment', 'loan_payment', 'debt_lent', 'debt_repayment_out'].includes(t.type)).reduce((sum, t) => sum + t.amount, 0);
+                const netChange = monthlyInflow - monthlyOutflow;
 
                 return (
                 <AccordionItem value={account.id} key={account.id} className="border-b-0">
@@ -159,14 +161,18 @@ export function BankAccounts() {
                                                 <p className="text-xs text-muted-foreground">Updated just now</p>
                                             </div>
                                         </div>
-                                        <div className="mt-4 flex justify-between text-sm">
+                                        <div className="mt-4 grid grid-cols-3 gap-2 text-center">
                                             <div>
-                                                <span className="text-muted-foreground">Inflow: </span>
-                                                <span className="font-medium text-green-600">{formatCurrency(monthlyInflow)}</span>
+                                                <p className="text-xs text-muted-foreground">Inflow</p>
+                                                <p className="font-semibold text-green-600">{formatCurrency(monthlyInflow)}</p>
                                             </div>
                                             <div>
-                                                <span className="text-muted-foreground">Outflow: </span>
-                                                <span className="font-medium text-red-600">{formatCurrency(monthlyOutflow)}</span>
+                                                <p className="text-xs text-muted-foreground">Outflow</p>
+                                                <p className="font-semibold text-red-600">{formatCurrency(monthlyOutflow)}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-xs text-muted-foreground">Net</p>
+                                                <p className={cn("font-semibold", netChange > 0 ? 'text-blue-600' : 'text-orange-600')}>{formatCurrency(netChange)}</p>
                                             </div>
                                         </div>
                                     </div>

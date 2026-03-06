@@ -3,13 +3,14 @@
 import React, { useMemo } from 'react'
 import { Area, AreaChart, ResponsiveContainer } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Wallet, Flame, ShieldAlert, Target, TrendingUp } from 'lucide-react'
+import { Wallet, Flame, ShieldAlert, Target, TrendingUp, TrendingDown } from 'lucide-react'
 import { Progress } from '@/components/ui/progress'
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase'
 import { collection, query, where } from 'firebase/firestore'
-import type { BankAccount, CreditCard, Transaction } from '@/lib/types'
+import type { BankAccount, CreditCard, Transaction, Loan, PersonalDebt } from '@/lib/types'
 import { startOfMonth, differenceInDays, parseISO } from 'date-fns'
 import { Skeleton } from '@/components/ui/skeleton'
+import { cn } from '@/lib/utils'
 
 const formatCurrency = (amount: number, compact = false) => {
   const formatter = new Intl.NumberFormat('en-IN', {
@@ -62,6 +63,18 @@ export function KpiSummary() {
   const { data: creditCards, isLoading: loadingCreditCards } =
     useCollection<CreditCard>(creditCardsQuery)
 
+  const loansQuery = useMemoFirebase(
+    () => (user ? collection(firestore, 'users', user.uid, 'loans') : null),
+    [firestore, user?.uid]
+  )
+  const { data: loans, isLoading: loadingLoans } = useCollection<Loan>(loansQuery)
+  
+  const personalDebtsQuery = useMemoFirebase(
+    () => (user ? collection(firestore, 'users', user.uid, 'personalDebts') : null),
+    [firestore, user?.uid]
+  )
+  const { data: personalDebts, isLoading: loadingPersonalDebts } = useCollection<PersonalDebt>(personalDebtsQuery)
+
   const startOfCurrentMonth = useMemo(() => startOfMonth(new Date()), [])
   const transactionsQuery = useMemoFirebase(
     () =>
@@ -77,7 +90,7 @@ export function KpiSummary() {
     useCollection<Transaction>(transactionsQuery)
 
   const isLoading =
-    loadingBankAccounts || loadingCreditCards || loadingTransactions
+    loadingBankAccounts || loadingCreditCards || loadingTransactions || loadingLoans || loadingPersonalDebts
 
   const metrics = useMemo(() => {
     const now = new Date()
@@ -89,10 +102,10 @@ export function KpiSummary() {
 
     // Income & Expense for current month
     const totalIncome = currentMonthTransactions
-      .filter((t) => t.type === 'income')
+      .filter((t) => ['income', 'debt_borrowed', 'debt_repayment_in'].includes(t.type))
       .reduce((sum, t) => sum + t.amount, 0)
     const totalExpense = currentMonthTransactions
-      .filter((t) => t.type === 'expense')
+      .filter((t) => ['expense', 'loan_payment', 'debt_lent', 'debt_repayment_out'].includes(t.type))
       .reduce((sum, t) => sum + t.amount, 0)
 
     // 2. Monthly Burn Rate
@@ -139,6 +152,7 @@ export function KpiSummary() {
     const savings = totalIncome - totalExpense
     const savingsRate = totalIncome > 0 ? (savings / totalIncome) * 100 : 0
     const onTrack = savingsRate >= 20 // Assuming 20% savings rate is the goal
+    const overspending = savings < 0
 
     // MOCK DATA for sparkline - To be replaced with historical data fetching
     const cashSparkline = [
@@ -156,9 +170,10 @@ export function KpiSummary() {
       savingsRate,
       savedThisMonth: savings,
       onTrack,
+      overspending,
       cashSparkline,
     }
-  }, [bankAccounts, creditCards, transactions, startOfCurrentMonth])
+  }, [bankAccounts, creditCards, transactions, loans, personalDebts, startOfCurrentMonth])
 
   const kpiCards = [
     {
@@ -242,23 +257,24 @@ export function KpiSummary() {
       bgColor: 'bg-green-50',
       renderContent: () => (
         <>
-          <p className="text-3xl font-bold">
-            {metrics.savingsRate.toFixed(0)}%{' '}
-            <span className="text-lg font-normal text-muted-foreground">
-              rate
+          <p className={cn("text-3xl font-bold", metrics.overspending && "text-red-600")}>
+            {metrics.overspending ? formatCurrency(metrics.savedThisMonth, true) : `${metrics.savingsRate.toFixed(0)}%`}
+            <span className={cn("text-lg font-normal text-muted-foreground", !metrics.overspending && "ml-1")}>
+              {metrics.overspending ? " overspent" : "rate"}
             </span>
           </p>
           <p className="text-sm text-muted-foreground h-5">
-            Saved{' '}
-            <span className="font-semibold text-foreground">
-              {formatCurrency(metrics.savedThisMonth, true)}
-            </span>{' '}
-            this month
+            {metrics.overspending ? `of your income this month` : `Saved ${formatCurrency(metrics.savedThisMonth, true)} this month`}
           </p>
         </>
       ),
       renderFooter: () =>
-        metrics.onTrack ? (
+        metrics.overspending ? (
+          <div className="flex items-center gap-2 text-sm text-red-600 font-medium">
+            <TrendingDown className="h-4 w-4" />
+            <span>Overspending this month</span>
+          </div>
+        ) : metrics.onTrack ? (
           <div className="flex items-center gap-2 text-sm text-green-600 font-medium">
             <TrendingUp className="h-4 w-4" />
             <span>You're on track this month!</span>
@@ -310,7 +326,7 @@ export function KpiSummary() {
           </CardHeader>
           <CardContent className="space-y-2">
             {kpi.renderContent()}
-            <div className="pt-2">{kpi.renderFooter && kpi.renderFooter()}</div>
+            <div className="pt-2 h-10">{kpi.renderFooter && kpi.renderFooter()}</div>
           </CardContent>
         </Card>
       ))}

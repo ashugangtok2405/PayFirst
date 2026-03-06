@@ -69,8 +69,8 @@ export function FinancialHealthAnalysis() {
         } catch { return false; }
       });
       return {
-        income: filtered.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0),
-        expense: filtered.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0),
+        income: filtered.filter(t => ['income', 'debt_borrowed', 'debt_repayment_in'].includes(t.type)).reduce((s, t) => s + t.amount, 0),
+        expense: filtered.filter(t => ['expense', 'loan_payment', 'debt_lent', 'debt_repayment_out'].includes(t.type)).reduce((s, t) => s + t.amount, 0),
       }
     }
 
