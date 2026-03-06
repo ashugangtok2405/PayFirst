@@ -6,20 +6,35 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   useSidebar,
+  SidebarGroup,
+  SidebarGroupLabel,
 } from '@/components/ui/sidebar'
 import {
   LayoutGrid,
   ArrowRightLeft,
-  Wallet,
   Sparkles,
-  Settings,
+  Landmark,
+  PiggyBank,
+  CreditCard,
+  FileText,
+  Handshake,
 } from 'lucide-react'
 
-const menuItems = [
+const overviewItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutGrid },
   { href: '/dashboard/transactions', label: 'Transactions', icon: ArrowRightLeft },
-  { href: '/dashboard/accounts', label: 'Accounts', icon: Wallet },
   { href: '/dashboard/insights', label: 'Insights', icon: Sparkles },
+]
+
+const assetItems = [
+  { href: '/dashboard/accounts', label: 'Accounts', icon: Landmark },
+  { href: '/dashboard/investments', label: 'Investments', icon: PiggyBank },
+]
+
+const liabilityItems = [
+    { href: '/dashboard/credit-cards', label: 'Credit Cards', icon: CreditCard },
+    { href: '/dashboard/loans', label: 'Loans', icon: FileText },
+    { href: '/dashboard/debts', label: 'Debts', icon: Handshake },
 ]
 
 export function MainNav() {
@@ -34,21 +49,42 @@ export function MainNav() {
     }
   }
 
-  return (
-    <SidebarMenu className="flex-1 p-0">
-      {menuItems.map((item) => (
+  const renderMenuItems = (items: typeof overviewItems) => {
+      return items.map((item) => (
         <SidebarMenuItem key={item.href}>
           <SidebarMenuButton
             isActive={pathname === item.href}
             tooltip={item.label}
-            className="h-12 justify-start data-[active=true]:bg-gradient-to-r data-[active=true]:from-blue-500 data-[active=true]:to-indigo-600 data-[active=true]:text-white data-[active=true]:shadow-md"
+            className="h-11 justify-start"
             onClick={() => handleNavClick(item.href)}
           >
             <item.icon className="h-5 w-5" />
             <span className="font-medium">{item.label}</span>
           </SidebarMenuButton>
         </SidebarMenuItem>
-      ))}
-    </SidebarMenu>
+      ))
+  }
+
+  return (
+    <>
+        <SidebarGroup>
+            <SidebarGroupLabel>OVERVIEW</SidebarGroupLabel>
+            <SidebarMenu className="p-0">
+                {renderMenuItems(overviewItems)}
+            </SidebarMenu>
+        </SidebarGroup>
+        <SidebarGroup>
+            <SidebarGroupLabel>ASSETS</SidebarGroupLabel>
+            <SidebarMenu className="p-0">
+                {renderMenuItems(assetItems)}
+            </SidebarMenu>
+        </SidebarGroup>
+        <SidebarGroup>
+            <SidebarGroupLabel>LIABILITIES</SidebarGroupLabel>
+            <SidebarMenu className="p-0">
+                {renderMenuItems(liabilityItems)}
+            </SidebarMenu>
+        </SidebarGroup>
+    </>
   )
 }

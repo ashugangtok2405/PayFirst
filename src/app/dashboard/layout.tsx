@@ -14,9 +14,10 @@ import {
   SidebarFooter,
   SidebarTrigger,
   SidebarInset,
-  SidebarSeparator,
+  SidebarGroup,
+  SidebarGroupLabel,
 } from '@/components/ui/sidebar'
-import { PlusCircle, Landmark, CreditCard, FileText, Handshake } from 'lucide-react'
+import { PlusCircle, Landmark, CreditCard, FileText } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { AddTransactionDialog } from '@/components/app/add-transaction-dialog'
 import { Button } from '@/components/ui/button'
@@ -38,12 +39,12 @@ export default function DashboardLayout({
     if (pathname === '/dashboard') {
       return 'Dashboard'
     }
-    const path = pathname.split('/').pop()
+    const path = pathname.split('/').pop()?.replace('-', ' ')
     if (!path) {
       return 'Dashboard'
     }
-    // Capitalize first letter
-    return path.charAt(0).toUpperCase() + path.slice(1)
+    // Capitalize each word
+    return path.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
   }, [pathname])
 
   useEffect(() => {
@@ -75,43 +76,31 @@ export default function DashboardLayout({
             <SidebarHeader className="border-b border-sidebar-border p-6 pb-4">
               <Logo />
             </SidebarHeader>
-            <SidebarContent className="p-4">
+            <SidebarContent className="p-0">
               <MainNav />
+              <SidebarGroup>
+                <SidebarGroupLabel>QUICK ACTIONS</SidebarGroupLabel>
+                 <div className="p-2 space-y-2">
+                    <AddAccountDialog accountType="bank">
+                        <Button variant="outline" className="w-full justify-start">
+                        <PlusCircle className="mr-2" /> Add Bank
+                        </Button>
+                    </AddAccountDialog>
+                    <AddAccountDialog accountType="credit">
+                        <Button variant="outline" className="w-full justify-start">
+                        <CreditCard className="mr-2" /> Add Card
+                        </Button>
+                    </AddAccountDialog>
+                    <AddAccountDialog accountType="loan">
+                        <Button variant="outline" className="w-full justify-start">
+                        <FileText className="mr-2" /> Add Loan
+                        </Button>
+                    </AddAccountDialog>
+                </div>
+              </SidebarGroup>
             </SidebarContent>
           </div>
-          <SidebarFooter className="space-y-4 p-4">
-            <div className="space-y-2">
-              <AddAccountDialog accountType="bank">
-                <Button className="w-full justify-start bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-md transition hover:scale-[1.02]">
-                  <Landmark className="mr-2" /> Add Bank Account
-                </Button>
-              </AddAccountDialog>
-              <AddAccountDialog accountType="credit">
-                <Button
-                  variant="outline"
-                  className="w-full justify-start border-gray-300 text-gray-700 hover:bg-gray-100"
-                >
-                  <CreditCard className="mr-2" /> Add Credit Card
-                </Button>
-              </AddAccountDialog>
-              <AddAccountDialog accountType="loan">
-                <Button
-                  variant="outline"
-                  className="w-full justify-start border-gray-300 text-gray-700 hover:bg-gray-100"
-                >
-                  <FileText className="mr-2" /> Add Loan / EMI
-                </Button>
-              </AddAccountDialog>
-              <AddAccountDialog accountType="personal_debt">
-                <Button
-                  variant="outline"
-                  className="w-full justify-start border-gray-300 text-gray-700 hover:bg-gray-100"
-                >
-                  <Handshake className="mr-2" /> Add Personal Debt
-                </Button>
-              </AddAccountDialog>
-            </div>
-            <SidebarSeparator />
+          <SidebarFooter className="p-4">
             <UserNav />
           </SidebarFooter>
         </div>
