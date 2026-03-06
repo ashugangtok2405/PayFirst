@@ -124,3 +124,40 @@ export interface Alert {
   createdAt: string;
   expiresAt?: string;
 }
+
+export interface Investment {
+  id: string;
+  userId: string;
+  fundName: string;
+  fundHouse: string;
+  category: 'Equity' | 'Debt' | 'Hybrid' | 'Other';
+  subCategory: string;
+  units: number;
+  investedAmount: number;
+  currentValue: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SIP {
+  id: string;
+  userId: string;
+  investmentId: string;
+  amount: number;
+  sipDate: number; // Day of the month
+  nextDueDate: string;
+  active: boolean;
+  createdAt: string;
+}
+
+export interface InvestmentTransaction {
+  id: string;
+  userId: string;
+  investmentId: string;
+  sipId?: string;
+  type: 'buy' | 'sell';
+  transactionDate: string;
+  amount: number;
+  nav: number;
+  units: number;
+}

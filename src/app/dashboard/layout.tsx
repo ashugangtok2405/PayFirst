@@ -17,7 +17,7 @@ import {
   SidebarGroup,
   SidebarGroupLabel,
 } from '@/components/ui/sidebar'
-import { PlusCircle, Landmark, CreditCard, FileText } from 'lucide-react'
+import { PlusCircle, Landmark, CreditCard, FileText, PiggyBank } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { AddTransactionDialog } from '@/components/app/add-transaction-dialog'
 import { Button } from '@/components/ui/button'
@@ -25,6 +25,7 @@ import { AddAccountDialog } from '@/components/app/accounts/add-account-dialog'
 import { RecurringProcessor } from '@/components/app/recurring-processor'
 import { NotificationBell } from '@/components/app/notifications/notification-bell'
 import { AlertManager } from '@/components/app/alert-manager'
+import { AddInvestmentDialog } from '@/components/app/investments/add-investment-dialog'
 
 export default function DashboardLayout({
   children,
@@ -96,6 +97,11 @@ export default function DashboardLayout({
                         <FileText className="mr-2" /> Add Loan
                         </Button>
                     </AddAccountDialog>
+                    <AddInvestmentDialog>
+                      <Button variant="outline" className="w-full justify-start">
+                        <PiggyBank className="mr-2" /> Add Investment
+                      </Button>
+                    </AddInvestmentDialog>
                 </div>
               </SidebarGroup>
             </SidebarContent>

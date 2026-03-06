@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Wallet, Landmark, CreditCard } from 'lucide-react'
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase'
 import { collection } from 'firebase/firestore'
-import type { BankAccount, CreditCard as CreditCardType, Loan, PersonalDebt } from '@/lib/types'
+import type { BankAccount, CreditCard as CreditCardType, Loan, PersonalDebt, Investment } from '@/lib/types'
 import { Skeleton } from '@/components/ui/skeleton'
 
 const formatCurrency = (amount: number) => {
@@ -31,9 +31,13 @@ export function NetWorthSummary() {
 
   const personalDebtsQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'personalDebts') : null, [firestore, user?.uid])
   const { data: personalDebts, isLoading: loadingPersonalDebts } = useCollection<PersonalDebt>(personalDebtsQuery)
+  
+  const investmentsQuery = useMemoFirebase(() => user ? collection(firestore, 'users', user.uid, 'investments') : null, [firestore, user?.uid])
+  const { data: investments, isLoading: loadingInvestments } = useCollection<Investment>(investmentsQuery)
 
   const totalAssets = (bankAccounts?.reduce((acc, account) => acc + account.currentBalance, 0) ?? 0)
     + (personalDebts?.filter(d => d.type === 'lent' && d.status === 'active').reduce((acc, debt) => acc + debt.remainingAmount, 0) ?? 0)
+    + (investments?.reduce((acc, inv) => acc + inv.currentValue, 0) ?? 0)
 
   const totalLiabilities = (creditCards?.reduce((acc, card) => acc + card.currentBalance, 0) ?? 0) 
     + (loans?.reduce((acc, loan) => acc + loan.outstanding, 0) ?? 0)
@@ -47,7 +51,7 @@ export function NetWorthSummary() {
     { title: 'Net Worth', value: netWorth, icon: Wallet },
   ]
   
-  const isLoading = loadingBankAccounts || loadingCreditCards || loadingLoans || loadingPersonalDebts
+  const isLoading = loadingBankAccounts || loadingCreditCards || loadingLoans || loadingPersonalDebts || loadingInvestments
 
   if (isLoading) {
       return (

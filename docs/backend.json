@@ -477,6 +477,58 @@
         }
       },
       "required": ["id", "userId", "type", "title", "message", "severity", "isRead", "resolved", "createdAt"]
+    },
+    "Investment": {
+      "title": "Investment",
+      "type": "object",
+      "description": "Represents a user's holding in a specific mutual fund.",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "fundName": { "type": "string" },
+        "fundHouse": { "type": "string" },
+        "category": { "type": "string", "enum": ["Equity", "Debt", "Hybrid", "Other"] },
+        "subCategory": { "type": "string" },
+        "units": { "type": "number" },
+        "investedAmount": { "type": "number" },
+        "currentValue": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "fundName", "investedAmount", "currentValue"]
+    },
+    "SIP": {
+      "title": "SIP",
+      "type": "object",
+      "description": "Represents a Systematic Investment Plan for a mutual fund.",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "investmentId": { "type": "string" },
+        "amount": { "type": "number" },
+        "sipDate": { "type": "number" },
+        "nextDueDate": { "type": "string", "format": "date-time" },
+        "active": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "investmentId", "amount", "sipDate", "nextDueDate", "active"]
+    },
+    "InvestmentTransaction": {
+      "title": "Investment Transaction",
+      "type": "object",
+      "description": "Represents a single transaction for an investment (buy, sell).",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "investmentId": { "type": "string" },
+        "sipId": { "type": "string" },
+        "type": { "type": "string", "enum": ["buy", "sell"] },
+        "transactionDate": { "type": "string", "format": "date-time" },
+        "amount": { "type": "number" },
+        "nav": { "type": "number" },
+        "units": { "type": "number" }
+      },
+      "required": ["userId", "investmentId", "type", "transactionDate", "amount", "nav", "units"]
     }
   },
   "auth": {
@@ -676,6 +728,30 @@
               "description": "The unique ID of the alert."
             }
           ]
+        }
+      },
+      {
+        "path": "/users/{userId}/investments/{investmentId}",
+        "definition": {
+          "entityName": "Investment",
+          "schema": { "$ref": "#/backend/entities/Investment" },
+          "description": "Stores user's mutual fund investments."
+        }
+      },
+      {
+        "path": "/users/{userId}/sips/{sipId}",
+        "definition": {
+          "entityName": "SIP",
+          "schema": { "$ref": "#/backend/entities/SIP" },
+          "description": "Stores user's Systematic Investment Plans."
+        }
+      },
+      {
+        "path": "/users/{userId}/investmentTransactions/{transactionId}",
+        "definition": {
+          "entityName": "InvestmentTransaction",
+          "schema": { "$ref": "#/backend/entities/InvestmentTransaction" },
+          "description": "Logs all buy/sell transactions for investments."
         }
       }
     ],
