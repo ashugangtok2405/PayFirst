@@ -161,3 +161,14 @@ export interface InvestmentTransaction {
   nav: number;
   units: number;
 }
+
+export interface Goal {
+  id: string;
+  userId: string;
+  name: string;
+  targetAmount: number;
+  targetDate: string;
+  linkedInvestmentIds: string[];
+  createdAt: string;
+  updatedAt: string;
+}

@@ -529,6 +529,26 @@
         "units": { "type": "number" }
       },
       "required": ["userId", "investmentId", "type", "transactionDate", "amount", "nav", "units"]
+    },
+    "Goal": {
+      "title": "Goal",
+      "type": "object",
+      "description": "Represents a user's financial goal.",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "name": { "type": "string", "description": "Name of the financial goal." },
+        "targetAmount": { "type": "number", "description": "The target amount to be saved." },
+        "targetDate": { "type": "string", "format": "date-time", "description": "The date by which the goal should be achieved." },
+        "linkedInvestmentIds": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "An array of Investment IDs linked to this goal."
+        },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name", "targetAmount", "targetDate"]
     }
   },
   "auth": {
@@ -752,6 +772,14 @@
           "entityName": "InvestmentTransaction",
           "schema": { "$ref": "#/backend/entities/InvestmentTransaction" },
           "description": "Logs all buy/sell transactions for investments."
+        }
+      },
+      {
+        "path": "/users/{userId}/goals/{goalId}",
+        "definition": {
+          "entityName": "Goal",
+          "schema": { "$ref": "#/backend/entities/Goal" },
+          "description": "Stores user's financial goals."
         }
       }
     ],

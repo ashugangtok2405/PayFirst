@@ -18,12 +18,14 @@ import {
   CreditCard,
   FileText,
   Handshake,
+  Target,
 } from 'lucide-react'
 
 const overviewItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutGrid },
   { href: '/dashboard/transactions', label: 'Transactions', icon: ArrowRightLeft },
   { href: '/dashboard/insights', label: 'Insights', icon: Sparkles },
+  { href: '/dashboard/goals', label: 'Goals', icon: Target },
 ]
 
 const assetItems = [
