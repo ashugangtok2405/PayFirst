@@ -31,6 +31,7 @@ import {
   ArrowRightLeft,
   CreditCard as CreditCardIcon,
   ChevronDown,
+  PiggyBank,
 } from 'lucide-react'
 import { addDays, addWeeks, addMonths, addYears, isAfter, format, parseISO } from 'date-fns'
 import { useToast } from '@/hooks/use-toast'
@@ -44,7 +45,7 @@ import { collection, doc, runTransaction, DocumentReference, DocumentSnapshot, a
 import type { BankAccount, CreditCard, Category, Transaction, RecurringTransaction } from '@/lib/types'
 import { Skeleton } from '@/components/ui/skeleton'
 
-type TransactionType = 'expense' | 'income' | 'transfer' | 'credit_card_payment'
+type TransactionType = 'expense' | 'income' | 'transfer' | 'credit_card_payment' | 'investment'
 type Frequency = 'daily' | 'weekly' | 'monthly' | 'yearly'
 
 export function AddTransactionDialog({ children, mode = 'add', transaction }: { children: React.ReactNode, mode?: 'add' | 'edit', transaction?: Transaction }) {
@@ -63,6 +64,8 @@ export function AddTransactionDialog({ children, mode = 'add', transaction }: { 
   const [fromAccountId, setFromAccountId] = useState('') // For transfer 'from' & cc payment 'from'
   const [toAccountId, setToAccountId] = useState('') // For transfer 'to'
   const [toCreditCardId, setToCreditCardId] = useState('') // For cc payment 'to'
+  const [investmentSourceAccountId, setInvestmentSourceAccountId] = useState('');
+
 
   // Recurring state
   const [isRecurring, setIsRecurring] = useState(false)
@@ -102,6 +105,7 @@ export function AddTransactionDialog({ children, mode = 'add', transaction }: { 
     setFromAccountId('')
     setToAccountId('')
     setToCreditCardId('')
+    setInvestmentSourceAccountId('');
     setDate(new Date().toISOString().substring(0, 10))
     setIsRecurring(false)
     setFrequency('monthly')
@@ -137,11 +141,12 @@ export function AddTransactionDialog({ children, mode = 'add', transaction }: { 
                 setFromAccountId(transaction.fromBankAccountId || '');
                 setToCreditCardId(transaction.toCreditCardId || '');
                 break;
+            case 'investment':
+                setInvestmentSourceAccountId(transaction.fromBankAccountId || '');
+                break;
         }
 
         if (transaction.recurringTransactionId) {
-          // For now, we don't allow editing the recurring aspects of a transaction from here.
-          // This can be a future enhancement.
           setIsRecurring(false);
         }
       } else {
@@ -152,7 +157,7 @@ export function AddTransactionDialog({ children, mode = 'add', transaction }: { 
 
   useEffect(() => {
     // Reset recurring fields if tab changes to one that doesn't support it
-    if (isRecurring && (activeTab === 'transfer' || activeTab === 'credit_card_payment')) {
+    if (isRecurring && (activeTab === 'transfer' || activeTab === 'credit_card_payment' || activeTab === 'investment')) {
         setIsRecurring(false)
     }
   }, [activeTab, isRecurring])
@@ -264,6 +269,9 @@ export function AddTransactionDialog({ children, mode = 'add', transaction }: { 
                     refsToRead.set(`bank-${fromAccountId}`, doc(firestore, 'users', user.uid, 'bankAccounts', fromAccountId));
                     refsToRead.set(`card-${toCreditCardId}`, doc(firestore, 'users', user.uid, 'creditCards', toCreditCardId));
                     break;
+                case 'investment':
+                    refsToRead.set(`bank-${investmentSourceAccountId}`, doc(firestore, 'users', user.uid, 'bankAccounts', investmentSourceAccountId));
+                    break;
             }
 
             const readDocs = await Promise.all(Array.from(refsToRead.values()).map(ref => tx.get(ref)));
@@ -294,7 +302,7 @@ export function AddTransactionDialog({ children, mode = 'add', transaction }: { 
             const transactionData: Partial<Transaction> = {
                 userId: user.uid, type: activeTab, amount: numericAmount,
                 transactionDate: new Date(date).toISOString(),
-                description: notes || `New ${activeTab.replace('_', ' ')}`,
+                description: notes || `New ${activeTab.replace(/_/g, ' ')}`,
             };
             
             switch (activeTab) {
@@ -357,6 +365,16 @@ export function AddTransactionDialog({ children, mode = 'add', transaction }: { 
                   const cardPayBalance = (balancesToWrite.get(cardPayDoc.ref) || cardPayDoc.data()).currentBalance;
                   balancesToWrite.set(cardPayDoc.ref, { currentBalance: cardPayBalance - numericAmount });
                   break;
+                case 'investment':
+                    if (!investmentSourceAccountId) throw new Error("Source account is required for an investment.");
+                    const investmentSourceAccDoc = docMap.get(`bank-${investmentSourceAccountId}`);
+                    if (!investmentSourceAccDoc?.exists()) throw new Error("Source account not found.");
+                    
+                    transactionData.fromBankAccountId = investmentSourceAccountId;
+                    const invSourceBalance = (balancesToWrite.get(investmentSourceAccDoc.ref) || investmentSourceAccDoc.data()).currentBalance;
+                    if (invSourceBalance < numericAmount) throw new Error("Insufficient funds for investment.");
+                    balancesToWrite.set(investmentSourceAccDoc.ref, { currentBalance: invSourceBalance - numericAmount });
+                    break;
             }
 
             for (const [ref, balanceData] of balancesToWrite.entries()) {
@@ -368,7 +386,8 @@ export function AddTransactionDialog({ children, mode = 'add', transaction }: { 
                 transactionData.recurringTransactionId = newRecurringTransactionRef.id;
                 const recurringData: Omit<RecurringTransaction, 'id'> = {
                     userId: user.uid, description: transactionData.description!, amount: transactionData.amount!,
-                    type: transactionData.type!, frequency, startDate: transactionData.transactionDate!,
+                    type: transactionData.type as 'income' | 'expense', // Investment is not recurring
+                    frequency, startDate: transactionData.transactionDate!,
                     endDate: endDate ? new Date(endDate).toISOString() : undefined, lastGeneratedDate: transactionData.transactionDate!,
                     nextGenerationDate: getNextGenerationDate(new Date(date), frequency).toISOString(),
                     autoCreate, active: true, createdAt: new Date().toISOString(), categoryId: transactionData.categoryId,
@@ -388,7 +407,7 @@ export function AddTransactionDialog({ children, mode = 'add', transaction }: { 
 
         toast({
             title: mode === 'edit' ? 'Transaction Updated' : (isRecurring ? 'Recurring Transaction Saved' : 'Transaction Added'),
-            description: `Your ${activeTab.replace('_', ' ')} has been successfully recorded.`,
+            description: `Your ${activeTab.replace(/_/g, ' ')} has been successfully recorded.`,
         });
         setOpen(false);
 
@@ -541,6 +560,18 @@ export function AddTransactionDialog({ children, mode = 'add', transaction }: { 
             </div>
         </TabsContent>
 
+        <TabsContent value="investment" className="space-y-4 m-0">
+            <div className="space-y-2">
+                <Label htmlFor="investment-source">Source Account</Label>
+                <Select value={investmentSourceAccountId} onValueChange={setInvestmentSourceAccountId}>
+                    <SelectTrigger id="investment-source"><SelectValue placeholder="Select bank account" /></SelectTrigger>
+                    <SelectContent>
+                        {bankAccounts?.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+            </div>
+        </TabsContent>
+
         <div className="space-y-2">
           <Label htmlFor="date">Date</Label>
           <Input id="date" type="date" value={date} onChange={e => setDate(e.target.value)} />
@@ -610,11 +641,12 @@ export function AddTransactionDialog({ children, mode = 'add', transaction }: { 
           <DialogDescription>{mode === 'edit' ? 'Modify your existing transaction.' : 'Log a new income, expense, or transfer.'}</DialogDescription>
         </DialogHeader>
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TransactionType)} className="pt-4">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto p-1">
+          <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 h-auto p-1">
             <TabsTrigger value="expense" className="flex-col h-16 gap-1" disabled={mode==='edit'}><ArrowDown className="h-5 w-5 text-red-500"/>Expense</TabsTrigger>
             <TabsTrigger value="income" className="flex-col h-16 gap-1" disabled={mode==='edit'}><ArrowUp className="h-5 w-5 text-green-500"/>Income</TabsTrigger>
             <TabsTrigger value="transfer" className="flex-col h-16 gap-1" disabled={mode==='edit'}><ArrowRightLeft className="h-5 w-5 text-blue-500"/>Transfer</TabsTrigger>
             <TabsTrigger value="credit_card_payment" className="flex-col h-16 gap-1 text-center" disabled={mode==='edit'}><CreditCardIcon className="h-5 w-5 text-orange-500"/>CC Payment</TabsTrigger>
+            <TabsTrigger value="investment" className="flex-col h-16 gap-1 text-center" disabled={mode==='edit'}><PiggyBank className="h-5 w-5 text-indigo-500"/>Investment</TabsTrigger>
           </TabsList>
           
           {renderContent()}

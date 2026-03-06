@@ -44,10 +44,11 @@ const TransactionTypeBadge = ({ type }: { type: Transaction['type']}) => {
         transfer: { icon: ArrowRightLeft, color: 'text-blue-700 bg-blue-50 border-blue-200', label: 'Transfer' },
         credit_card_payment: { icon: CreditCardIcon, color: 'text-orange-700 bg-orange-50 border-orange-200', label: 'CC Payment' },
         loan_payment: { icon: BadgeIndianRupee, color: 'text-cyan-700 bg-cyan-50 border-cyan-200', label: 'Loan Payment' },
+        investment: { icon: PiggyBank, color: 'text-indigo-700 bg-indigo-50 border-indigo-200', label: 'Investment' },
         debt_lent: { icon: ArrowUpRight, color: 'text-orange-700 bg-orange-50 border-orange-200', label: 'Lent' },
         debt_borrowed: { icon: ArrowDownLeft, color: 'text-purple-700 bg-purple-50 border-purple-200', label: 'Borrowed' },
         debt_repayment_in: { icon: HandCoins, color: 'text-teal-700 bg-teal-50 border-teal-200', label: 'Repayment In' },
-        debt_repayment_out: { icon: HandCoins, color: 'text-indigo-700 bg-indigo-50 border-indigo-200', label: 'Repayment Out' },
+        debt_repayment_out: { icon: HandCoins, color: 'text-pink-700 bg-pink-50 border-pink-200', label: 'Repayment Out' },
     }[type] || { icon: CircleDollarSign, color: 'text-gray-700 bg-gray-50 border-gray-200', label: 'Transaction'}
 
     const Icon = config.icon;
@@ -186,6 +187,7 @@ export function TransactionList({ transactions, categories, accounts, totalIncom
                                             transfer: { sign: '', color: 'text-blue-600' },
                                             credit_card_payment: { sign: '-', color: 'text-orange-600' },
                                             loan_payment: { sign: '-', color: 'text-cyan-600' },
+                                            investment: { sign: '-', color: 'text-indigo-600' },
                                             debt_lent: { sign: '-', color: 'text-red-600' },
                                             debt_borrowed: { sign: '+', color: 'text-green-600' },
                                             debt_repayment_in: { sign: '+', color: 'text-green-600' },

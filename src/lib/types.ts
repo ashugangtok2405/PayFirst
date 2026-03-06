@@ -69,7 +69,7 @@ export interface Repayment {
 export interface Transaction {
   id: string;
   userId?: string;
-  type: 'income' | 'expense' | 'transfer' | 'credit_card_payment' | 'loan_payment' | 'debt_lent' | 'debt_borrowed' | 'debt_repayment_in' | 'debt_repayment_out';
+  type: 'income' | 'expense' | 'transfer' | 'credit_card_payment' | 'loan_payment' | 'debt_lent' | 'debt_borrowed' | 'debt_repayment_in' | 'debt_repayment_out' | 'investment';
   amount: number;
   description: string;
   transactionDate: string;
