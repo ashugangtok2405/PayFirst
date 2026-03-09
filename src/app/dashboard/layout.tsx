@@ -72,40 +72,38 @@ export default function DashboardLayout({
       <RecurringProcessor />
       <AlertManager />
       <Sidebar>
-        <div className="flex h-full flex-col justify-between">
-          <div>
-            <SidebarHeader className="border-b border-sidebar-border p-6 pb-4">
-              <Logo />
-            </SidebarHeader>
-            <SidebarContent className="p-0">
-              <MainNav />
-              <SidebarGroup>
-                <SidebarGroupLabel>QUICK ACTIONS</SidebarGroupLabel>
-                 <div className="p-2 space-y-2">
-                    <AddAccountDialog accountType="bank">
-                        <Button variant="outline" className="w-full justify-start">
-                        <PlusCircle className="mr-2" /> Add Bank
-                        </Button>
-                    </AddAccountDialog>
-                    <AddAccountDialog accountType="credit">
-                        <Button variant="outline" className="w-full justify-start">
-                        <CreditCard className="mr-2" /> Add Card
-                        </Button>
-                    </AddAccountDialog>
-                    <AddAccountDialog accountType="loan">
-                        <Button variant="outline" className="w-full justify-start">
-                        <FileText className="mr-2" /> Add Loan
-                        </Button>
-                    </AddAccountDialog>
-                    <AddInvestmentDialog>
+        <div className="flex h-full flex-col">
+          <SidebarHeader className="border-b border-sidebar-border p-6 pb-4">
+            <Logo />
+          </SidebarHeader>
+          <SidebarContent className="p-0">
+            <MainNav />
+            <SidebarGroup>
+              <SidebarGroupLabel>QUICK ACTIONS</SidebarGroupLabel>
+                <div className="p-2 space-y-2">
+                  <AddAccountDialog accountType="bank">
                       <Button variant="outline" className="w-full justify-start">
-                        <PiggyBank className="mr-2" /> Add Investment
+                      <PlusCircle className="mr-2" /> Add Bank
                       </Button>
-                    </AddInvestmentDialog>
-                </div>
-              </SidebarGroup>
-            </SidebarContent>
-          </div>
+                  </AddAccountDialog>
+                  <AddAccountDialog accountType="credit">
+                      <Button variant="outline" className="w-full justify-start">
+                      <CreditCard className="mr-2" /> Add Card
+                      </Button>
+                  </AddAccountDialog>
+                  <AddAccountDialog accountType="loan">
+                      <Button variant="outline" className="w-full justify-start">
+                      <FileText className="mr-2" /> Add Loan
+                      </Button>
+                  </AddAccountDialog>
+                  <AddInvestmentDialog>
+                    <Button variant="outline" className="w-full justify-start">
+                      <PiggyBank className="mr-2" /> Add Investment
+                    </Button>
+                  </AddInvestmentDialog>
+              </div>
+            </SidebarGroup>
+          </SidebarContent>
           <SidebarFooter className="p-4">
             <UserNav />
           </SidebarFooter>
