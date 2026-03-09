@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Download, FileDown, Calendar as CalendarIcon, ArrowUp, ArrowDown } from 'lucide-react'
 import { startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear, format } from 'date-fns'
 import { cn } from '@/lib/utils'
+import * as XLSX from 'xlsx'
+import { useToast } from '@/hooks/use-toast'
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -257,6 +259,7 @@ export default function SummaryReportPage() {
   const [period, setPeriod] = useState('this-month');
   const { user } = useUser()
   const firestore = useFirestore()
+  const { toast } = useToast()
 
   const { startDate, endDate } = useMemo(() => {
     const now = new Date();
@@ -360,6 +363,97 @@ export default function SummaryReportPage() {
     };
   }, [transactions, investments, sips, personalDebts, categories]);
 
+  const handleExcelDownload = () => {
+    if (isLoading) {
+        toast({ title: "Please wait", description: "Data is still loading." });
+        return;
+    }
+
+    const wb = XLSX.utils.book_new();
+    const periodString = `${format(startDate, 'yyyy-MM-dd')}_to_${format(endDate, 'yyyy-MM-dd')}`;
+
+    // 1. Summary Sheet
+    const summaryWsData = [
+        ["PayFirst Summary Report"],
+        [`Period: ${format(startDate, 'PPP')} to ${format(endDate, 'PPP')}`],
+        [],
+        ["Metric", "Value"],
+        ["Total Income", reportData.snapshot.totalIncome],
+        ["Total Expenses", reportData.snapshot.totalExpenses],
+        ["Total Investments", reportData.snapshot.totalInvestments],
+        ["Net Balance", reportData.snapshot.netBalance],
+        ["Savings Rate (%)", reportData.snapshot.savingsRate.toFixed(2)],
+    ];
+    const summaryWs = XLSX.utils.aoa_to_sheet(summaryWsData);
+    XLSX.utils.book_append_sheet(wb, summaryWs, "Summary");
+
+    // 2. Transactions Sheet
+    const categoryMap = categories?.reduce((acc, cat) => ({ ...acc, [cat.id]: cat.name }), {} as Record<string, string>) ?? {};
+    const transactionsWsData = transactions?.map(tx => ({
+        Date: format(new Date(tx.transactionDate), 'yyyy-MM-dd'),
+        Description: tx.description,
+        Category: tx.categoryId ? categoryMap[tx.categoryId] : 'N/A',
+        Amount: tx.amount,
+        Type: tx.type,
+    })) ?? [];
+    const transactionsWs = XLSX.utils.json_to_sheet(transactionsWsData);
+    XLSX.utils.book_append_sheet(wb, transactionsWs, "All Transactions");
+    
+    // 3. Spending Breakdown Sheet
+    const spendingWsData = reportData.spending.map(item => ({
+        Category: item.name,
+        Amount: item.value,
+        'Percentage (%)': item.percentage.toFixed(2),
+    }));
+    const spendingWs = XLSX.utils.json_to_sheet(spendingWsData);
+    XLSX.utils.book_append_sheet(wb, spendingWs, "Spending Breakdown");
+
+    // 4. Bank Accounts Sheet
+    const bankAccountsWsData = bankAccounts?.map(acc => ({
+        Name: acc.name,
+        'Bank Name': acc.bankName,
+        'Current Balance': acc.currentBalance,
+        Type: acc.type,
+    })) ?? [];
+    const bankAccountsWs = XLSX.utils.json_to_sheet(bankAccountsWsData);
+    XLSX.utils.book_append_sheet(wb, bankAccountsWs, "Bank Accounts");
+
+    // 5. Credit Cards Sheet
+    const creditCardsWsData = creditCards?.map(card => ({
+        Name: card.name,
+        Issuer: card.issuer,
+        'Credit Limit': card.creditLimit,
+        'Outstanding Balance': card.currentBalance,
+        'Due Date': format(new Date(card.statementDueDate), 'yyyy-MM-dd'),
+    })) ?? [];
+    const creditCardsWs = XLSX.utils.json_to_sheet(creditCardsWsData);
+    XLSX.utils.book_append_sheet(wb, creditCardsWs, "Credit Cards");
+
+    // 6. Investments
+    const investmentsWsData = investments?.map(inv => ({
+        'Fund Name': inv.fundName,
+        'Invested Amount': inv.investedAmount,
+        'Current Value': inv.currentValue,
+        'P&L': inv.currentValue - inv.investedAmount,
+        'Category': inv.category
+    })) ?? [];
+    const investmentsWs = XLSX.utils.json_to_sheet(investmentsWsData);
+    XLSX.utils.book_append_sheet(wb, investmentsWs, "Investments");
+
+    // 7. Lending & Borrowing
+    const debtsWsData = personalDebts?.map(debt => ({
+        'Person Name': debt.personName,
+        'Type': debt.type,
+        'Original Amount': debt.originalAmount,
+        'Remaining Amount': debt.remainingAmount,
+        'Status': debt.status,
+    })) ?? [];
+    const debtsWs = XLSX.utils.json_to_sheet(debtsWsData);
+    XLSX.utils.book_append_sheet(wb, debtsWs, "Lending & Borrowing");
+
+    XLSX.writeFile(wb, `PayFirst_Report_${periodString}.xlsx`);
+  };
+
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto p-4 md:p-8 print:p-0">
@@ -383,7 +477,7 @@ export default function SummaryReportPage() {
           <Button variant="outline" className="w-full sm:w-auto" onClick={() => window.print()}>
             <Download className="mr-2 h-4 w-4" /> Download PDF
           </Button>
-          <Button variant="outline" className="w-full sm:w-auto">
+          <Button variant="outline" className="w-full sm:w-auto" onClick={handleExcelDownload}>
             <FileDown className="mr-2 h-4 w-4" /> Download Excel
           </Button>
         </div>
