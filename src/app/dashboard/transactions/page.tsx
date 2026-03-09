@@ -186,7 +186,7 @@ export default function TransactionsPage() {
           />
           {isFiltered && (
             <FilteredSummary
-              transactions={filteredTransactions.filter(t => t.type === 'expense')}
+              transactions={filteredTransactions}
               searchTerm={searchTerm}
               dateRange={dateRange}
             />
