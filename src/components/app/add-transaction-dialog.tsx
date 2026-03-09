@@ -298,11 +298,12 @@ export function AddTransactionDialog({ children, mode = 'add', transaction }: { 
                 if (originalTx.fromCreditCardId) updateBalance(`card-${originalTx.fromCreditCardId}`, -originalTx.amount);
                 if (originalTx.toCreditCardId) updateBalance(`card-${originalTx.toCreditCardId}`, originalTx.amount);
             }
-
+            
+            const selectedCategory = categories?.find(c => c.id === categoryId);
             const transactionData: Partial<Transaction> = {
                 userId: user.uid, type: activeTab, amount: numericAmount,
                 transactionDate: new Date(date).toISOString(),
-                description: notes || `New ${activeTab.replace(/_/g, ' ')}`,
+                description: notes || selectedCategory?.name || `New ${activeTab.replace(/_/g, ' ')}`,
             };
             
             switch (activeTab) {
