@@ -19,6 +19,7 @@ import {
   FileText,
   Handshake,
   Target,
+  ClipboardList,
 } from 'lucide-react'
 
 const overviewItems = [
@@ -26,6 +27,7 @@ const overviewItems = [
   { href: '/dashboard/transactions', label: 'Transactions', icon: ArrowRightLeft },
   { href: '/dashboard/insights', label: 'Insights', icon: Sparkles },
   { href: '/dashboard/goals', label: 'Goals', icon: Target },
+  { href: '/dashboard/summary-report', label: 'Summary Report', icon: ClipboardList },
 ]
 
 const assetItems = [
