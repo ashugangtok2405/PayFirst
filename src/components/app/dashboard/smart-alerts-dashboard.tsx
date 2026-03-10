@@ -3,16 +3,18 @@
 import { useState, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { AlertCircle, Zap, ArrowRight, ShieldCheck, CalendarClock } from 'lucide-react'
+import { AlertCircle, Zap, ArrowRight, ShieldCheck, CalendarClock, X } from 'lucide-react'
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase'
-import { collection, query, where, orderBy } from 'firebase/firestore'
+import { collection, query, where, orderBy, doc, updateDoc } from 'firebase/firestore'
 import type { Alert } from '@/lib/types'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useToast } from '@/hooks/use-toast'
 
 export function SmartAlertsDashboard() {
   const { user } = useUser()
   const firestore = useFirestore()
   const [showAll, setShowAll] = useState(false)
+  const { toast } = useToast()
 
   const alertsQuery = useMemoFirebase(
     () =>
@@ -31,6 +33,23 @@ export function SmartAlertsDashboard() {
     critical: { icon: AlertCircle, iconColor: 'text-red-500', bgColor: 'bg-red-50' },
     warning: { icon: Zap, iconColor: 'text-orange-500', bgColor: 'bg-orange-50' },
     info: { icon: CalendarClock, iconColor: 'text-blue-500', bgColor: 'bg-blue-50' },
+  }
+
+  const handleDismiss = async (alertId: string) => {
+    if (!user) return
+    const alertRef = doc(firestore, 'users', user.uid, 'alerts', alertId)
+    try {
+      await updateDoc(alertRef, { resolved: true })
+      toast({
+        title: 'Alert Dismissed',
+      })
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Could not dismiss the alert.',
+      })
+    }
   }
 
   const renderLoading = () => (
@@ -77,6 +96,15 @@ export function SmartAlertsDashboard() {
                 <p className="font-semibold text-sm">{alert.message}</p>
                 <p className="text-xs text-muted-foreground">{alert.title}</p>
               </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 shrink-0 text-muted-foreground hover:bg-muted"
+                onClick={() => handleDismiss(alert.id)}
+              >
+                <X className="h-4 w-4" />
+                <span className="sr-only">Dismiss alert</span>
+              </Button>
             </div>
           )
         })}
