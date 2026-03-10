@@ -1,6 +1,6 @@
 'use client'
 
-import { NetWorthSummary } from '@/components/app/accounts/net-worth-summary'
+import { BankAccountsSummary } from '@/components/app/accounts/bank-accounts-summary'
 import { BankAccounts } from '@/components/app/accounts/bank-accounts'
 import { SmartAlerts } from '@/components/app/accounts/smart-alerts'
 import { TransferMoneyDialog } from '@/components/app/accounts/transfer-money-dialog'
@@ -23,7 +23,7 @@ export default function AccountsPage() {
         </div>
       </div>
       
-      <NetWorthSummary />
+      <BankAccountsSummary />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
