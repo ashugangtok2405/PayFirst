@@ -1,6 +1,6 @@
 'use client'
 
-import { NetWorthSummary } from '@/components/app/accounts/net-worth-summary'
+import { DebtSummary } from '@/components/app/accounts/debt-summary'
 import { PersonalDebtManagement } from '@/components/app/accounts/personal-debt-management'
 import { SmartAlerts } from '@/components/app/accounts/smart-alerts'
 import { AddAccountDialog } from '@/components/app/accounts/add-account-dialog'
@@ -21,7 +21,7 @@ export default function DebtsPage() {
         </div>
       </div>
       
-      <NetWorthSummary />
+      <DebtSummary />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
